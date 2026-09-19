@@ -1,0 +1,151 @@
+:root {
+  color-scheme: dark;
+  --bg: #12121a;
+  --panel: #1c1c28;
+  --fg: #e8e8f0;
+  --dim: #8a8aa0;
+  --accent: #f5c542;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.4 system-ui, sans-serif;
+}
+
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1rem;
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
+}
+
+h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.hint,
+.status {
+  color: var(--dim);
+}
+
+.pad {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--panel);
+  border-radius: 0.5rem;
+}
+
+.pad-id {
+  margin: 0.25rem 0;
+  color: var(--dim);
+  font: 0.85rem ui-monospace, monospace;
+  word-break: break-all;
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
+  gap: 0.4rem;
+}
+
+.button {
+  position: relative;
+  height: 3rem;
+  overflow: hidden;
+  border: 2px solid var(--dim);
+  border-radius: 0.4rem;
+}
+
+.button.pressed {
+  border-color: var(--accent);
+}
+
+.button .fill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0.6;
+  transform: scaleY(var(--value, 0));
+  transform-origin: bottom;
+}
+
+.button .label {
+  position: relative;
+  display: grid;
+  height: 100%;
+  place-items: center;
+  font-weight: 600;
+}
+
+.axes {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+
+.axis {
+  display: grid;
+  grid-template-columns: 5rem 1fr 4rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.track {
+  position: relative;
+  height: 0.6rem;
+  background: #2a2a3a;
+  border-radius: 0.3rem;
+}
+
+.marker {
+  position: absolute;
+  top: -0.2rem;
+  left: calc((var(--value, 0) + 1) * 50%);
+  width: 0.5rem;
+  height: 1rem;
+  background: var(--accent);
+  border-radius: 0.2rem;
+  transform: translateX(-50%);
+}
+
+.value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.copy {
+  padding: 0.6rem 1.2rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  font-weight: 700;
+}
+
+.copy:disabled {
+  opacity: 0.4;
+}
+
+textarea {
+  width: 100%;
+  min-height: 12rem;
+  margin-top: 0.5rem;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--dim);
+  font: 0.85rem ui-monospace, monospace;
+}
