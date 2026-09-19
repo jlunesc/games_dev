@@ -16,6 +16,7 @@ A public-repo web game (TypeScript, PWA) that trains boss-fight skills for metro
 - TypeScript in strict mode.
 - Game loop uses a fixed timestep so timings are deterministic and measurable in ms.
 - The stats schema is versioned and documented. Do not change it without updating the docs.
+- The CSP blocks inline scripts and `style="..."` attributes. Style through CSS classes or `el.style.setProperty(...)`, and write DOM with `textContent`, never `innerHTML`.
 
 ## Working style
 - The owner decides design questions. Propose options with a recommendation and ask before adding anything that is not in the spec.
@@ -23,4 +24,13 @@ A public-repo web game (TypeScript, PWA) that trains boss-fight skills for metro
 - Build and test on PC first. Keep the game working as an offline PWA on the phone.
 
 ## Commands
-To be added once the tooling is set up (M0).
+- `npm ci`: install the pinned dependencies.
+- `npm run dev`: dev server with hot reload at http://localhost:5173.
+- `npm test`: run Vitest once.
+- `npm run typecheck`: strict TypeScript check.
+- `npm run build`: typecheck, then build into `dist/` (also generates `dist/sw.js`, the offline service worker).
+- `npm run preview`: serve `dist/` at http://localhost:4173 to test the PWA and service worker.
+- `npm run audit:deps`: `npm audit`, fails on high severity.
+- `node tools/make-icons.mjs`: regenerate `public/icons/`.
+
+Phone testing is in `docs/phone-testing.md`.
