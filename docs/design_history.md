@@ -65,6 +65,11 @@ Constraints stated by the owner:
 - **Why TypeScript**: instant feedback in the browser, minimal setup, strict mode catches many mistakes, and the design stays portable. Rust's extra safety matters less for a small offline game with no server and few dependencies, since the locked security rules already cover the main risks.
 - **Portability rule**: bosses as data files, a fixed and documented stats format, and the spec as the source of truth, so a later rewrite would mostly translate the engine and not redesign the game.
 
+### 3.5b Build and test tooling
+- **Chosen (LOCKED)**: **Vite** (build and dev server) and **Vitest** (tests), with TypeScript strict. The offline service worker is written by hand and generated at build time by a small in-repo build plugin (`tools/precache-plugin.ts`). No PWA plugin.
+- **Considered**: **esbuild plus `node:test`** (fewer moving parts, but no dev server or hot reload, and we would build that ourselves); **`tsc` only** (no bundler, so no hashed asset names, no dev server, and imports would need extra handling in the browser).
+- **Why**: Vite and Vitest share one config and give fast feedback on the PC, which matters when tuning boss timings. A PWA plugin would add many transitive dependencies for a service worker of about fifty lines, and the security rules ask for few dependencies. Writing the worker ourselves also keeps its caching behavior easy to read and test.
+
 ### 3.6 Delivery on the phone
 - **Chosen (LOCKED)**: an installable **web app (PWA)** first. It caches its files at the first visit, then runs from the home screen **fully offline**, with controller support through the browser Gamepad API.
 - **DEFERRED**: a real **APK**. Constraints researched:
@@ -83,7 +88,7 @@ Constraints stated by the owner:
 - **Stats storage caveat**: Android can clear a browser app's stored data (wiped site data, low storage), so stats must be exported regularly and not left to pile up.
 
 ### 3.7 Hosting, privacy and security
-- **Chosen (LOCKED)**: **public hosting is fine**, with strong emphasis on security. **DEFAULT** host: GitHub Pages.
+- **Chosen (LOCKED)**: **public hosting is fine**, with strong emphasis on security. Host: **GitHub Pages (LOCKED)**. The Content Security Policy is a `<meta>` tag because Pages cannot set response headers, so `frame-ancestors` cannot be enforced. Accepted.
 - **Considered for privacy**: a private repository or private hosting (may need a paid plan, not verified), or copying the built game onto the phone directly. Installing a PWA normally requires HTTPS, so serving it from the PC over home wifi would not work without extra setup. The public option makes this unnecessary.
 - **Nothing about the owner goes to the internet**: only the game files are hosted. No accounts, no server, no uploads. Stats stay on the devices and leave only when the owner exports them.
 - **LOCKED security rules**: no backend, accounts or uploads; no third-party scripts or trackers; few dependencies, pinned, with vulnerability alerts and an audit step; strict Content Security Policy; two-factor authentication on the GitHub account (the account is the real target, since whoever controls it could change the game installed on the phone); exported stats never committed to the public repo.

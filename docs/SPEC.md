@@ -125,7 +125,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 
 ## 10. Development and testing (DEFAULT, pending approval)
 
-- **Repo layout**: `src/engine` (loop, input, timing, collision, stats), `src/bosses` (data files), `src/game`, `src/ui`, `tests`, `docs`, and `public` (manifest, service worker).
+- **Repo layout**: `src/engine` (loop, input, timing, collision, stats), `src/bosses` (data files), `src/game`, `src/ui`, `tests`, `docs`, `tools` (build plugin and scripts), and `public` (manifest and icons). The service worker is generated into `dist/` at build time by `tools/precache-plugin.ts`.
 - **Fixed-timestep game loop** so timings are deterministic and measurable in milliseconds.
 - **Automated tests** on PC for the engine and boss data (schema validation, deterministic simulation of attack timelines), plus manual playtests.
 - **Early controller test** on the S21 with the 8BitDo in its different modes, and a documented button mapping.

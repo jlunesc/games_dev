@@ -11,15 +11,16 @@ A PWA can only be installed over HTTPS, so test the phone from the deployed GitH
 - [ ] Chrome menu, "Install app" (or "Add to Home screen"). The icon is a gold diamond on dark.
 - [ ] Launch it from the home screen: it opens without the browser bar.
 - [ ] Turn on airplane mode, close the app fully, launch it again: it still opens.
+- [ ] After a new deploy, launch the app twice. The first launch still shows the old version while the update downloads in the background. The new version appears on the second launch.
 
 ## Controller check (repeat for every controller mode)
 Pair the 8BitDo in Android Bluetooth settings. Check the controller's manual for how to switch modes; each mode may report buttons differently.
 1. Open the app and press any button. A "Gamepad" panel appears.
 2. Press every button once and move each stick and trigger through its full range.
-3. Tap **Copy report** and paste the text into the chat with Claude. Note which 8BitDo mode it was in.
+3. Tap **Copy report** and paste the text into the chat with Claude. Note which 8BitDo mode it was in. Tapping Copy report with a finger is fine: the report remembers every button you pressed ("ever pressed") and each stick's range, so you do not need to hold anything.
 4. Repeat for each mode. The button layout decision (SPEC section 5) will use these reports.
 
-If the controller shows nothing, note the mode, the id string from a different mode if any, and whether the Gamepad panel says "not available" (that means the page is not HTTPS).
+If the controller shows nothing, note which mode it was in and whether the page says the Gamepad API is not available (that means the page is not HTTPS).
 
 ## On the PC
 `npm run dev`, open http://localhost:5173, plug in or pair the PC controller, and follow the controller check above. Reports from different controllers are expected to differ.
