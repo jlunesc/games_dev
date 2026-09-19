@@ -28,6 +28,13 @@ describe('Content Security Policy in index.html', () => {
     expect(p.get('connect-src')).toEqual(["'self'"]);
   });
 
+  it('only allows images, the manifest and workers from the page itself', () => {
+    const p = policy();
+    expect(p.get('img-src')).toEqual(["'self'"]);
+    expect(p.get('manifest-src')).toEqual(["'self'"]);
+    expect(p.get('worker-src')).toEqual(["'self'"]);
+  });
+
   it('blocks plugins and restricts base and form targets', () => {
     const p = policy();
     expect(p.get('object-src')).toEqual(["'none'"]);
