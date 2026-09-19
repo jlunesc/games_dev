@@ -52,7 +52,8 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 - **LOCKED**: the **dash makes the player invulnerable** for its duration.
 - **LOCKED**: health is **hit-based**, not a health bar. **DEFAULT**: 5 hits, as a setting. **DEFAULT**: a short invulnerability window after being hit, so one attack cannot hit several times.
 - Not in v1: healing and any extra moves. Add moves only when a boss needs them to be fair.
-- **Input**: 8BitDo Bluetooth controller. **OPEN**: button layout. 8BitDo pads report buttons differently depending on their mode, so test on the S21 early. Touch controls are not planned.
+- **Input**: 8BitDo Bluetooth controller. Touch controls are not planned. Pads report buttons differently by model, mode and browser, so the game maps actions to buttons through a per-controller profile keyed by the controller id string, never by the standard button numbers. Measured mappings are in `docs/controllers.md`.
+- **DEFAULT**: layout by physical position: move = left stick or d-pad, jump = bottom face button, attack = left face button, dash = right shoulder. No triggers and no right stick in v1, because the owner's phone pad (8BitDo SN30 Pro in X-input mode, the only mode that connects to the phone) does not report them usably. The owner said "ok" to this proposal; reopen it if it feels wrong in play.
 - **OPEN**: how the player counters a counterable attack (for example an attack press timed inside a flash window), and whether the dash has a cooldown or a stamina budget.
 
 ## 6. Fight rules and flow (LOCKED)
@@ -145,7 +146,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 - Exact counter input and timing window.
 - Dash cooldown or stamina budget.
 - Preset names and values.
-- Controller button layout.
+- Controller button layout: default proposed in section 5, to confirm after playtesting.
 - Final parameter list per boss (grows while building).
 - Stats export format details (JSON only, or also CSV).
 - Player extras (healing, more moves) once bosses require them.
