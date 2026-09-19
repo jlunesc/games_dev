@@ -29,8 +29,9 @@ A public-repo web game (TypeScript, PWA) that trains boss-fight skills for metro
 - `npm test`: run Vitest once.
 - `npm run typecheck`: strict TypeScript check.
 - `npm run build`: typecheck, then build into `dist/` (also generates `dist/sw.js`, the offline service worker).
+- `npm run check:dist`: after a build, check the shipped `dist/` (CSP meta tag, no inline script or style, no `data:` URI, every file in the service worker precache list). Run by CI.
 - `npm run preview`: serve `dist/` at http://localhost:4173 to test the PWA and service worker.
 - `npm run audit:deps`: `npm audit`, fails on high severity.
-- `node tools/make-icons.mjs`: regenerate `public/icons/`.
+- `node tools/make-icons.mjs`: regenerate `public/icons/`. Run it from the repo root.
 
 Phone testing is in `docs/phone-testing.md`.
