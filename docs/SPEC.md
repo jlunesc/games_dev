@@ -1,0 +1,151 @@
+# Boss Trainer: Specification (v0.1, draft)
+
+Working title. Source of truth for the project. Written from a design conversation between the owner and Claude.
+
+**Status tags used throughout**
+- **LOCKED**: decided by the owner.
+- **DELEGATED**: the owner had no strong opinion and let Claude decide; can be reopened.
+- **DEFAULT**: proposed by Claude, not yet explicitly approved by the owner.
+- **OPEN**: not decided yet.
+
+---
+
+## 1. Purpose
+
+A repository of simple 2D games that help the owner improve at boss fights in games such as Hollow Knight and Grime (metroidvanias). The skills to train are learning attack patterns, reading telegraphs, dodging, spacing and punishing at the right moment.
+
+- The game must be **fun to play as a real game**, not feel like a lab tool.
+- The owner plays on a **Samsung Galaxy S21** with a **Bluetooth 8BitDo controller**.
+- Development and testing happen on a **PC first**, then the game is used on the phone.
+- Every fight produces **stats that are exported** and analyzed together with Claude, and the mechanics are refined from what the data shows.
+- Doom and Risk of Rain 2 (3D) are long-term targets but **out of scope for now**. The owner has a lot of trouble with 3D games. We start with 2D.
+
+## 2. Working method
+
+The owner and Claude build the specification together, one topic at a time. Claude proposes options and gives a recommendation, and the owner decides. When a decision changes, update this file and its status tag.
+
+## 3. Platform and technology
+
+- **LOCKED**: first language is **TypeScript (strict mode)**, chosen for fast iteration while tuning boss timings. Rust was considered (stronger compile-time safety) and is kept as a possible later move.
+- **LOCKED**: the game is a **web app**, first delivered as an **installable PWA** that runs offline on the phone after the first install. Controller input uses the browser Gamepad API.
+- **LOCKED**: a real **APK is a possible later step**. Known routes that need no rewrite: Capacitor (bundles the built files inside an Android shell) or Bubblewrap / Trusted Web Activity (wraps the hosted PWA). Check the 8BitDo controller behaviour inside the wrapper when the time comes.
+- **LOCKED**: **public hosting is acceptable**, with strong emphasis on security (section 4).
+- **DEFAULT**: rendering with plain Canvas 2D, no heavy game engine.
+- **DEFAULT**: hosting on GitHub Pages.
+- **Portability rule** (keeps a later rewrite cheap): bosses are defined as data files, separate from engine code. The stats format is fixed and documented. This spec stays the source of truth.
+
+## 4. Security rules (LOCKED)
+
+1. No backend, no accounts, no uploads. All data stays on the owner's devices.
+2. No third-party scripts, trackers or analytics. Everything ships inside the game.
+3. Few dependencies, all pinned with a lockfile, with automated vulnerability alerts (e.g. Dependabot) and an audit step in CI.
+4. A strict Content Security Policy so the page can only load and talk to itself.
+5. Two-factor authentication on the GitHub account (it controls what gets installed on the phone).
+6. Exported stats never go into the public repository (git-ignored).
+
+To-do (later): have an agent test the game's security. Where possible, enforce the rules above with automated checks in the repo instead of relying on guidance alone.
+
+## 5. Player (v1)
+
+- **LOCKED**: move left and right, jump, attack, dash. Attack is a single button with short range.
+- **LOCKED**: the **dash makes the player invulnerable** for its duration.
+- **LOCKED**: health is **hit-based**, not a health bar. **DEFAULT**: 5 hits, as a setting. **DEFAULT**: a short invulnerability window after being hit, so one attack cannot hit several times.
+- Not in v1: healing and any extra moves. Add moves only when a boss needs them to be fair.
+- **Input**: 8BitDo Bluetooth controller. **OPEN**: button layout. 8BitDo pads report buttons differently depending on their mode, so test on the S21 early. Touch controls are not planned.
+- **OPEN**: how the player counters a counterable attack (for example an attack press timed inside a flash window), and whether the dash has a cooldown or a stamina budget.
+
+## 6. Fight rules and flow (LOCKED)
+
+- Menu: pick a **boss** and a **difficulty**, then the fight starts immediately. The menu **remembers the last boss and difficulty**.
+- **Death returns to the menu.** Every attempt starts from the beginning of the fight. There are no phase checkpoints.
+- After a fight, a short **summary screen** shows result, time, phase reached, hits taken and the most dangerous attack. Then back to the menu.
+- **Difficulty** comes as **presets** (Easy, Normal, Hard, etc.), and the owner can **tweak individual parameters on top of a preset**. **OPEN**: preset names and values. Every logged attempt records the preset and every changed value.
+
+## 7. Bosses
+
+**Design principle**: bosses are designed the way bosses work in real games, taking inspiration from Hollow Knight, Metroid, Ori and Grime. **Inspiration only, never copying**: original names, art and attack patterns. The battery of bosses grows over time. Each boss has one flat list of tunable parameters.
+
+**Tunable parameters** (grows as we test): attack speed, attack frequency, wind-up duration, recovery time, gap between attacks, combo length, predictability (fixed vs random order), boss HP ("tankiness"), number of phases and their HP thresholds.
+
+**Archetypes to draw from**: melee duelist, heavy bruiser, zoner, summoner, trickster.
+
+**Mechanics collected from research (candidates, not all decided)**
+- Two attack classes told apart by a color cue: *counterable* and *must-dodge*.
+- Phases at HP thresholds, each with a signature opening attack and extra attacks in later phases.
+- Attack chosen by a visible body pose, so the pose is the telegraph.
+- Limited damage windows, or a hidden or rarely exposed weak point, which test patience.
+- Twin bosses alternating a shared attack set to split attention.
+- Form changes where each form needs a different tactic, and a final phase where the boss cannot be damaged and the player must survive.
+- Arena as a mechanic: cover, switches, hazards, shrinking safe area.
+- Lingering hazards left on the ground.
+- Punishing greed (for example extra hazards when the player keeps attacking).
+- A harder second pass that adds patterns, which fits the difficulty presets.
+- Dash as a limited resource so that greedy attacking has a cost (OPEN).
+
+**Battery, sketches (working names, all original)**
+
+1. **Ember Duelist**: melee duelist that trains telegraph reading. **First boss to build (DELEGATED).**
+   - The pose of its weapon arm picks the attack: raised means overhead slam, sideways means sweep, pulled back means lunge.
+   - One attack flashes gold and can be countered for a stagger.
+   - Phase 2 at about 66% HP adds a fourth attack and longer chains.
+   - Knobs: wind-up time, chain length, pause between chains, HP.
+2. **Veiled Lantern**: trains patience and not being greedy.
+   - A floating boss that takes damage only while its lantern is open, briefly after certain attacks.
+   - It leaves lingering embers on the floor.
+   - In phase 2 it is nearly invisible except for the lantern.
+   - Knobs: window length, how often it opens, ember lifetime.
+3. **Moulter**: trains adapting.
+   - Three forms, each needing a different response: counter it, dash through it, then keep moving through bomb patterns.
+   - Knobs: HP per form, speed, pattern density.
+
+## 8. Feel (v1)
+
+- **LOCKED**: a **geometric visual style** (simple shapes, strong colors, glows, very readable telegraphs), with a possible upgrade to pixel art later. Art is kept **separate from fight logic**, so a boss can be restyled without changing how it fights.
+- **DELEGATED**: hit feedback with a brief freeze on impact, a small screen shake, a flash on the boss when hit and a clear flash on the player when hurt.
+- **DELEGATED**: simple **sound effects generated in code** (hit, dash, telegraph cue), and **no music in v1**.
+- Each feedback effect and the sound can be switched off in settings.
+
+## 9. Stats (v1)
+
+**LOCKED as a starting point**, to be extended as the owner tests. The goal is to record as much information as possible.
+
+**Per fight**: boss and all parameter values (preset plus changes), date, attempt number, result, duration, phase reached, boss HP left, damage dealt and taken, the player's hit timeline, hit accuracy.
+
+**Per boss attack occurrence**: attack type, phase, timestamp, distance to the player, outcome (hit, dodged, countered), reaction time from the start of the telegraph, dodge timing margin (early or late, in ms), damage taken, and what the player was doing when hit.
+
+**Player behavior**: timestamped input log, counts per action, position over time, time spent at close, mid and far range, punish windows (opened, taken, missed, greedy attacks), heals if added.
+
+**Derived (computed afterwards)**: hit rate per attack across attempts, learning curve, fatigue over a session, death cause and phase distribution.
+
+**Storage and export**
+- Stats are stored on the device and exported as a file. **DEFAULT**: JSON with a documented, versioned schema. **OPEN**: whether CSV is needed too.
+- Browser storage can be cleared by Android, so export regularly.
+- Exports are git-ignored and never committed. Analysis is done together with Claude after each play session.
+
+## 10. Development and testing (DEFAULT, pending approval)
+
+- **Repo layout**: `src/engine` (loop, input, timing, collision, stats), `src/bosses` (data files), `src/game`, `src/ui`, `tests`, `docs`, and `public` (manifest, service worker).
+- **Fixed-timestep game loop** so timings are deterministic and measurable in milliseconds.
+- **Automated tests** on PC for the engine and boss data (schema validation, deterministic simulation of attack timelines), plus manual playtests.
+- **Early controller test** on the S21 with the 8BitDo in its different modes, and a documented button mapping.
+- **Tooling**: TypeScript strict mode, a minimal build tool and test runner, pinned dependencies, CI with an audit step.
+
+## 11. Milestones (DEFAULT, pending approval)
+
+- **M0**: repository, PWA skeleton, and a controller test screen running on the phone.
+- **M1**: player, arena, fixed loop and hit feedback.
+- **M2**: boss data format, Ember Duelist, counter mechanic and phase 2.
+- **M3**: menu (boss and difficulty, remembers last choice), summary screen, stats log and export.
+- **M4**: play on the phone and hold the first analysis session.
+- **M5**: next bosses, the security test, and a decision on an APK.
+
+## 12. Open points
+
+- Exact counter input and timing window.
+- Dash cooldown or stamina budget.
+- Preset names and values.
+- Controller button layout.
+- Final parameter list per boss (grows while building).
+- Stats export format details (JSON only, or also CSV).
+- Hosting and build tooling confirmation.
+- Player extras (healing, more moves) once bosses require them.

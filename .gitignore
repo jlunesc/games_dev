@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+
+# Exported stats and player data must never be committed (SPEC section 4, rule 6).
+# The export file naming is decided in M3; these patterns cover the likely names.
+stats/
+stats-export/
+exports/
+*.stats.json
+*.stats.csv
