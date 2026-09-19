@@ -104,18 +104,21 @@ export function mountControllerScreen(root: HTMLElement): void {
       { date: new Date().toISOString(), userAgent: navigator.userAgent },
       latest,
     );
-    navigator.clipboard.writeText(report).then(
-      () => {
-        fallback.hidden = true;
-        status.textContent = 'Report copied to the clipboard.';
-      },
-      () => {
-        fallback.value = report;
-        fallback.hidden = false;
-        fallback.select();
-        status.textContent = 'Clipboard unavailable. Select and copy the text below.';
-      },
-    );
+    // Promise.resolve().then(...) turns a synchronous throw (no navigator.clipboard) into a rejection too.
+    Promise.resolve()
+      .then(() => navigator.clipboard.writeText(report))
+      .then(
+        () => {
+          fallback.hidden = true;
+          status.textContent = 'Report copied to the clipboard.';
+        },
+        () => {
+          fallback.value = report;
+          fallback.hidden = false;
+          fallback.select();
+          status.textContent = 'Clipboard unavailable. Select and copy the text below.';
+        },
+      );
   });
 
   requestAnimationFrame(frame);
