@@ -31,7 +31,11 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => cache.addAll(FILES.map((f) => new URL(f, self.registration.scope).href)))
+      .then((cache) =>
+        cache.addAll(
+          FILES.map((f) => new Request(new URL(f, self.registration.scope).href, { cache: 'reload' })),
+        ),
+      )
       .then(() => self.skipWaiting()),
   );
 });

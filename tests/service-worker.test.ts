@@ -19,6 +19,11 @@ describe('buildServiceWorker', () => {
     expect(buildServiceWorker([...files, 'sw.js'], 'v')).not.toContain('"sw.js"');
   });
 
+  it('precaches with requests that bypass the HTTP cache', () => {
+    expect(source).toContain('new Request(');
+    expect(source).toContain("cache: 'reload'");
+  });
+
   it('is syntactically valid JavaScript', () => {
     expect(() => new Function(source)).not.toThrow();
   });
