@@ -5,11 +5,11 @@ export type InputRun = [frame: number, count: number];
 
 /**
  * Packs the part of an input frame that a fight uses: bits 0-1 hold the direction plus one, bit 2 jump held,
- * bit 3 jump pressed, bit 4 attack pressed, bit 5 dash pressed. Menu-only fields are not kept.
+ * bit 3 jump pressed, bit 4 attack pressed, bit 5 dash pressed. Menu-only fields are not kept. A NaN direction counts as none.
  */
 export function packFrame(frame: InputFrame): number {
   return (
-    (Math.sign(frame.moveX) + 1) |
+    ((Math.sign(frame.moveX) || 0) + 1) |
     (frame.jumpHeld ? 4 : 0) |
     (frame.jumpPressed ? 8 : 0) |
     (frame.attackPressed ? 16 : 0) |
@@ -17,9 +17,10 @@ export function packFrame(frame: InputFrame): number {
   );
 }
 
+/** The direction bits hold 0, 1 or 2 (left, none, right); the unused pattern 3 is read as right. */
 export function unpackFrame(packed: number): InputFrame {
   return {
-    moveX: (packed & 3) - 1,
+    moveX: Math.min(1, (packed & 3) - 1),
     moveY: 0,
     jumpHeld: (packed & 4) !== 0,
     jumpPressed: (packed & 8) !== 0,

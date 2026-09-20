@@ -36,7 +36,11 @@ describe('packing a frame', () => {
     }
   });
 
-  it('gives different numbers to different frames, and 0 to movement left with nothing pressed', () => {
+  it('gives different numbers to different frames, and stores the direction plus one', () => {
+    // Left is stored as 0, no direction as 1, right as 2.
+    expect(packFrame(withInput({ moveX: -1 }))).toBe(0);
+    expect(packFrame(NO_INPUT)).toBe(1);
+    expect(packFrame(withInput({ moveX: 1 }))).toBe(2);
     expect(packFrame(withInput({ moveX: -1 }))).not.toBe(packFrame(withInput({ moveX: 1 })));
     expect(packFrame(withInput({ dashPressed: true }))).not.toBe(packFrame(NO_INPUT));
     expect(unpackFrame(packFrame(NO_INPUT))).toEqual(NO_INPUT);
@@ -50,6 +54,21 @@ describe('packing a frame', () => {
   it('turns an analog stick value into its direction', () => {
     expect(unpackFrame(packFrame(withInput({ moveX: 0.7 }))).moveX).toBe(1);
     expect(unpackFrame(packFrame(withInput({ moveX: -0.2 }))).moveX).toBe(-1);
+  });
+
+  it('packs analog edge values by their sign, and NaN and -0 as no direction', () => {
+    const one = packFrame(withInput({ moveX: 1 }));
+    expect(packFrame(withInput({ moveX: 0.0001 }))).toBe(one);
+    expect(packFrame(withInput({ moveX: 0.7 }))).toBe(one);
+    expect(packFrame(withInput({ moveX: -0.0001 }))).toBe(packFrame(withInput({ moveX: -1 })));
+    expect(packFrame(withInput({ moveX: NaN }))).toBe(packFrame(NO_INPUT));
+    expect(packFrame(withInput({ moveX: -0 }))).toBe(packFrame(NO_INPUT));
+    expect(unpackFrame(packFrame(withInput({ moveX: NaN }))).moveX).toBe(0);
+  });
+
+  it('reads the unused direction pattern 3 as right, never as 2', () => {
+    expect(unpackFrame(3).moveX).toBe(1);
+    expect(unpackFrame(3 | 4 | 32).moveX).toBe(1);
   });
 });
 
@@ -84,6 +103,16 @@ describe('runs', () => {
       );
     }
     expect(decodeInputs(encodeInputs(frames)).map(fightPart)).toEqual(frames.map(fightPart));
+  });
+
+  it('countUpdates adds the counts over several runs', () => {
+    const runs: InputRun[] = [
+      [packFrame(NO_INPUT), 5],
+      [packFrame(withInput({ moveX: 1 })), 1],
+      [packFrame(NO_INPUT), 12],
+    ];
+    expect(countUpdates(runs)).toBe(18);
+    expect(countUpdates(decodeInputs(runs).length === 18 ? runs : [])).toBe(decodeInputs(runs).length);
   });
 
   it('an empty log is empty both ways', () => {
