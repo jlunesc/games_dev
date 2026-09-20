@@ -127,7 +127,8 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 **Derived (computed afterwards)**: hit rate per attack across attempts, learning curve, fatigue over a session, death cause and phase distribution.
 
 **Storage and export**
-- Stats are stored on the device and exported as a file. **LOCKED** (owner): an Export button opens the phone's share sheet or saves a file, never an upload. **DEFAULT**: JSON with a documented, versioned schema (`docs/stats.md`). Because the game is deterministic, each fight also stores its seed, the dials and the full input log, so it can be replayed exactly and any measurement recomputed later. **OPEN**: whether CSV is needed too.
+- Stats are stored on the device and exported as a file. **LOCKED** (owner): an Export button opens the phone's share sheet or saves a file, never an upload. **DEFAULT**: JSON with a documented, versioned schema (`docs/stats.md`). Because the game is deterministic, each fight also stores its seed, the dials and the full input log, so it can be replayed exactly and any measurement recomputed later. **OPEN**: whether CSV is needed too (it is not built).
+- **DELEGATED** (M3b detail, design in `docs/superpowers/specs/2026-09-20-m3b-design.md`): the export format is decided as JSON, documented in `docs/stats.md` (file `boss-trainer-YYYY-MM-DD.stats.json`, schema version 1). The stats are stored on the device in IndexedDB. Punish windows are measured as opened, taken and missed; "greedy" attacks are not measured yet and come when a boss can make them happen.
 - Browser storage can be cleared by Android, so export regularly.
 - Exports are git-ignored and never committed. Analysis is done together with Claude after each play session.
 
@@ -146,7 +147,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 - **M0**: repository, PWA skeleton, and a controller test screen running on the phone.
 - **M1**: player, arena, fixed loop and hit feedback, with a throwaway **training dummy** that can be hit and swings back after a visible warning (design in `docs/superpowers/specs/2026-09-20-m1-design.md`). The effect and sound on/off switches get their settings screen in M3 with the menu; in M1 everything is on.
 - **M2**: boss data format, Ember Duelist (replaces the M1 training dummy), counter mechanic, phase 2, and victory and restart (the summary screen comes in M3). Design in `docs/superpowers/specs/2026-09-20-m2-design.md`; ideas for later are in `docs/backlog.md`.
-- **M3**: menu (boss and difficulty, remembers last choice), summary screen, stats log and export, and the settings screen. Built in two steps: **M3a** the menu, difficulty dials and Tweak screen, summary screen and settings; **M3b** the stats recording, storage and export. Design in `docs/superpowers/specs/2026-09-20-m3-design.md`.
+- **M3**: menu (boss and difficulty, remembers last choice), summary screen, stats log and export, and the settings screen. Built in two steps: **M3a** the menu, difficulty dials and Tweak screen, summary screen and settings; **M3b** the stats recording, storage and export. Design in `docs/superpowers/specs/2026-09-20-m3-design.md`. M3b is built (recording, storage in IndexedDB and export as JSON; design in `docs/superpowers/specs/2026-09-20-m3b-design.md`, format in `docs/stats.md`); it still needs the play test on the phone (`docs/phone-testing.md`).
 - **M4**: play on the phone and hold the first analysis session.
 - **M5**: next bosses, the security test, and a decision on an APK.
 
@@ -154,5 +155,5 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 
 - Controller button layout: default proposed in section 5, to confirm after playtesting.
 - Final parameter list per boss (grows while building).
-- Stats export format details (JSON only, or also CSV).
+- Whether a CSV export is needed too (JSON is built, section 9).
 - Player extras (healing, more moves) once bosses require them.

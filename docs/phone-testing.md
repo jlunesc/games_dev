@@ -27,7 +27,7 @@ If the controller shows nothing, note which mode it was in and whether the page 
 
 ## Playing the fight and the menu (M2 and M3a)
 ### The menu
-Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Tweak difficulty**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
+Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Tweak difficulty**, **Stats**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
 
 How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty). On the Boss row they do nothing for now, because there is only one boss. The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
 
@@ -48,7 +48,7 @@ The last row, **Reset to preset**, puts every value back to the preset (Easy, No
 
 **Settings** switches four things on or off: **Hit freeze** (a tiny pause when a hit lands), **Screen shake**, **Flashes** (white and red flashes when something is hit) and **Sound**. They only change how a fight looks and sounds, and the fight rules stay the same. One honest catch: switching Hit freeze off does not change the rules, but you get slightly less time to react after a hit, so timing can feel different. Left, right or the bottom button switch one; the top button goes back.
 
-**The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time, the phase reached, the hits you took, the boss's health left, and the attack that hurt you most (if nothing hit you, it says "You were never hit."). The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident.
+**The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time, the phase reached, the hits you took, the boss's health left, and the attack that hurt you most (if nothing hit you, it says "You were never hit."). The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident. Under the lines, a last line says whether the fight was saved on the phone (see "Stats and export" below).
 
 ### The fight
 The installed app opens sideways (landscape) by itself. If it does not after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site. In a normal Chrome tab, turn the phone sideways yourself.
@@ -88,6 +88,40 @@ All of the Duelist's attacks are meant to be dodged from their warning (the arm 
 
 Send me your impressions in plain words: what feels too fast, too slow, too hard, too easy, unfair or boring. Every number is tunable, so "the slam is too quick" is enough.
 
+## Stats and export (M3b)
+### What is recorded
+The game now keeps a record of every fight you play: which boss and difficulty, and the exact buttons you pressed on every step of the fight. From that the game works out the numbers we will study together: how long you took to react to each attack, whether you dodged, got hit or countered, how you moved, and whether you punished the boss after its attacks. A finished fight (a win or a loss) and a fight you leave after it started are saved by themselves, and the summary ends with "Fight saved (3 on this device)." (the number is how many fights are saved). A fight you leave before it started is not saved.
+
+Everything stays **on the phone**. Nothing is uploaded anywhere: the file only goes where you send it. The details of the file are in `docs/stats.md`.
+
+### The Stats screen
+In the menu, the **Stats** row sits between **Tweak difficulty** and **Settings**. It shows when you last exported ("Last export: never." at first) and a reminder that Android can clear browser data, so export now and then. It has three rows:
+- **Export**: shows how many fights are saved. It packs them into one file (its name ends in `.stats.json`, for example `boss-trainer-2026-09-21.stats.json`) and hands it to the phone.
+- **Delete all fights**: asks twice. The first press changes the row to "Really delete all fights? Press again.", the second press deletes. Moving to another row cancels it. Export first.
+- **Back**: return to the menu.
+
+### How to export and send
+1. Play some fights, then open **Stats** in the menu.
+2. **Tap Export with your finger** (do not press it with the controller). The phone's share sheet may not accept a controller button press, so if you press it with the controller the file may only download to the phone instead of opening the share sheet.
+3. In the share sheet, choose where to send the file: for example save it to Drive, or send it to yourself in a chat or email. If the phone downloaded it instead, the screen says "File saved to your downloads." and the file is in the Downloads folder.
+4. Send the file to me for the analysis, the way that is easiest for you.
+5. After a good export the screen says "Sent." (share sheet) or "File saved to your downloads.", and "Last export" shows the date. That date is in UTC, so around midnight it can be a day off from your local date.
+
+Android can clear a browser's data by itself (for example when the phone is short of space), and that would delete the saved fights. So export now and then, and always before you delete anything. Exporting does not remove the fights from the phone; they stay until you use Delete.
+
+### Checklist
+- [ ] After a win, a loss and after leaving in the middle of a fight, the summary's last line says "Fight saved (n on this device)." with n going up by one each time.
+- [ ] A fight left before it started is not saved. This is hard to do on purpose (holding the top button takes about a second, and the fight is already running by then), so skip it if you cannot. One way: start a fight and switch the controller off at once, then tap the "No usable controller" message (if a moment of the fight already ran, it will be saved as a left fight, which is also fine). You should land in the menu and the count should not go up.
+- [ ] The Stats row is between Tweak difficulty and Settings, and the number next to Export matches the fights you played.
+- [ ] Tapping Export opens the phone's share sheet (or, if the phone cannot, downloads a file). Note which one happened.
+- [ ] Pressing Export with the controller instead of a finger: note what happens (share sheet, only a download, or nothing).
+- [ ] The file's name ends in `.stats.json`.
+- [ ] After a successful export, "Last export" shows today's date.
+- [ ] Delete asks twice, and afterwards the count is 0 and the screen says "All fights deleted." (Export first if you want to keep the fights.)
+- [ ] Close the app fully and open it again: the fights are still there (the count on the Stats screen is the same).
+- [ ] The game still plays normally with airplane mode on, and fights are still saved offline.
+- [ ] Nothing pauses or stutters when a fight ends and is saved.
+
 ## Things I would like to know
 After playing, answer these in plain words:
 - Does the counter feel too easy or too hard? Note that it can also be triggered by mashing attack, and by a swing that faces away from the boss (the game only checks that you are close and press attack in the window).
@@ -98,3 +132,5 @@ After playing, answer these in plain words:
 - Do the Easy and Hard presets feel right, or should some values change?
 - Does Hard feel like a step up from Normal, or like a wall (several values change at once)? Is 3 damage (two mistakes end the fight) too harsh?
 - Was anything in the menu confusing?
+- Did the phone offer the share sheet when you tapped Export, and did the file reach where you wanted it? What happened when you pressed Export with the controller?
+- Did saving a fight at the end cause any pause, even a small one?
