@@ -15,7 +15,7 @@ A PWA can only be installed over HTTPS, so test the phone from the deployed GitH
 
 ## Controller check (repeat for every controller mode)
 Pair the 8BitDo in Android Bluetooth settings. Check the controller's manual for how to switch modes; each mode may report buttons differently.
-1. Open the app, press any button on the controller so it wakes up, then tap "Controller test" (or press the top button). A "Gamepad" panel appears. Use the Back button at the top to return.
+1. Open the app, press any button on the controller so it wakes up, then choose "Controller test" in the menu (move down to it and press the bottom button, or tap it). A "Gamepad" panel appears. Use the Back button at the top to return.
 2. Press every button once and move each stick and trigger through its full range.
 3. Tap **Copy report** and paste the text into the chat with Claude. Note which 8BitDo mode it was in. Tapping Copy report with a finger is fine: the report remembers every button you pressed ("ever pressed") and each stick's range, so you do not need to hold anything.
 4. Repeat for each mode. The button layout decision (SPEC section 5) will use these reports.
@@ -25,10 +25,33 @@ If the controller shows nothing, note which mode it was in and whether the page 
 ## On the PC
 `npm run dev`, open http://localhost:5173, plug in or pair the PC controller, and follow the controller check above. Reports from different controllers are expected to differ.
 
-## Playing the fight (M2)
-The installed app opens sideways (landscape) by itself. If it does not after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site. In a normal Chrome tab, turn the phone sideways yourself.
+## Playing the fight and the menu (M2 and M3a)
+### The menu
+Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Tweak difficulty**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
 
-Open the app with the controller connected. The start screen shows which controller it found. Press the bottom button (or tap "Fight the Ember Duelist") to start. During a fight, hold the top button for about a second to return to the start screen, where you can also open the controller test. If the start screen says "No controller detected", press any button on the controller so the phone notices it.
+How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
+
+The menu remembers your last choices (boss, difficulty and any tweaks), even after you close the app. It opens with Fight highlighted, so pressing the bottom button twice starts the same fight as last time.
+
+**Difficulty** has three names: **Easy**, **Normal** and **Hard**. Left and right switch between them. Normal is the fight as designed. Easy gives longer warnings, slower and less frequent attacks, less boss health and fewer kinds of attack. Hard does the opposite, and each attack that hits you costs 2 hits instead of 1. If you change any value in the Tweak screen, the menu shows **Custom (from Normal)**, or from whichever name you started with.
+
+**Tweak difficulty** lets you change the fight one value at a time. Up and down pick a value, left and right change it, and the top button goes back to the menu. There are seven values:
+- **Speed**: how fast the boss moves and how soon it recovers after an attack.
+- **Attack frequency**: how often it attacks (higher means shorter pauses).
+- **Warning length**: how long you get to read an attack before it lands (lower is harder).
+- **Boss health**: how much it takes to beat it.
+- **Damage**: how many of your hits each attack costs.
+- **Attack range**: how far the attacks reach and how far away the boss starts them.
+- **Variety**: how many different attacks it uses (lower means fewer kinds).
+
+The last row, **Reset to preset**, puts every value back to the Easy, Normal or Hard you started from. Choosing a different name in the Difficulty row also starts again from that name's values.
+
+**Settings** switches four things on or off: Hit freeze, Screen shake, Flashes and Sound. They only change how a fight looks and sounds; the fight itself plays exactly the same. Left, right or the bottom button switch one; the top button goes back.
+
+**The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time, the phase reached, the hits you took, the boss's health left, and the attack that hurt you most. The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident.
+
+### The fight
+The installed app opens sideways (landscape) by itself. If it does not after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site. In a normal Chrome tab, turn the phone sideways yourself.
 
 Controls: left stick or d-pad to move, bottom button to jump (hold it for a higher jump), left button to attack, right shoulder to dash.
 
@@ -44,12 +67,21 @@ Try each of these and note anything that feels off:
 - [ ] Getting hit: red flash, a short freeze, blinking for about a second. Five hits and you are defeated.
 - [ ] Phase 2 at about two thirds of its health: it powers up (white glow, cannot be hurt). After that it attacks more often with less pause, walks faster, and sometimes does two attacks in a row. It always opens phase 2 with the ground burst (arm pointing down, red glow): a low shockwave that travels along the floor away from it. Jump over it.
 - [ ] In a two-attack chain, the second attack still shows its full warning (pose and glow), and it can start a little late while the boss walks into range first.
-- [ ] Beating it shows "Victory" and a new fight starts; losing shows "Defeated" and a new fight starts.
+- [ ] Beating it shows "Victory" on the screen for a moment and then the summary; losing shows "Defeated" and then the summary. No new fight starts by itself.
 - [ ] Fights are not identical: the order of attacks differs from fight to fight.
 - [ ] Sounds play for hits, dashes and the Duelist's warnings. Sound needs one tap on the screen after the app starts. If you started the fight with the controller and there is no sound, tap the screen once (it should then work from the next hit).
-- [ ] Turn the controller off in the middle of a fight. The game pauses and says so. Turn it on and press the bottom, left or dash button to continue (holding the top button for about a second goes back to the start screen).
-- [ ] Tapping the top button during a fight does nothing; holding it for about a second shows 'Keep holding to leave the fight…' and then returns to the start screen.
+- [ ] Turn the controller off in the middle of a fight. The game pauses and says so. Turn it on and press the bottom, left or dash button to continue (holding the top button for about a second, or tapping the "No usable controller" message, leaves the fight and shows the summary).
+- [ ] Tapping the top button during a fight does nothing; holding it for about a second shows 'Keep holding to leave the fight…' and then leaves the fight and shows the summary ("You left the fight").
 - [ ] Pressing several buttons at once (for example moving while jumping and attacking) works, and fast repeated taps are not lost.
+
+The menu and the summary (M3a):
+- [ ] The menu opens with Fight highlighted; up and down move the highlight and it wraps around.
+- [ ] Left and right on Difficulty switch between Easy, Normal and Hard. Easy feels clearly easier (longer warnings, slower and less frequent attacks, less boss health) and Hard clearly harder.
+- [ ] In Tweak, each dial changes with left and right, the menu then shows "Custom (from ...)", "Reset to preset" puts it back, and your choice is still there after closing and reopening the app.
+- [ ] In Settings, switching off Hit freeze, Screen shake, Flashes or Sound removes exactly that effect in a fight, and the fight itself plays the same.
+- [ ] After a win, a loss, and after leaving with the top button, the summary appears with time, phase reached, hits taken, boss health left, and the attack that hurt you most; the bottom button returns to the menu.
+- [ ] The menu no longer shows button names on the buttons.
+- [ ] Tapping the rows with a finger works too.
 
 All of the Duelist's attacks are meant to be dodged from their warning (the arm pose and the glow), not reacted to after they start: jump or dash during the warning. If you feel you "could not dodge in time", tell me, that is useful to know and the timing can be tuned.
 
@@ -59,5 +91,8 @@ Send me your impressions in plain words: what feels too fast, too slow, too hard
 After playing, answer these in plain words:
 - Does the counter feel too easy or too hard? Note that it can also be triggered by mashing attack, and by a swing that faces away from the boss (the game only checks that you are close and press attack in the window).
 - Is the fight too short or too long?
-- Is the Victory / Defeated message too quick? It shows for 1 second before the next fight starts.
+- Is the Victory / Defeated message too quick? It shows for 1 second before the summary appears.
 - Would a sign of when the counter window opens help (for example a flash on the boss)?
+- Which of the seven dials matters most for how hard the fight feels?
+- Do the Easy and Hard presets feel right, or should some values change?
+- Was anything in the menu confusing?

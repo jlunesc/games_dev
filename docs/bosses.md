@@ -1,6 +1,6 @@
 # Boss files
 
-How a boss is described, and how to add or tune one. Everything here matches `src/bosses/schema.ts` (the types and their doc comments), `src/bosses/parse.ts` (the checks), `src/game/boss.ts` (the boss's movement and choices) and `src/game/step.ts` (the counter, damage and phase change). If you change any of those, update this file and `tests/boss-parse.test.ts`.
+How a boss is described, and how to add or tune one. Everything here matches `src/bosses/schema.ts` (the types and their doc comments), `src/bosses/parse.ts` (the checks), `src/game/boss.ts` (the boss's movement and choices) and `src/game/step.ts` (the counter, damage and phase change) and `src/game/difficulty.ts` (the difficulty dials, section 5). If you change any of those, update this file and `tests/boss-parse.test.ts`.
 
 Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second), distances are in world units (the arena is 1280 wide, the floor is at y = 640; the player is 48 wide and 96 tall), speeds are units per second.
 
@@ -20,9 +20,9 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 
 ### Adding a boss
 1. Create `src/bosses/<id>.json` with every field below (copy `ember-duelist.json` as a starting point).
-2. Load and export it in `src/bosses/index.ts` the same way as the Duelist, with its own import name: `import rawNext from './next-boss.json'; export const NEXT_BOSS = parseBoss(rawNext);`.
+2. Load and export it in `src/bosses/index.ts` the same way as the Duelist, with its own import name: `import rawNext from './next-boss.json'; export const NEXT_BOSS = parseBoss(rawNext);`, and add it to the `BOSSES` list in that file (the menu offers the bosses in that order).
 3. Add tests: the real file is accepted and has the shape you planned; and behavior tests for anything new about it. `tests/boss-parse.test.ts` (checker) and `tests/step-boss.test.ts`, `tests/step-counter.test.ts`, `tests/step-phases.test.ts` (behavior, with helpers in `tests/boss-helpers.ts` and `tests/helpers.ts`) show the pattern.
-4. The app currently starts the Ember Duelist directly (`src/ui/app.ts`). Choosing between several bosses is the menu of milestone M3 (see `docs/SPEC.md`), which needs its own design.
+4. The menu's Boss row (`src/ui/menu-model.ts`) steps through `BOSSES`, so a boss in that list can be chosen from the menu with no other change. With one boss in the list the row has nothing to switch to.
 5. Drawing is separate from the boss file. The body colors, the arm poses and the glow live in `src/ui/render.ts`; a boss file only chooses one of the existing poses.
 
 ## 2. Every field
@@ -123,7 +123,7 @@ The boss is always in one of five modes (`BossState.mode` in `src/game/state.ts`
 
 **Chaining:** when it commits to an attack (at the end of `gap`, and for an `opening`), it rolls once against `chainChance`. If the roll succeeds it will perform `maxChain` attacks in total: after the attack's recovery it chooses the next attack the same way but skips the `gap` (it still walks into range and still shows the full wind-up). With `maxChain` 1 nothing ever chains. A counter or a phase change cancels the rest of a chain.
 
-**The phase change:** it is checked when the player's hit lands. If health is at or below `maxHp * startsAtHpFraction` of the *next* phase, the boss immediately drops whatever it was doing (the attack in progress does not finish) and goes to `transition` (event `phaseChange`). One phase change per hit: if one hit (for example a double-damage hit) falls below two thresholds, the second phase change happens on the next hit. At 0 health the fight is won instead ("Victory", then a new fight starts 60 updates later).
+**The phase change:** it is checked when the player's hit lands. If health is at or below `maxHp * startsAtHpFraction` of the *next* phase, the boss immediately drops whatever it was doing (the attack in progress does not finish) and goes to `transition` (event `phaseChange`). One phase change per hit: if one hit (for example a double-damage hit) falls below two thresholds, the second phase change happens on the next hit. At 0 health the fight is won instead ("Victory"; the game itself would start a new fight 60 updates later, but the app shows the summary screen at that point and the next fight starts from the menu).
 
 **The player's side** (`src/game/params.ts`): 5 health, hit blinking for 60 updates, a dash of 11 updates that is untouchable for its whole length, a jump that rises roughly 150 units when the button is held.
 
@@ -154,13 +154,33 @@ All times are in updates (60 = 1 second); speeds are units per second.
 | `startsAtHpFraction` | Moves the phase change. | Must stay lower than the previous phase's; the first phase is always 1. |
 | A shorter `transitionTicks` | A shorter breather. | It is also the only time the boss cannot be hit. |
 
+A boss file must still make sense at the extremes of the difficulty dials (section 5): `tests/difficulty.test.ts` applies every dial at both ends of its range, all of them low, all of them high, and many random mixes, and each result must still pass `parseBoss`. A boss that only works at its written values fails there, so read that failure when adding or changing a boss.
+
 After any change: run `npm test` (the checker and the behavior tests read the real file, so many mistakes show up there), then play the fight on the PC and the phone and use the list in `docs/phone-testing.md`.
 
-## 5. Ideas not built yet
+## 5. Difficulty dials
+
+The difficulty presets (Easy, Normal, Hard) and the Tweak screen in the menu do not change the boss file. They adjust a copy of the boss through `applyDials` in `src/game/difficulty.ts`, once at the start of each fight, and the boss file on disk (and `BOSSES`) is never modified. The adjusted copy is run through `parseBoss` again, so a dial can never produce a boss the game cannot run: if a dial and a boss file do not fit, that throws the same kind of `BossFormatError`. A dial value of 1 (damage 1 hit) leaves the boss as written; Normal is all ones.
+
+There are seven dials. Each is a multiplier on numbers in the boss file (damage counts whole hits):
+
+| Dial | Range | What it changes in the boss file |
+|---|---|---|
+| `speed` | 0.7 to 1.4 | Faster: each phase's `walkSpeed` and `retreatSpeed`, each attack's `move.speed` are multiplied; each attack's `recovery` is divided by it (rounded), so it also recovers sooner. |
+| `frequency` | 0.5 to 2 | Each phase's `gap` is divided by it (rounded, never below 0): higher means shorter pauses. It does not touch chaining. |
+| `readability` | 0.6 to 1.6 | Each attack's `windup` is multiplied (rounded). The `from` and `to` of its `hits` and of its `move` shift by the same number of updates, so they stay inside the active part. A `counterable` attack never gets a `windup` below `counter.window` (any other attack, never below 1). Lower is harder. |
+| `health` | 0.5 to 2 | `maxHp` is multiplied (rounded, at least 1). The phase thresholds are fractions, so they scale with it. |
+| `damage` | 1 to 3 | Each attack's `damage` is multiplied (at least 1). It is a whole number of hits: 1, 2 or 3. |
+| `range` | 0.8 to 1.2 | Each attack's `range.min` and `range.max`, and each hit window's `x0` and `x1`, are multiplied: attacks reach farther and start from farther away. `spacing`, `counter.range` and `top`/`bottom` are not changed. |
+| `variety` | 0.5 to 1 | Each phase keeps only that fraction of its `attacks` (rounded, at least 1): the ones with the highest `weight` (ties keep list order), in their original order. An `opening` attack is not filtered. |
+
+The ranges, the steps the Tweak screen moves in, and the values of the three presets are all in `src/game/difficulty.ts` (`DIALS` and `PRESETS`); change them there. Adding a dial means a new entry in `DIALS`, its effect in `applyDials` and a test. Player and environment dials are not built yet (`docs/backlog.md`).
+
+## 6. Ideas not built yet
 
 Recorded in `docs/backlog.md`, not part of the format today:
 - **Ranges instead of single numbers** (for example a `gap` that varies a little on each fight), using the seeded random generator so a fight stays replayable.
 - **An arena section** for hazards with their own timing (falling objects, moving hazards).
 - Playable character types.
 
-More bosses and the menu to choose between them are not in the backlog: the menu is milestone M3 in `docs/SPEC.md`.
+More bosses are not in the backlog: they are a later milestone in `docs/SPEC.md`.
