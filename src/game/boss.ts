@@ -171,6 +171,32 @@ function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   if (b.attackTick >= attackLength(attack)) finishAttack(s, boss, phase);
 }
 
+/** After the powering-up pause the boss opens with the new phase's opening attack, if it has one. */
+function finishTransition(s: GameState, phase: PhaseDef): void {
+  const b = s.boss;
+  if (phase.opening !== undefined) {
+    b.pendingAttackId = phase.opening;
+    b.chainLeft = planChain(s, phase);
+    b.mode = 'approach';
+    b.modeTick = 0;
+  } else {
+    enterGap(b);
+  }
+}
+
+/** The boss moves on to the next phase: it drops what it was doing and powers up, unhurtable. */
+export function beginTransition(s: GameState): void {
+  const b = s.boss;
+  b.phase += 1;
+  b.mode = 'transition';
+  b.modeTick = 0;
+  b.attackId = null;
+  b.attackTick = 0;
+  b.pendingAttackId = null;
+  b.chainLeft = 0;
+  s.events.push('phaseChange');
+}
+
 /** Moves the boss one update. Mutates the (already cloned) state. */
 export function updateBoss(s: GameState, boss: BossDef): void {
   const b = s.boss;
@@ -190,8 +216,8 @@ export function updateBoss(s: GameState, boss: BossDef): void {
     case 'stagger':
       if (b.modeTick >= boss.counter.staggerTicks) enterGap(b);
       break;
-    default:
-      // Transition is added in a later task.
+    case 'transition':
+      if (b.modeTick >= boss.transitionTicks) finishTransition(s, phase);
       break;
   }
 }

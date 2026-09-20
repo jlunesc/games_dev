@@ -1,7 +1,7 @@
 import type { BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { DT } from '../engine/time';
-import { attackById, updateBoss } from './boss';
+import { attackById, beginTransition, updateBoss } from './boss';
 import {
   activeHitBoxes,
   attackActive,
@@ -138,15 +138,23 @@ function tryCounter(s: GameState, boss: BossDef): void {
   s.events.push('counter');
 }
 
-/** The player's swing hurts the boss once per swing. */
+/** The player's swing hurts the boss once per swing. It ends the fight at 0 health and can start the next phase. */
 function resolvePlayerAttack(s: GameState, boss: BossDef): void {
   const { player: p, boss: b } = s;
-  if (attackActive(p) && !p.attackConnected && overlaps(attackBox(p), bossBox(b, boss))) {
-    p.attackConnected = true;
-    const damage = b.mode === 'stagger' ? boss.counter.damageMultiplier : 1;
-    b.hp = Math.max(0, b.hp - damage);
-    s.events.push('bossHit');
+  if (b.mode === 'transition') return;
+  if (!attackActive(p) || p.attackConnected || !overlaps(attackBox(p), bossBox(b, boss))) return;
+  p.attackConnected = true;
+  const damage = b.mode === 'stagger' ? boss.counter.damageMultiplier : 1;
+  b.hp = Math.max(0, b.hp - damage);
+  s.events.push('bossHit');
+  if (b.hp <= 0) {
+    s.phase = 'victory';
+    s.endTicks = GAME.defeatRestartTicks;
+    s.events.push('bossDefeated');
+    return;
   }
+  const next = boss.phases[b.phase + 1];
+  if (next !== undefined && b.hp <= boss.maxHp * next.startsAtHpFraction) beginTransition(s);
 }
 
 /** The boss's active hit boxes hurt a player who is not untouchable. */
@@ -176,6 +184,7 @@ export function step(prev: GameState, input: InputFrame, boss: BossDef): GameSta
   updateBoss(s, boss);
   tryCounter(s, boss);
   resolvePlayerAttack(s, boss);
+  if (s.phase !== 'fight') return s;
   resolveBossHits(s, boss);
   return s;
 }
