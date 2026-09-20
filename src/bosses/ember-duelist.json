@@ -1,0 +1,98 @@
+{
+  "id": "ember-duelist",
+  "name": "Ember Duelist",
+  "width": 80,
+  "height": 150,
+  "startX": 960,
+  "maxHp": 30,
+  "spacing": { "min": 200, "max": 320 },
+  "approachTimeout": 180,
+  "predictability": 0.25,
+  "counter": { "window": 12, "range": 200, "staggerTicks": 90, "damageMultiplier": 2 },
+  "transitionTicks": 60,
+  "attacks": [
+    {
+      "id": "slam",
+      "name": "Ember slam",
+      "pose": "raised",
+      "class": "counterable",
+      "windup": 30,
+      "active": 6,
+      "recovery": 30,
+      "range": { "min": 90, "max": 140 },
+      "hits": [{ "from": 30, "to": 36, "x0": 40, "x1": 150, "bottom": 0, "top": 180 }]
+    },
+    {
+      "id": "sweep",
+      "name": "Low sweep",
+      "pose": "sideways",
+      "class": "mustDodge",
+      "windup": 24,
+      "active": 8,
+      "recovery": 24,
+      "range": { "min": 110, "max": 200 },
+      "hits": [{ "from": 24, "to": 32, "x0": 40, "x1": 250, "bottom": 0, "top": 100 }]
+    },
+    {
+      "id": "lunge",
+      "name": "Lunge",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 30,
+      "active": 10,
+      "recovery": 36,
+      "range": { "min": 220, "max": 320 },
+      "move": { "from": 30, "to": 40, "speed": 1500 },
+      "hits": [{ "from": 30, "to": 40, "x0": 0, "x1": 90, "bottom": 0, "top": 150 }]
+    },
+    {
+      "id": "burst",
+      "name": "Ground burst",
+      "pose": "down",
+      "class": "mustDodge",
+      "windup": 30,
+      "active": 20,
+      "recovery": 30,
+      "range": { "min": 150, "max": 350 },
+      "hits": [
+        { "from": 30, "to": 34, "x0": 40, "x1": 140, "bottom": 0, "top": 50 },
+        { "from": 34, "to": 38, "x0": 140, "x1": 240, "bottom": 0, "top": 50 },
+        { "from": 38, "to": 42, "x0": 240, "x1": 340, "bottom": 0, "top": 50 },
+        { "from": 42, "to": 46, "x0": 340, "x1": 440, "bottom": 0, "top": 50 },
+        { "from": 46, "to": 50, "x0": 440, "x1": 540, "bottom": 0, "top": 50 }
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "name": "Phase 1",
+      "startsAtHpFraction": 1,
+      "attacks": [
+        { "id": "slam", "weight": 3 },
+        { "id": "sweep", "weight": 3 },
+        { "id": "lunge", "weight": 2 }
+      ],
+      "gap": 70,
+      "maxChain": 1,
+      "chainChance": 0,
+      "walkSpeed": 190,
+      "retreatSpeed": 150
+    },
+    {
+      "name": "Phase 2",
+      "startsAtHpFraction": 0.66,
+      "attacks": [
+        { "id": "slam", "weight": 2 },
+        { "id": "sweep", "weight": 2 },
+        { "id": "lunge", "weight": 2 },
+        { "id": "burst", "weight": 3 }
+      ],
+      "opening": "burst",
+      "gap": 40,
+      "maxChain": 2,
+      "chainChance": 0.5,
+      "walkSpeed": 240,
+      "retreatSpeed": 190
+    }
+  ]
+}
