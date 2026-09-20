@@ -32,7 +32,7 @@ export interface MenuRow {
   value?: string;
 }
 
-/** The menu opens with Fight focused, so two presses of the bottom button start the same fight again. */
+/** The menu opens with Fight focused, so one press of the bottom button starts the same fight again. */
 export const createMenu = (prefs: Prefs): MenuModel => ({ focus: 0, prefs });
 
 /** The preset name, or `Custom (from <preset>)` once the dials differ from it. */
