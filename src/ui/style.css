@@ -183,6 +183,11 @@ textarea {
   text-align: center;
 }
 
+.leave {
+  top: 1.5rem;
+  bottom: auto;
+}
+
 body {
   overscroll-behavior: none;
 }

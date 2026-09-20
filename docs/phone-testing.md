@@ -28,7 +28,7 @@ If the controller shows nothing, note which mode it was in and whether the page 
 ## Playing the fight (M1)
 The installed app opens sideways (landscape) by itself. If it does not after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site. In a normal Chrome tab, turn the phone sideways yourself.
 
-Open the app with the controller connected. The start screen shows which controller it found. Press the bottom button (or tap "Fight the dummy") to start. During a fight, the top button returns to the start screen, where you can also open the controller test. If the start screen says "No controller detected", press any button on the controller so the phone notices it.
+Open the app with the controller connected. The start screen shows which controller it found. Press the bottom button (or tap "Fight the dummy") to start. During a fight, hold the top button for about a second to return to the start screen, where you can also open the controller test. If the start screen says "No controller detected", press any button on the controller so the phone notices it.
 
 Controls: left stick or d-pad to move, bottom button to jump (hold it for a higher jump), left button to attack, right shoulder to dash.
 
@@ -40,7 +40,8 @@ Try each of these and note anything that feels off:
 - [ ] The dummy changes color and pulls back as a warning, then sweeps low along the floor. You can jump over it or dash through it.
 - [ ] Getting hit: red flash, a short freeze, blinking for about a second. Five hits end the round and the arena restarts by itself.
 - [ ] Sounds play for hits, dashes and the dummy's warning. Sound needs one tap on the screen after the app starts. If you started the fight with the controller and there is no sound, tap the screen once (it should then work from the next hit).
-- [ ] Turn the controller off in the middle of a fight. The game pauses and says so. Turn it on and press the bottom, left or dash button to continue (the top button goes back to the start screen).
+- [ ] Turn the controller off in the middle of a fight. The game pauses and says so. Turn it on and press the bottom, left or dash button to continue (holding the top button for about a second goes back to the start screen).
+- [ ] Tapping the top button during a fight does nothing; holding it for about a second shows 'Keep holding to leave the fight…' and then returns to the start screen.
 - [ ] Pressing several buttons at once (for example moving while jumping and attacking) works, and fast repeated taps are not lost.
 
 The dummy's sweep is meant to be dodged from its warning (the color change and pull-back), not reacted to after it starts: jump or dash during the warning. If you feel you "could not dodge in time", tell me, that is useful to know and the timing can be tuned.

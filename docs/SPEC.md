@@ -58,6 +58,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 - **LOCKED**: the dash is limited by a **short fixed cooldown** (no stamina budget for now). **DEFAULT**: about 0.4 seconds, counted from the end of the dash, as a tunable value. A stamina budget can come later as a boss or difficulty setting.
 - **OPEN**: how the player counters a counterable attack (for example an attack press timed inside a flash window).
 - **DEFAULT**: if a controller disconnects mid-fight, the game pauses and shows a message; play continues after reconnecting and pressing a button. If a controller reports a non-standard layout and has no profile, the game says so and shows the controller's name instead of guessing buttons.
+- **DEFAULT**: leaving a fight on purpose needs the top button **held for about 1 second** (tunable), so an accidental tap cannot end a round.
 
 ## 6. Fight rules and flow (LOCKED)
 

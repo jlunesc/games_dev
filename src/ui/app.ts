@@ -13,6 +13,7 @@ import {
   type HeldButtons,
   type ProfileSelection,
 } from '../engine/input-profile';
+import { advanceHold } from '../engine/hold';
 import { planUpdates } from '../engine/loop';
 import { GAME } from '../game/params';
 import { step } from '../game/step';
@@ -58,7 +59,9 @@ export function mountApp(root: HTMLElement): void {
   const panel = el('div', 'panel');
   const banner = el('p', 'banner');
   banner.hidden = true;
-  root.replaceChildren(canvas, panel, banner);
+  const leaveHint = el('p', 'banner leave', 'Keep holding to leave the fight…');
+  leaveHint.hidden = true;
+  root.replaceChildren(canvas, panel, banner, leaveHint);
 
   const sound = createSound();
   // A phone only counts some events as a tap for sound: touch needs pointerup or click, not just pointerdown.
@@ -79,6 +82,8 @@ export function mountApp(root: HTMLElement): void {
   let padSeen = false;
   let lastTime = performance.now();
   let paused = false;
+  // How long the top button has been held during a fight (leaving needs GAME.exitHoldMs).
+  let exitHoldMs = 0;
   let stopTest: (() => void) | null = null;
   let statusLine = el('p', 'status');
   let fightButton = el('button', 'action', 'Fight the dummy');
@@ -90,6 +95,8 @@ export function mountApp(root: HTMLElement): void {
 
   function showStart(): void {
     screen = 'start';
+    exitHoldMs = 0;
+    leaveHint.hidden = true;
     canvas.hidden = true;
     panel.hidden = false;
     setBanner(null);
@@ -103,7 +110,7 @@ export function mountApp(root: HTMLElement): void {
     testButton.addEventListener('click', showTest);
     panel.replaceChildren(
       el('h1', undefined, 'Boss Trainer'),
-      el('p', 'hint', 'During a fight, the top button returns to this screen.'),
+      el('p', 'hint', 'During a fight, hold the top button for a second to return to this screen.'),
       fightButton,
       testButton,
       statusLine,
@@ -112,6 +119,8 @@ export function mountApp(root: HTMLElement): void {
 
   function showTest(): void {
     screen = 'test';
+    exitHoldMs = 0;
+    leaveHint.hidden = true;
     canvas.hidden = true;
     panel.hidden = false;
     setBanner(null);
@@ -124,6 +133,8 @@ export function mountApp(root: HTMLElement): void {
 
   function startFight(): void {
     screen = 'fight';
+    exitHoldMs = 0;
+    leaveHint.hidden = true;
     state = createInitialState();
     feedback = NO_FEEDBACK;
     leftoverMs = 0;
@@ -156,12 +167,17 @@ export function mountApp(root: HTMLElement): void {
   function runFight(now: number, selection: ProfileSelection | null, input: InputFrame): void {
     if (selection?.kind !== 'profile') {
       paused = true;
+      exitHoldMs = 0;
+      leaveHint.hidden = true;
       setBanner('No usable controller. Reconnect it and press a button (or tap here to go back).');
       lastTime = now;
       draw(0);
       return;
     }
-    if (input.alt) {
+    const hold = advanceHold(exitHoldMs, held.alt, now - lastTime, GAME.exitHoldMs);
+    exitHoldMs = hold.heldMs;
+    leaveHint.hidden = exitHoldMs === 0;
+    if (hold.done) {
       showStart();
       return;
     }
