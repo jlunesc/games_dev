@@ -22,7 +22,7 @@ export interface Prefs {
 export const DEFAULT_PREFS: Prefs = {
   bossId: EMBER_DUELIST.id,
   presetId: 'normal',
-  dials: NORMAL_DIALS,
+  dials: { ...NORMAL_DIALS },
 };
 
 const KEY = 'boss-trainer.prefs';

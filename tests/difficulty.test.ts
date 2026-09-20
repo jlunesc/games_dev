@@ -142,10 +142,10 @@ describe('applyDials', () => {
 
   it('readability never shortens a counterable warning below the counter window', () => {
     const wide: BossDef = { ...DUELIST, counter: { ...DUELIST.counter, window: 25 } };
-    const hard = applyDials(wide, only({ readability: 0.6 }));
+    const hard = applyDials(wide, only({ readability: 0.7 }));
     expect(hard.attacks.find((a) => a.id === 'slam')!.windup).toBe(25);
     expect(hard.attacks.find((a) => a.id === 'sweep')!.windup).toBe(
-      Math.round(DUELIST.attacks.find((a) => a.id === 'sweep')!.windup * 0.6),
+      Math.round(DUELIST.attacks.find((a) => a.id === 'sweep')!.windup * 0.7),
     );
   });
 

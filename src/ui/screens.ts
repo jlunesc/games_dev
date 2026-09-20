@@ -28,11 +28,12 @@ export function renderList(
     button.addEventListener('click', () => onPick(index));
     list.append(button);
   });
+  const help = rows[focus]?.help;
   panel.replaceChildren(
     el('h1', undefined, title),
     el('p', 'hint', hint),
     list,
-    el('p', 'help', rows[focus]?.help ?? ''),
+    ...(help === undefined || help === '' ? [] : [el('p', 'help', help)]),
     ...footer,
   );
   // With a controller only the focus moves: keep the focused row on screen.

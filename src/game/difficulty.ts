@@ -44,7 +44,8 @@ export const DIALS: readonly DialDef[] = [
     id: 'readability',
     label: 'Warning length',
     help: 'How long you get to read an attack before it lands. Lower is harder.',
-    min: 0.6,
+    // The floor is 0.7 because at 0.6 the sweep's warning is 233 ms, which cannot be reacted to (measured with bots).
+    min: 0.7,
     max: 1.6,
     step: 0.05,
   },
@@ -59,7 +60,7 @@ export const DIALS: readonly DialDef[] = [
   {
     id: 'damage',
     label: 'Damage',
-    help: 'How many of your hits each attack costs.',
+    help: 'How many of your hits each attack costs, so at 3 two mistakes end the fight.',
     min: 1,
     max: 3,
     step: 1,

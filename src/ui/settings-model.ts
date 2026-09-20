@@ -1,4 +1,5 @@
 import type { MenuAction } from './menu-model';
+import { wrap } from './nav';
 import type { Settings } from './settings';
 
 export interface SettingsModel {
@@ -33,9 +34,7 @@ export function settingsStep(
 ): { model: SettingsModel; outcome: 'stay' | 'back' } {
   if (action === 'back') return { model, outcome: 'back' };
   if (action === 'up' || action === 'down') {
-    const direction = action === 'up' ? -1 : 1;
-    const focus = (model.focus + direction + ROWS.length) % ROWS.length;
-    return { model: { ...model, focus }, outcome: 'stay' };
+    return { model: { ...model, focus: wrap(model.focus, action === 'up' ? -1 : 1, ROWS.length) }, outcome: 'stay' };
   }
   const row = ROWS[model.focus];
   if (row === undefined) return { model, outcome: 'stay' };

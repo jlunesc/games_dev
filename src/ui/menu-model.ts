@@ -1,6 +1,6 @@
 import { BOSSES, bossById } from '../bosses';
 import { PRESETS } from '../game/difficulty';
-import type { NavAction } from './nav';
+import { wrap, type NavAction } from './nav';
 import { isCustom, selectPreset, type Prefs } from './prefs';
 
 export type MenuItemId = 'fight' | 'boss' | 'difficulty' | 'tweak' | 'settings' | 'test';
@@ -51,9 +51,6 @@ export function menuRows(model: MenuModel): MenuRow[] {
     { id: 'test', label: 'Controller test' },
   ];
 }
-
-const wrap = (index: number, direction: 1 | -1, length: number): number =>
-  (index + direction + length) % length;
 
 /** What a press does in the menu. Pure: returns the new model and what the app should do next. */
 export function menuStep(

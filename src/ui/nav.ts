@@ -9,6 +9,10 @@ export interface NavState {
   lastFired: number;
 }
 
+/** Moves `index` one step in `direction` inside a list of `length` rows, wrapping around at both ends. */
+export const wrap = (index: number, direction: 1 | -1, length: number): number =>
+  (index + direction + length) % length;
+
 export const NAV_START: NavState = { direction: null, since: 0, lastFired: 0 };
 
 /** A held direction repeats after this long, then once per interval. */

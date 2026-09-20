@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMBER_DUELIST } from '../src/bosses';
+import { EMBER_DUELIST, bossById } from '../src/bosses';
 import { DIALS, NORMAL_DIALS, PRESETS } from '../src/game/difficulty';
 import {
   DEFAULT_PREFS,
@@ -68,6 +68,10 @@ describe('the remembered choices', () => {
     expect(presetDials('normal').speed).toBe(1);
     expect(DEFAULT_PREFS.dials.speed).toBe(1);
   });
+
+  it('keep the default dials apart from the shared Normal dials', () => {
+    expect(DEFAULT_PREFS.dials).not.toBe(NORMAL_DIALS);
+  });
 });
 
 describe('storing the choices', () => {
@@ -92,6 +96,24 @@ describe('storing the choices', () => {
     const partial = parsePrefs(JSON.stringify({ presetId: 'hard', dials: { speed: 1.2 } }));
     expect(partial.dials.speed).toBe(1.2);
     expect(partial.dials.health).toBe(PRESETS[2]!.dials.health);
+  });
+
+  it('ignores a dial stored as an infinite number, and a dials value that is not an object', () => {
+    // 1e999 is valid JSON that reads back as Infinity.
+    const infinite = parsePrefs('{"presetId":"hard","dials":{"speed":1e999,"health":-1e999}}');
+    expect(infinite.dials.speed).toBe(PRESETS[2]!.dials.speed);
+    expect(infinite.dials.health).toBe(PRESETS[2]!.dials.health);
+    for (const dials of ['"text"', '42', 'null', '[1,2]', 'true']) {
+      const parsed = parsePrefs(`{"presetId":"easy","dials":${dials}}`);
+      expect(parsed.presetId).toBe('easy');
+      expect(parsed.dials).toEqual(presetDials('easy'));
+    }
+  });
+
+  it('keeps a boss id it does not know, and the boss lookup then gives the Duelist', () => {
+    const parsed = parsePrefs('{"bossId":"a-boss-that-was-removed"}');
+    expect(parsed.bossId).toBe('a-boss-that-was-removed');
+    expect(bossById(parsed.bossId)).toBe(EMBER_DUELIST);
   });
 
   it('survive a browser that blocks storage', () => {

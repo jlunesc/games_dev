@@ -1,5 +1,6 @@
 import { DIALS, PRESETS, type DialId } from '../game/difficulty';
 import type { MenuAction } from './menu-model';
+import { wrap } from './nav';
 import { nudgeDial, resetDials, type Prefs } from './prefs';
 
 export interface TweakModel {
@@ -38,9 +39,6 @@ export function tweakRows(model: TweakModel): TweakRow[] {
   });
   return rows;
 }
-
-const wrap = (index: number, direction: 1 | -1, length: number): number =>
-  (index + direction + length) % length;
 
 /** What a press does on the Tweak screen. */
 export function tweakStep(

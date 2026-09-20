@@ -21,17 +21,12 @@ import { applyDials } from '../game/difficulty';
 import { GAME } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
-import {
-  createTracker,
-  summarize,
-  trackUpdate,
-  type FightSummary,
-  type SummaryTracker,
-} from '../game/summary';
+import type { FightSummary } from '../game/summary';
 import { createSound } from './audio';
 import { mountControllerScreen } from './controller-screen';
 import { el } from './dom';
 import { NO_FEEDBACK, advanceFeedback, applyEvents, freezeFor, type FeedbackState } from './feedback';
+import { advanceFlow, leaveSummary, startFlow, type FightFlow } from './fight-flow';
 import { createMenu, menuRows, menuStep, type MenuAction, type MenuModel } from './menu-model';
 import { NAV_START, advanceNav, type NavState } from './nav';
 import { loadPrefs, savePrefs, type Prefs } from './prefs';
@@ -109,9 +104,8 @@ export function mountApp(root: HTMLElement): void {
   // The boss as adjusted by the dials for the current fight.
   let boss: BossDef = bossById(prefs.bossId);
   let state: GameState = createInitialState(boss);
-  let tracker: SummaryTracker = createTracker();
-  // Set when the fight ends (win or loss); the summary shows once the end pause is over.
-  let ended: FightSummary | null = null;
+  // The summary tracker and, once the fight ends (win or loss), its result: the summary shows when the end pause is over.
+  let flow: FightFlow = startFlow();
   let feedback: FeedbackState = NO_FEEDBACK;
   let leftoverMs = 0;
   let freezeLeft = 0;
@@ -119,6 +113,10 @@ export function mountApp(root: HTMLElement): void {
   let hitStopView = false;
   // False until the first usable read of a pad, so buttons already held then do not count as presses.
   let padSeen = false;
+  // Whether the controller found on the last frame has a usable button profile.
+  let hasProfile = false;
+  // A message that replaces the controller line on the menu until the controller is usable or the menu is reopened.
+  let notice: string | null = null;
   let lastTime = performance.now();
   let paused = false;
   // How long the top button has been held during a fight (leaving needs GAME.exitHoldMs).
@@ -174,6 +172,8 @@ export function mountApp(root: HTMLElement): void {
 
   function showMenu(): void {
     screen = 'menu';
+    nav = NAV_START;
+    notice = null;
     leaveFightScreen();
     menu = createMenu(prefs);
     renderMenu();
@@ -184,7 +184,13 @@ export function mountApp(root: HTMLElement): void {
     menu = result.model;
     updatePrefs(menu.prefs);
     if (result.outcome.kind === 'fight') {
-      startFight();
+      if (hasProfile) {
+        startFight();
+      } else {
+        notice = 'Connect a controller and press a button first.';
+        statusLine.textContent = notice;
+        renderMenu();
+      }
     } else if (result.outcome.kind === 'open') {
       if (result.outcome.screen === 'tweak') showTweak();
       else if (result.outcome.screen === 'settings') showSettings();
@@ -255,6 +261,7 @@ export function mountApp(root: HTMLElement): void {
   // Controller test
   function showTest(): void {
     screen = 'test';
+    leaveFightScreen();
     stopTest = mountControllerScreen(panel, () => {
       stopTest?.();
       stopTest = null;
@@ -273,15 +280,17 @@ export function mountApp(root: HTMLElement): void {
 
   /** Leaves the fight for the summary: how it ended, or "left" if it was still going. */
   function endFight(): void {
-    showSummary(ended ?? summarize(tracker, state, boss, 'left'));
+    // A fight that never ran has nothing to summarise.
+    if (state.tick === 0) showMenu();
+    else showSummary(leaveSummary(flow, state, boss));
   }
 
   function startFight(): void {
     screen = 'fight';
     boss = applyDials(bossById(prefs.bossId), prefs.dials);
     state = createInitialState(boss, newSeed());
-    tracker = createTracker();
-    ended = null;
+    flow = startFlow();
+    nav = NAV_START;
     exitHoldMs = 0;
     leaveHint.hidden = true;
     feedback = NO_FEEDBACK;
@@ -356,13 +365,11 @@ export function mountApp(root: HTMLElement): void {
       state = step(state, applyPresses(input, pending), boss);
       pending = NO_PRESSES;
       // After a win or a loss the game shows its message, then starts a new fight: show the summary instead.
-      if (ended !== null && state.phase === 'fight') {
-        showSummary(ended);
+      const advanced = advanceFlow(flow, before, state, boss);
+      flow = advanced.flow;
+      if (advanced.show !== null) {
+        showSummary(advanced.show);
         return;
-      }
-      tracker = trackUpdate(tracker, state, before);
-      if (ended === null && state.phase !== 'fight') {
-        ended = summarize(tracker, state, boss, state.phase === 'victory' ? 'victory' : 'defeat');
       }
       feedback = applyEvents(feedback, state.events, settings);
       freezeLeft = Math.max(freezeLeft, freezeFor(state.events, settings));
@@ -378,6 +385,8 @@ export function mountApp(root: HTMLElement): void {
     // Sample the pad on every frame, on the controller test screen too, so `held` never goes stale.
     const pad = firstPad();
     const selection = pad === null ? null : selectProfile(pad.id, pad.mapping);
+    hasProfile = selection?.kind === 'profile';
+    if (hasProfile) notice = null;
     let input = NO_INPUT;
     if (pad !== null && selection?.kind === 'profile') {
       const sampled = sampleInput(pad, selection.profile, held, GAME.deadZone);
@@ -401,7 +410,7 @@ export function mountApp(root: HTMLElement): void {
     }
 
     // Menu, Tweak, Settings and Summary: one step per press, with repeat while a direction is held.
-    statusLine.textContent = describeController(pad, selection);
+    if (screen === 'menu') statusLine.textContent = notice ?? describeController(pad, selection);
     const walked = advanceNav(nav, input.moveX, input.moveY, now);
     nav = walked.state;
     const action: MenuAction | null = input.confirm ? 'confirm' : input.alt ? 'back' : walked.action;
