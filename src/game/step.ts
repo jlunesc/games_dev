@@ -1,7 +1,7 @@
 import type { BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { DT } from '../engine/time';
-import { updateBoss } from './boss';
+import { attackById, updateBoss } from './boss';
 import {
   activeHitBoxes,
   attackActive,
@@ -118,12 +118,33 @@ export function hurtPlayer(s: GameState): void {
   }
 }
 
+/**
+ * A swing that starts inside the counter window of a counterable attack, close enough, staggers the boss
+ * and cancels the attack. It runs before the hits are resolved, so the cancelled attack cannot hurt.
+ */
+function tryCounter(s: GameState, boss: BossDef): void {
+  const { player: p, boss: b } = s;
+  if (b.mode !== 'attack' || b.attackId === null || p.attackTick !== 0) return;
+  const attack = attackById(boss, b.attackId);
+  if (attack.class !== 'counterable') return;
+  if (b.attackTick < attack.windup - boss.counter.window || b.attackTick >= attack.windup) return;
+  if (Math.abs(p.x - b.x) > boss.counter.range) return;
+  b.mode = 'stagger';
+  b.modeTick = 0;
+  b.attackId = null;
+  b.attackTick = 0;
+  b.pendingAttackId = null;
+  b.chainLeft = 0;
+  s.events.push('counter');
+}
+
 /** The player's swing hurts the boss once per swing. */
 function resolvePlayerAttack(s: GameState, boss: BossDef): void {
   const { player: p, boss: b } = s;
   if (attackActive(p) && !p.attackConnected && overlaps(attackBox(p), bossBox(b, boss))) {
     p.attackConnected = true;
-    b.hp = Math.max(0, b.hp - 1);
+    const damage = b.mode === 'stagger' ? boss.counter.damageMultiplier : 1;
+    b.hp = Math.max(0, b.hp - damage);
     s.events.push('bossHit');
   }
 }
@@ -153,6 +174,7 @@ export function step(prev: GameState, input: InputFrame, boss: BossDef): GameSta
 
   updatePlayer(s.player, input, s.events);
   updateBoss(s, boss);
+  tryCounter(s, boss);
   resolvePlayerAttack(s, boss);
   resolveBossHits(s, boss);
   return s;

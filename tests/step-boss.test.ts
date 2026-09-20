@@ -5,53 +5,8 @@ import { attackLength } from '../src/game/boss';
 import { GAME, PLAYER, WORLD } from '../src/game/params';
 import { step } from '../src/game/step';
 import { createInitialState, type GameEvent, type GameState } from '../src/game/state';
+import { anywhere, attackIds, solo, standAt, updatesWith, WALKER, windupUpdates } from './boss-helpers';
 import { DUELIST, run, withInput } from './helpers';
-
-const isWindup = (e: GameEvent): boolean => e === 'bossWindupGold' || e === 'bossWindupRed';
-const windupUpdates = (states: GameState[]): number[] =>
-  states.flatMap((s, i) => (s.events.some(isWindup) ? [i + 1] : []));
-const updatesWith = (states: GameState[], event: GameEvent): number[] =>
-  states.flatMap((s, i) => (s.events.includes(event) ? [i + 1] : []));
-const attackIds = (states: GameState[]): string[] =>
-  states.flatMap((s) => (s.events.some(isWindup) ? [s.boss.attackId ?? ''] : []));
-
-/** The real boss with its attacks removed: it walks and keeps its distance but never attacks. */
-const WALKER: BossDef = {
-  ...DUELIST,
-  phases: DUELIST.phases.map((p) => ({ ...p, attacks: [] })),
-};
-
-/** The real boss using only attack `id`, starting a new attack one update after the last one ends, never walking. */
-function solo(id: string): BossDef {
-  return {
-    ...DUELIST,
-    spacing: { min: 0, max: 1e9 },
-    phases: DUELIST.phases.map((p) => ({
-      ...p,
-      gap: 1,
-      maxChain: 1,
-      chainChance: 0,
-      attacks: [{ id, weight: 1 }],
-    })),
-  };
-}
-
-/** The real boss with every attack usable from any distance and no walking, so a test decides when it strikes. */
-function anywhere(): BossDef {
-  return {
-    ...DUELIST,
-    spacing: { min: 0, max: 1e9 },
-    attacks: DUELIST.attacks.map((a) => ({ ...a, range: { min: 0, max: 1e9 } })),
-  };
-}
-
-/** A fresh fight with the player `distance` units to the left of the boss. */
-function standAt(boss: BossDef, distance: number, seed = 1): GameState {
-  const s = createInitialState(boss, seed);
-  s.player.x = s.boss.x - distance;
-  s.player.prevX = s.player.x;
-  return s;
-}
 
 describe('walking', () => {
   it('walks towards a far player until it is at its keeping distance', () => {

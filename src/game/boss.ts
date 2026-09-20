@@ -187,8 +187,11 @@ export function updateBoss(s: GameState, boss: BossDef): void {
     case 'attack':
       updateAttack(s, boss, phase);
       break;
+    case 'stagger':
+      if (b.modeTick >= boss.counter.staggerTicks) enterGap(b);
+      break;
     default:
-      // Stagger and transition are added in later tasks.
+      // Transition is added in a later task.
       break;
   }
 }
