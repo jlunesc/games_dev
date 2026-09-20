@@ -39,11 +39,12 @@ import {
   settingsStep,
   type SettingsModel,
 } from './settings-model';
+import { createStats, statsRows, statsStep, type StatsModel } from './stats-model';
 import { browserStorage } from './storage';
 import { summaryLines } from './summary-text';
 import { createTweak, tweakRows, tweakStep, type TweakModel } from './tweak-model';
 
-type Screen = 'menu' | 'tweak' | 'settings' | 'summary' | 'fight' | 'test';
+type Screen = 'menu' | 'tweak' | 'stats' | 'settings' | 'summary' | 'fight' | 'test';
 
 function firstPad(): Gamepad | null {
   if (typeof navigator.getGamepads !== 'function') return null;
@@ -98,6 +99,7 @@ export function mountApp(root: HTMLElement): void {
   let menu: MenuModel = createMenu(prefs);
   let tweak: TweakModel = createTweak(prefs);
   let settingsModel: SettingsModel = createSettingsModel(settings);
+  let statsModel: StatsModel = createStats(null, null);
   let nav: NavState = NAV_START;
   let held: HeldButtons = NOTHING_HELD;
   let pending: PendingPresses = NO_PRESSES;
@@ -200,6 +202,7 @@ export function mountApp(root: HTMLElement): void {
       }
     } else if (result.outcome.kind === 'open') {
       if (result.outcome.screen === 'tweak') showTweak();
+      else if (result.outcome.screen === 'stats') showStats();
       else if (result.outcome.screen === 'settings') showSettings();
       else showTest();
     } else {
@@ -234,6 +237,34 @@ export function mountApp(root: HTMLElement): void {
     updatePrefs(tweak.prefs);
     if (result.outcome === 'back') showMenu();
     else renderTweak();
+  }
+
+  // Stats (export and delete are wired later; for now every press but back just redraws)
+  function renderStats(): void {
+    renderList(
+      panel,
+      'Stats',
+      'Up and down move, bottom button chooses, top button goes back.',
+      statsRows(statsModel).map((row) => ({ label: row.label, value: row.value, help: row.help })),
+      statsModel.focus,
+      (index) => {
+        statsModel = { ...statsModel, focus: index };
+        handleStats('confirm');
+      },
+    );
+  }
+
+  function showStats(): void {
+    screen = 'stats';
+    statsModel = createStats(null, null);
+    renderStats();
+  }
+
+  function handleStats(action: MenuAction): void {
+    const result = statsStep(statsModel, action);
+    statsModel = result.model;
+    if (result.outcome === 'back') showMenu();
+    else renderStats();
   }
 
   // Settings
@@ -424,7 +455,7 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
 
-    // Menu, Tweak, Settings and Summary: one step per press, with repeat while a direction is held.
+    // Menu, Tweak, Stats, Settings and Summary: one step per press, with repeat while a direction is held.
     if (screen === 'menu') statusLine.textContent = notice ?? describeController(pad, selection);
     const walked = advanceNav(nav, input.moveX, input.moveY, now);
     nav = walked.state;
@@ -433,6 +464,7 @@ export function mountApp(root: HTMLElement): void {
     if (action === null) return;
     if (screen === 'menu') handleMenu(action);
     else if (screen === 'tweak') handleTweak(action);
+    else if (screen === 'stats') handleStats(action);
     else if (screen === 'settings') handleSettings(action);
     else if ((action === 'confirm' || action === 'back') && now >= summaryUnlockAt) showMenu();
   }

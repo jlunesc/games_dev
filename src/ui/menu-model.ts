@@ -3,13 +3,14 @@ import { PRESETS } from '../game/difficulty';
 import { wrap, type NavAction } from './nav';
 import { isCustom, selectPreset, type Prefs } from './prefs';
 
-export type MenuItemId = 'fight' | 'boss' | 'difficulty' | 'tweak' | 'settings' | 'test';
+export type MenuItemId = 'fight' | 'boss' | 'difficulty' | 'tweak' | 'stats' | 'settings' | 'test';
 
 export const MENU_ITEMS: readonly MenuItemId[] = [
   'fight',
   'boss',
   'difficulty',
   'tweak',
+  'stats',
   'settings',
   'test',
 ];
@@ -24,7 +25,7 @@ export interface MenuModel {
 export type MenuOutcome =
   | { kind: 'stay' }
   | { kind: 'fight' }
-  | { kind: 'open'; screen: 'tweak' | 'settings' | 'test' };
+  | { kind: 'open'; screen: 'tweak' | 'stats' | 'settings' | 'test' };
 
 export interface MenuRow {
   id: MenuItemId;
@@ -47,6 +48,7 @@ export function menuRows(model: MenuModel): MenuRow[] {
     { id: 'boss', label: 'Boss', value: bossById(model.prefs.bossId).name },
     { id: 'difficulty', label: 'Difficulty', value: difficultyLabel(model.prefs) },
     { id: 'tweak', label: 'Tweak difficulty' },
+    { id: 'stats', label: 'Stats' },
     { id: 'settings', label: 'Settings' },
     { id: 'test', label: 'Controller test' },
   ];
@@ -70,7 +72,7 @@ export function menuStep(
 
   if (action === 'confirm') {
     if (item === 'fight') return { model, outcome: { kind: 'fight' } };
-    if (item === 'tweak' || item === 'settings' || item === 'test') {
+    if (item === 'tweak' || item === 'stats' || item === 'settings' || item === 'test') {
       return { model, outcome: { kind: 'open', screen: item } };
     }
   }

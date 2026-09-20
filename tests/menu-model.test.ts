@@ -22,7 +22,7 @@ const press = (model: MenuModel, ...actions: MenuAction[]): MenuModel =>
 describe('the menu rows', () => {
   it('are in order and show the boss and the difficulty', () => {
     const rows = menuRows(createMenu(DEFAULT_PREFS));
-    expect(rows.map((r) => r.id)).toEqual(['fight', 'boss', 'difficulty', 'tweak', 'settings', 'test']);
+    expect(rows.map((r) => r.id)).toEqual(['fight', 'boss', 'difficulty', 'tweak', 'stats', 'settings', 'test']);
     expect(rows.find((r) => r.id === 'boss')!.value).toBe(EMBER_DUELIST.name);
     expect(rows.find((r) => r.id === 'difficulty')!.value).toBe('Normal');
   });
@@ -46,7 +46,7 @@ describe('moving in the menu', () => {
     expect(press(start, ...Array<MenuAction>(MENU_ITEMS.length).fill('down')).focus).toBe(0);
   });
 
-  it.each(['fight', 'tweak', 'settings', 'test'] as const)(
+  it.each(['fight', 'tweak', 'stats', 'settings', 'test'] as const)(
     'left and right do nothing on %s, which has no choice, and back does nothing in the menu',
     (item) => {
       const start = at(item);
@@ -62,7 +62,7 @@ describe('choosing in the menu', () => {
     expect(menuStep(createMenu(DEFAULT_PREFS), 'confirm').outcome).toEqual({ kind: 'fight' });
   });
 
-  it.each(['tweak', 'settings', 'test'] as const)('confirm on %s opens that screen', (item) => {
+  it.each(['tweak', 'stats', 'settings', 'test'] as const)('confirm on %s opens that screen', (item) => {
     expect(menuStep(at(item), 'confirm').outcome).toEqual({ kind: 'open', screen: item });
   });
 
