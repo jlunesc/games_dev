@@ -37,10 +37,11 @@ export function createSound(): Sound {
     },
     play(events): void {
       for (const event of events) {
-        if (event === 'dummyHit') beep(220, 90, 'square', 0.15);
+        if (event === 'bossHit') beep(220, 90, 'square', 0.15);
         if (event === 'playerHit') beep(110, 200, 'sawtooth', 0.2);
         if (event === 'dash') beep(660, 70, 'triangle', 0.1);
-        if (event === 'dummyWindup') beep(440, 120, 'sine', 0.12);
+        if (event === 'bossWindupGold') beep(440, 120, 'sine', 0.12);
+        if (event === 'bossWindupRed') beep(440, 120, 'sine', 0.12);
         if (event === 'playerDefeated') beep(80, 500, 'sawtooth', 0.2);
       }
     },

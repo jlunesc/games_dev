@@ -1,22 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { isInvulnerable } from '../src/game/geometry';
-import { DUMMY, PLAYER, WORLD } from '../src/game/params';
+import { PLAYER, WORLD } from '../src/game/params';
 import { createInitialState, type GameEvent, type GameState } from '../src/game/state';
-import { run, withInput } from './helpers';
+import { QUIET_BOSS, run, withInput } from './helpers';
 
-/** A fresh fight where the dummy will not sweep for a very long time. */
+/** A fresh fight against a boss that stands still and never attacks. */
 function quiet(): GameState {
-  const s = createInitialState();
-  s.dummy.nextSweepIn = 100000;
-  return s;
+  return createInitialState(QUIET_BOSS);
 }
 
 const { startup, active, recovery } = PLAYER.attack;
 const SWING_LENGTH = startup + active + recovery;
 const DASH = PLAYER.dash;
 
-/** A player x from which the swing reaches half its length into the dummy. */
-const IN_REACH_X = DUMMY.x - DUMMY.width / 2 - PLAYER.width / 2 - PLAYER.attack.reach / 2;
+/** A player x from which the swing reaches half its length into the boss. */
+const IN_REACH_X = QUIET_BOSS.startX - QUIET_BOSS.width / 2 - PLAYER.width / 2 - PLAYER.attack.reach / 2;
 
 const updatesWith = (states: GameState[], event: GameEvent): number[] =>
   states.flatMap((s, i) => (s.events.includes(event) ? [i + 1] : []));
@@ -29,12 +27,12 @@ describe('attack', () => {
     return run(start, SWING_LENGTH + 10, (n) => withInput({ attackPressed: n === 1 }));
   };
 
-  it('hits the dummy once, on the first update after the start-up', () => {
-    expect(updatesWith(swing(IN_REACH_X), 'dummyHit')).toEqual([startup + 1]);
+  it('hits the boss once, on the first update after the start-up', () => {
+    expect(updatesWith(swing(IN_REACH_X), 'bossHit')).toEqual([startup + 1]);
   });
 
-  it('misses when the dummy is out of reach', () => {
-    expect(updatesWith(swing(320), 'dummyHit')).toEqual([]);
+  it('misses when the boss is out of reach', () => {
+    expect(updatesWith(swing(320), 'bossHit')).toEqual([]);
   });
 
   it('lasts start-up plus active plus recovery updates in total', () => {
@@ -56,13 +54,12 @@ describe('attack', () => {
     expect(states[5]!.player.facing).toBe(1);
   });
 
-  it('refills the dummy display health instead of letting it die', () => {
+  it('takes one hit point off the boss per swing', () => {
     const start = quiet();
     start.player.x = IN_REACH_X;
-    start.dummy.hp = 1;
     const states = run(start, startup + 2, (n) => withInput({ attackPressed: n === 1 }));
-    expect(states[startup]!.events).toContain('dummyHit');
-    expect(states[startup]!.dummy.hp).toBe(DUMMY.maxHp);
+    expect(states[startup]!.events).toContain('bossHit');
+    expect(states[startup]!.boss.hp).toBe(QUIET_BOSS.maxHp - 1);
   });
 });
 

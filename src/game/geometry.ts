@@ -1,5 +1,6 @@
-import { DUMMY, PLAYER, WORLD } from './params';
-import type { DummyState, PlayerState } from './state';
+import type { BossDef } from '../bosses/schema';
+import { PLAYER, WORLD } from './params';
+import type { BossState, PlayerState } from './state';
 
 /** Top-left corner plus size, in world units (y grows downward). */
 export interface Box {
@@ -16,12 +17,12 @@ export function playerBox(p: PlayerState): Box {
   return { x: p.x - PLAYER.width / 2, y: p.y - PLAYER.height, w: PLAYER.width, h: PLAYER.height };
 }
 
-export function dummyBox(d: DummyState): Box {
+export function bossBox(b: BossState, boss: BossDef): Box {
   return {
-    x: d.x - DUMMY.width / 2,
-    y: WORLD.floorY - DUMMY.height,
-    w: DUMMY.width,
-    h: DUMMY.height,
+    x: b.x - boss.width / 2,
+    y: WORLD.floorY - boss.height,
+    w: boss.width,
+    h: boss.height,
   };
 }
 
@@ -41,14 +42,4 @@ export function attackActive(p: PlayerState): boolean {
 /** Untouchable after a hit, and for the whole dash. */
 export function isInvulnerable(p: PlayerState): boolean {
   return p.invulnerableTicks > 0 || p.dashTick >= 0;
-}
-
-/**
- * The area the dummy's sweep hurts: low, so it can be jumped over. It reaches out from the dummy's
- * edge on the side it faces and covers the dummy's near half, so standing inside the dummy is no safe spot.
- */
-export function sweepBox(d: DummyState): Box {
-  const { reach, height } = DUMMY.sweep;
-  const x = d.facing === 1 ? d.x : d.x - DUMMY.width / 2 - reach;
-  return { x, y: WORLD.floorY - height, w: reach + DUMMY.width / 2, h: height };
 }

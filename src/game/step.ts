@@ -1,18 +1,11 @@
+import type { BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { DT } from '../engine/time';
-import {
-  attackActive,
-  attackBox,
-  dummyBox,
-  isInvulnerable,
-  overlaps,
-  playerBox,
-  sweepBox,
-} from './geometry';
-import { DUMMY, GAME, PLAYER, WORLD } from './params';
+import { attackActive, attackBox, bossBox, overlaps } from './geometry';
+import { GAME, PLAYER, WORLD } from './params';
+import { nextRandom } from './rng';
 import {
   createInitialState,
-  type DummyState,
   type GameEvent,
   type GameState,
   type PlayerState,
@@ -102,86 +95,46 @@ export function updatePlayer(p: PlayerState, input: InputFrame, events: GameEven
   }
 }
 
-/** The dummy waits, warns (turning towards the player), sweeps, recovers, and waits again. */
-function updateDummy(d: DummyState, p: PlayerState, events: GameEvent[]): void {
-  const sweep = DUMMY.sweep;
-  switch (d.phase) {
-    case 'idle':
-      d.nextSweepIn -= 1;
-      if (d.nextSweepIn <= 0) {
-        d.phase = 'windup';
-        d.phaseTick = 0;
-        d.facing = p.x < d.x ? -1 : 1;
-        events.push('dummyWindup');
-      }
-      break;
-    case 'windup':
-      d.phaseTick += 1;
-      if (d.phaseTick >= sweep.windup) {
-        d.phase = 'sweep';
-        d.phaseTick = 0;
-      }
-      break;
-    case 'sweep':
-      d.phaseTick += 1;
-      if (d.phaseTick >= sweep.active) {
-        d.phase = 'recovery';
-        d.phaseTick = 0;
-      }
-      break;
-    case 'recovery':
-      d.phaseTick += 1;
-      if (d.phaseTick >= sweep.recovery) {
-        d.phase = 'idle';
-        d.nextSweepIn = sweep.every - sweep.windup - sweep.active - sweep.recovery;
-      }
-      break;
-  }
-}
-
-/** The player's swing hurts the dummy once per swing. The dummy's display health refills instead of reaching zero. */
-function resolveAttack(s: GameState): void {
-  const { player: p, dummy: d } = s;
-  if (attackActive(p) && !p.attackConnected && overlaps(attackBox(p), dummyBox(d))) {
-    p.attackConnected = true;
-    d.hp -= 1;
-    if (d.hp <= 0) d.hp = DUMMY.maxHp;
-    s.events.push('dummyHit');
-  }
-}
-
-/** The sweep hurts a player who is not untouchable. The last hit ends the fight. */
-function resolveSweep(s: GameState): void {
-  const { player: p, dummy: d } = s;
-  if (d.phase !== 'sweep' || isInvulnerable(p) || !overlaps(sweepBox(d), playerBox(p))) return;
+/** The player takes one hit. The last hit ends the fight. */
+export function hurtPlayer(s: GameState): void {
+  const p = s.player;
   p.health -= 1;
   p.invulnerableTicks = PLAYER.hitInvulnerability;
   s.events.push('playerHit');
   if (p.health <= 0) {
     p.health = 0;
     s.phase = 'defeated';
-    s.defeatTicks = GAME.defeatRestartTicks;
+    s.endTicks = GAME.defeatRestartTicks;
     s.events.push('playerDefeated');
   }
 }
 
+/** The player's swing hurts the boss once per swing. */
+function resolvePlayerAttack(s: GameState, boss: BossDef): void {
+  const { player: p, boss: b } = s;
+  if (attackActive(p) && !p.attackConnected && overlaps(attackBox(p), bossBox(b, boss))) {
+    p.attackConnected = true;
+    b.hp = Math.max(0, b.hp - 1);
+    s.events.push('bossHit');
+  }
+}
+
 /** Advances the game by one update. Pure: returns a new state and never touches the one it is given. */
-export function step(prev: GameState, input: InputFrame): GameState {
+export function step(prev: GameState, input: InputFrame, boss: BossDef): GameState {
   const s = structuredClone(prev);
   s.events = [];
   s.tick += 1;
 
-  if (s.phase === 'defeated') {
-    s.defeatTicks -= 1;
+  if (s.phase !== 'fight') {
+    s.endTicks -= 1;
     // The player is frozen: without this the renderer would keep blending from the last move.
     s.player.prevX = s.player.x;
     s.player.prevY = s.player.y;
-    return s.defeatTicks <= 0 ? createInitialState() : s;
+    // The next fight gets a new seed derived from this one, so it plays out differently but stays reproducible.
+    return s.endTicks <= 0 ? createInitialState(boss, nextRandom(s.rng).state) : s;
   }
 
   updatePlayer(s.player, input, s.events);
-  updateDummy(s.dummy, s.player, s.events);
-  resolveAttack(s);
-  resolveSweep(s);
+  resolvePlayerAttack(s, boss);
   return s;
 }

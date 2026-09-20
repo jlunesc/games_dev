@@ -9,25 +9,25 @@ import {
 } from '../src/ui/feedback';
 
 describe('freezeFor', () => {
-  it('freezes for the dummy-hit length when the dummy is hit and for the player-hit length when the player is hurt', () => {
-    expect(freezeFor(['dummyHit'])).toBe(FEEDBACK.freezeOnDummyHit);
+  it('freezes for the boss-hit length when the boss is hit and for the player-hit length when the player is hurt', () => {
+    expect(freezeFor(['bossHit'])).toBe(FEEDBACK.freezeOnBossHit);
     expect(freezeFor(['playerHit'])).toBe(FEEDBACK.freezeOnPlayerHit);
   });
 
   it('takes the longer freeze when both happen at once, and none for other events', () => {
-    expect(freezeFor(['dummyHit', 'playerHit'])).toBe(
-      Math.max(FEEDBACK.freezeOnDummyHit, FEEDBACK.freezeOnPlayerHit),
+    expect(freezeFor(['bossHit', 'playerHit'])).toBe(
+      Math.max(FEEDBACK.freezeOnBossHit, FEEDBACK.freezeOnPlayerHit),
     );
-    expect(freezeFor(['dash', 'dummyWindup'])).toBe(0);
+    expect(freezeFor(['dash', 'bossWindupGold'])).toBe(0);
     expect(freezeFor([])).toBe(0);
   });
 });
 
 describe('applyEvents', () => {
-  it('starts the shake and the dummy flash when the dummy is hit', () => {
-    const fb = applyEvents(NO_FEEDBACK, ['dummyHit']);
+  it('starts the shake and the boss flash when the boss is hit', () => {
+    const fb = applyEvents(NO_FEEDBACK, ['bossHit']);
     expect(fb.shakeTicks).toBe(FEEDBACK.shakeTicks);
-    expect(fb.dummyFlashTicks).toBe(FEEDBACK.dummyFlashTicks);
+    expect(fb.bossFlashTicks).toBe(FEEDBACK.bossFlashTicks);
     expect(fb.playerFlashTicks).toBe(0);
   });
 
@@ -35,7 +35,7 @@ describe('applyEvents', () => {
     const fb = applyEvents(NO_FEEDBACK, ['playerHit']);
     expect(fb.shakeTicks).toBe(FEEDBACK.shakeTicks);
     expect(fb.playerFlashTicks).toBe(FEEDBACK.playerFlashTicks);
-    expect(fb.dummyFlashTicks).toBe(0);
+    expect(fb.bossFlashTicks).toBe(0);
   });
 
   it('does not change anything for other events and does not modify its input', () => {
@@ -47,8 +47,8 @@ describe('applyEvents', () => {
 
 describe('advanceFeedback', () => {
   it('counts every effect down by one and stops at zero', () => {
-    const fb = advanceFeedback({ shakeTicks: 2, dummyFlashTicks: 1, playerFlashTicks: 0 });
-    expect(fb).toEqual({ shakeTicks: 1, dummyFlashTicks: 0, playerFlashTicks: 0 });
+    const fb = advanceFeedback({ shakeTicks: 2, bossFlashTicks: 1, playerFlashTicks: 0 });
+    expect(fb).toEqual({ shakeTicks: 1, bossFlashTicks: 0, playerFlashTicks: 0 });
     expect(advanceFeedback(fb).shakeTicks).toBe(0);
     expect(advanceFeedback(advanceFeedback(fb)).shakeTicks).toBe(0);
   });

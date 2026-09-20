@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   attackActive,
   attackBox,
-  dummyBox,
+  bossBox,
   isInvulnerable,
   overlaps,
   playerBox,
 } from '../src/game/geometry';
-import { DUMMY, PLAYER, WORLD } from '../src/game/params';
+import { PLAYER, WORLD } from '../src/game/params';
 import { createInitialState } from '../src/game/state';
+import { DUELIST, QUIET_BOSS } from './helpers';
 
 describe('overlaps', () => {
   it('is true for overlapping boxes and false for touching ones', () => {
@@ -20,22 +21,22 @@ describe('overlaps', () => {
 
 describe('boxes', () => {
   it('places the player box around its centre and feet', () => {
-    const p = createInitialState().player;
+    const p = createInitialState(QUIET_BOSS).player;
     expect(playerBox(p)).toEqual({ x: 296, y: 544, w: 48, h: 96 });
   });
 
-  it('places the dummy box on the floor', () => {
-    const d = createInitialState().dummy;
-    expect(dummyBox(d)).toEqual({
-      x: DUMMY.x - DUMMY.width / 2,
-      y: WORLD.floorY - DUMMY.height,
-      w: DUMMY.width,
-      h: DUMMY.height,
+  it('places the boss box on the floor', () => {
+    const b = createInitialState(DUELIST).boss;
+    expect(bossBox(b, DUELIST)).toEqual({
+      x: DUELIST.startX - DUELIST.width / 2,
+      y: WORLD.floorY - DUELIST.height,
+      w: DUELIST.width,
+      h: DUELIST.height,
     });
   });
 
   it('puts the attack box in front of the player, vertically centred', () => {
-    const p = createInitialState().player;
+    const p = createInitialState(QUIET_BOSS).player;
     const { reach, height } = PLAYER.attack;
     const top = WORLD.floorY - PLAYER.height / 2 - height / 2;
     p.x = 850;
@@ -48,7 +49,7 @@ describe('boxes', () => {
 
 describe('predicates', () => {
   it('the attack is active only during its active updates', () => {
-    const p = createInitialState().player;
+    const p = createInitialState(QUIET_BOSS).player;
     const { startup, active } = PLAYER.attack;
     const ticks = Array.from({ length: startup + active + 3 }, (_, i) => i - 1);
     const result = ticks.map((t) => {
@@ -60,7 +61,7 @@ describe('predicates', () => {
   });
 
   it('the player is untouchable after a hit or while dashing', () => {
-    const p = createInitialState().player;
+    const p = createInitialState(QUIET_BOSS).player;
     expect(isInvulnerable(p)).toBe(false);
     p.invulnerableTicks = 5;
     expect(isInvulnerable(p)).toBe(true);

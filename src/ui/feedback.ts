@@ -4,17 +4,17 @@ import type { GameEvent } from '../game/state';
 /** Effect timers that only exist for the eyes: they never feed back into the simulation. */
 export interface FeedbackState {
   shakeTicks: number;
-  dummyFlashTicks: number;
+  bossFlashTicks: number;
   playerFlashTicks: number;
 }
 
-export const NO_FEEDBACK: FeedbackState = { shakeTicks: 0, dummyFlashTicks: 0, playerFlashTicks: 0 };
+export const NO_FEEDBACK: FeedbackState = { shakeTicks: 0, bossFlashTicks: 0, playerFlashTicks: 0 };
 
 /** How many updates the loop should hold still after these events (the longest one wins). */
 export function freezeFor(events: readonly GameEvent[]): number {
   let freeze = 0;
   for (const event of events) {
-    if (event === 'dummyHit') freeze = Math.max(freeze, FEEDBACK.freezeOnDummyHit);
+    if (event === 'bossHit') freeze = Math.max(freeze, FEEDBACK.freezeOnBossHit);
     if (event === 'playerHit') freeze = Math.max(freeze, FEEDBACK.freezeOnPlayerHit);
   }
   return freeze;
@@ -23,9 +23,9 @@ export function freezeFor(events: readonly GameEvent[]): number {
 export function applyEvents(fb: FeedbackState, events: readonly GameEvent[]): FeedbackState {
   const next = { ...fb };
   for (const event of events) {
-    if (event === 'dummyHit') {
+    if (event === 'bossHit') {
       next.shakeTicks = FEEDBACK.shakeTicks;
-      next.dummyFlashTicks = FEEDBACK.dummyFlashTicks;
+      next.bossFlashTicks = FEEDBACK.bossFlashTicks;
     }
     if (event === 'playerHit') {
       next.shakeTicks = FEEDBACK.shakeTicks;
@@ -39,7 +39,7 @@ export function applyEvents(fb: FeedbackState, events: readonly GameEvent[]): Fe
 export function advanceFeedback(fb: FeedbackState): FeedbackState {
   return {
     shakeTicks: Math.max(0, fb.shakeTicks - 1),
-    dummyFlashTicks: Math.max(0, fb.dummyFlashTicks - 1),
+    bossFlashTicks: Math.max(0, fb.bossFlashTicks - 1),
     playerFlashTicks: Math.max(0, fb.playerFlashTicks - 1),
   };
 }

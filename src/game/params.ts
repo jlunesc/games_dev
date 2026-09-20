@@ -21,15 +21,6 @@ export const PLAYER = {
   dash: { duration: 11, speed: 1450, cooldown: 24 },
 };
 
-export const DUMMY = {
-  width: 96,
-  height: 160,
-  x: 960,
-  maxHp: 20,
-  firstSweepIn: 120,
-  sweep: { every: 180, windup: 30, active: 8, recovery: 24, reach: 220, height: 120 },
-};
-
 export const GAME = {
   defeatRestartTicks: 60,
   deadZone: 0.25,
@@ -38,10 +29,10 @@ export const GAME = {
 };
 
 export const FEEDBACK = {
-  freezeOnDummyHit: 4,
+  freezeOnBossHit: 4,
   freezeOnPlayerHit: 8,
   shakeTicks: 10,
   shakeAmplitude: 6,
-  dummyFlashTicks: 6,
+  bossFlashTicks: 6,
   playerFlashTicks: 12,
 };

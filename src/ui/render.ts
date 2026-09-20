@@ -1,6 +1,7 @@
-import { attackActive, attackBox, sweepBox } from '../game/geometry';
-import { DUMMY, PLAYER, WORLD } from '../game/params';
-import type { DummyPhase, GameState } from '../game/state';
+import type { BossDef } from '../bosses/schema';
+import { attackActive, attackBox } from '../game/geometry';
+import { PLAYER, WORLD } from '../game/params';
+import type { GameState } from '../game/state';
 import { shakeOffset, type FeedbackState } from './feedback';
 
 export interface Viewport {
@@ -27,10 +28,8 @@ const COLORS = {
   player: '#e8e8f0',
   playerDash: '#7fd6ff',
   playerHurt: '#ff3b3b',
-  dummyIdle: '#5a6b8c',
-  dummyWindup: '#f5a742',
-  dummySweep: '#e0403a',
-  dummyRecovery: '#7a6b6b',
+  boss: '#c8642a',
+  bossHp: '#e0403a',
   flash: '#ffffff',
   slash: '#ffffff',
   hud: '#e8e8f0',
@@ -39,37 +38,15 @@ const COLORS = {
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
-const dummyColor = (phase: DummyPhase): string => {
-  switch (phase) {
-    case 'windup':
-      return COLORS.dummyWindup;
-    case 'sweep':
-      return COLORS.dummySweep;
-    case 'recovery':
-      return COLORS.dummyRecovery;
-    case 'idle':
-      return COLORS.dummyIdle;
-  }
-};
-
-function drawDummy(ctx: CanvasRenderingContext2D, state: GameState, feedback: FeedbackState): void {
-  const d = state.dummy;
-  // During the warning the dummy pulls back, away from the side it will sweep to.
-  const pullBack = d.phase === 'windup' ? -d.facing * 14 * (d.phaseTick / DUMMY.sweep.windup) : 0;
-  ctx.fillStyle = feedback.dummyFlashTicks > 0 ? COLORS.flash : dummyColor(d.phase);
-  ctx.fillRect(
-    d.x - DUMMY.width / 2 + pullBack,
-    WORLD.floorY - DUMMY.height,
-    DUMMY.width,
-    DUMMY.height,
-  );
-  if (d.phase === 'sweep') {
-    const box = sweepBox(d);
-    ctx.globalAlpha = 0.55;
-    ctx.fillStyle = COLORS.dummySweep;
-    ctx.fillRect(box.x, box.y, box.w, box.h);
-    ctx.globalAlpha = 1;
-  }
+function drawBoss(
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  boss: BossDef,
+  feedback: FeedbackState,
+): void {
+  const b = state.boss;
+  ctx.fillStyle = feedback.bossFlashTicks > 0 ? COLORS.flash : COLORS.boss;
+  ctx.fillRect(b.x - boss.width / 2, WORLD.floorY - boss.height, boss.width, boss.height);
 }
 
 function drawPlayer(
@@ -105,7 +82,7 @@ function drawPlayer(
   }
 }
 
-function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
+function drawHud(ctx: CanvasRenderingContext2D, state: GameState, boss: BossDef): void {
   for (let i = 0; i < PLAYER.maxHealth; i++) {
     ctx.globalAlpha = i < state.player.health ? 1 : 0.25;
     ctx.fillStyle = COLORS.hud;
@@ -116,8 +93,8 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState): void {
   const left = WORLD.width - 24 - width;
   ctx.fillStyle = COLORS.hudBack;
   ctx.fillRect(left, 24, width, 14);
-  ctx.fillStyle = COLORS.dummySweep;
-  ctx.fillRect(left, 24, (width * state.dummy.hp) / DUMMY.maxHp, 14);
+  ctx.fillStyle = COLORS.bossHp;
+  ctx.fillRect(left, 24, (width * state.boss.hp) / boss.maxHp, 14);
 }
 
 /** Draws one frame. `alpha` (0 to just under 1) blends the player between the last two updates. */
@@ -126,6 +103,7 @@ export function drawFrame(
   canvasWidth: number,
   canvasHeight: number,
   state: GameState,
+  boss: BossDef,
   alpha: number,
   feedback: FeedbackState,
 ): void {
@@ -153,9 +131,9 @@ export function drawFrame(
   ctx.fillStyle = COLORS.floorLine;
   ctx.fillRect(-8, WORLD.floorY, WORLD.width + 16, 3);
 
-  drawDummy(ctx, state, feedback);
+  drawBoss(ctx, state, boss, feedback);
   drawPlayer(ctx, state, alpha, feedback);
-  drawHud(ctx, state);
+  drawHud(ctx, state, boss);
 
   if (state.phase === 'defeated') {
     ctx.fillStyle = COLORS.hud;

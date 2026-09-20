@@ -1,3 +1,4 @@
+import { EMBER_DUELIST } from '../bosses';
 import {
   NO_INPUT,
   NO_PRESSES,
@@ -72,7 +73,7 @@ export function mountApp(root: HTMLElement): void {
   let screen: Screen = 'start';
   let held: HeldButtons = NOTHING_HELD;
   let pending: PendingPresses = NO_PRESSES;
-  let state: GameState = createInitialState();
+  let state: GameState = createInitialState(EMBER_DUELIST);
   let feedback: FeedbackState = NO_FEEDBACK;
   let leftoverMs = 0;
   let freezeLeft = 0;
@@ -86,7 +87,7 @@ export function mountApp(root: HTMLElement): void {
   let exitHoldMs = 0;
   let stopTest: (() => void) | null = null;
   let statusLine = el('p', 'status');
-  let fightButton = el('button', 'action', 'Fight the dummy');
+  let fightButton = el('button', 'action', 'Fight the Ember Duelist');
 
   function setBanner(text: string | null): void {
     banner.hidden = text === null;
@@ -101,7 +102,7 @@ export function mountApp(root: HTMLElement): void {
     panel.hidden = false;
     setBanner(null);
     statusLine = el('p', 'status');
-    fightButton = el('button', 'action', 'Fight the dummy (bottom button)');
+    fightButton = el('button', 'action', 'Fight the Ember Duelist (bottom button)');
     fightButton.type = 'button';
     fightButton.disabled = true;
     fightButton.addEventListener('click', startFight);
@@ -135,7 +136,7 @@ export function mountApp(root: HTMLElement): void {
     screen = 'fight';
     exitHoldMs = 0;
     leaveHint.hidden = true;
-    state = createInitialState();
+    state = createInitialState(EMBER_DUELIST);
     feedback = NO_FEEDBACK;
     leftoverMs = 0;
     freezeLeft = 0;
@@ -161,7 +162,7 @@ export function mountApp(root: HTMLElement): void {
       canvas.width = width;
       canvas.height = height;
     }
-    drawFrame(context, width, height, state, alpha, feedback);
+    drawFrame(context, width, height, state, EMBER_DUELIST, alpha, feedback);
   }
 
   function runFight(now: number, selection: ProfileSelection | null, input: InputFrame): void {
@@ -204,7 +205,7 @@ export function mountApp(root: HTMLElement): void {
         continue;
       }
       hitStopView = false;
-      state = step(state, applyPresses(input, pending));
+      state = step(state, applyPresses(input, pending), EMBER_DUELIST);
       pending = NO_PRESSES;
       feedback = applyEvents(feedback, state.events);
       freezeLeft = Math.max(freezeLeft, freezeFor(state.events));
