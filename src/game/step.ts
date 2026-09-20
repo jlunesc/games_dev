@@ -104,14 +104,13 @@ export function updatePlayer(p: PlayerState, input: InputFrame, events: GameEven
   }
 }
 
-/** The player takes one hit. The last hit ends the fight. */
-export function hurtPlayer(s: GameState): void {
+/** The player takes `amount` hits. The last hit ends the fight. */
+export function hurtPlayer(s: GameState, amount: number): void {
   const p = s.player;
-  p.health -= 1;
+  p.health = Math.max(0, p.health - amount);
   p.invulnerableTicks = PLAYER.hitInvulnerability;
   s.events.push('playerHit');
   if (p.health <= 0) {
-    p.health = 0;
     s.phase = 'defeated';
     s.endTicks = GAME.defeatRestartTicks;
     s.events.push('playerDefeated');
@@ -157,12 +156,14 @@ function resolvePlayerAttack(s: GameState, boss: BossDef): void {
   if (next !== undefined && b.hp <= boss.maxHp * next.startsAtHpFraction) beginTransition(s);
 }
 
-/** The boss's active hit boxes hurt a player who is not untouchable. */
+/** The boss's active hit boxes hurt a player who is not untouchable, for the damage of the attack that is landing. */
 function resolveBossHits(s: GameState, boss: BossDef): void {
   const p = s.player;
   if (isInvulnerable(p)) return;
   const box = playerBox(p);
-  if (activeHitBoxes(s.boss, boss).some((hit) => overlaps(hit, box))) hurtPlayer(s);
+  if (!activeHitBoxes(s.boss, boss).some((hit) => overlaps(hit, box))) return;
+  const attack = boss.attacks.find((a) => a.id === s.boss.attackId);
+  hurtPlayer(s, attack?.damage ?? 1);
 }
 
 /** Advances the game by one update. Pure: returns a new state and never touches the one it is given. */
