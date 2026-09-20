@@ -1,6 +1,8 @@
 /** What the player asked for during one update. `*Pressed` and `confirm`/`alt` are true only on the update where the button went down. */
 export interface InputFrame {
   moveX: number;
+  /** Menu movement: -1 up, 1 down (digital, like moveX). Unused during a fight. */
+  moveY: number;
   jumpHeld: boolean;
   jumpPressed: boolean;
   attackPressed: boolean;
@@ -11,6 +13,7 @@ export interface InputFrame {
 
 export const NO_INPUT: InputFrame = {
   moveX: 0,
+  moveY: 0,
   jumpHeld: false,
   jumpPressed: false,
   attackPressed: false,

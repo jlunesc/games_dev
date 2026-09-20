@@ -40,6 +40,7 @@ describe('SN30 Pro profile (X-input on Android)', () => {
     const { input } = sample(pad([6, 7]));
     expect(input).toEqual({
       moveX: 0,
+      moveY: 0,
       jumpHeld: false,
       jumpPressed: false,
       attackPressed: false,
@@ -49,9 +50,10 @@ describe('SN30 Pro profile (X-input on Android)', () => {
     });
   });
 
-  it('ignores buttons that have no action (2, 10, 11 and the d-pad up and down)', () => {
-    const { input } = sample(pad([2, 10, 11, 12, 13]));
+  it('ignores buttons that have no action (2, 10 and 11)', () => {
+    const { input } = sample(pad([2, 10, 11]));
     expect(input.moveX).toBe(0);
+    expect(input.moveY).toBe(0);
     expect(input.jumpHeld).toBe(false);
   });
 
@@ -75,6 +77,26 @@ describe('the left stick', () => {
 
   it('gives way to the d-pad when both are used', () => {
     expect(sample(pad([14], [1, 0, 0, 0])).input.moveX).toBe(-1);
+  });
+});
+
+describe('moving up and down (menus)', () => {
+  it('reads the d-pad up and down on both profiles', () => {
+    expect(sample(pad([12])).input.moveY).toBe(-1);
+    expect(sample(pad([13])).input.moveY).toBe(1);
+    expect(sample(pad([12, 13])).input.moveY).toBe(0);
+    expect(sampleInput(pad([12]), STANDARD_PROFILE, NOTHING_HELD, 0.25).input.moveY).toBe(-1);
+    expect(sampleInput(pad([13]), STANDARD_PROFILE, NOTHING_HELD, 0.25).input.moveY).toBe(1);
+  });
+
+  it('reads the left stick vertically beyond the dead zone, like the d-pad', () => {
+    expect(sample(pad([], [0, 0.5, 0, 0])).input.moveY).toBe(1);
+    expect(sample(pad([], [0, -0.9, 0, 0])).input.moveY).toBe(-1);
+    expect(sample(pad([], [0, 0.2, 0, 0])).input.moveY).toBe(0);
+  });
+
+  it('lets the d-pad win over the stick', () => {
+    expect(sample(pad([12], [0, 1, 0, 0])).input.moveY).toBe(-1);
   });
 });
 

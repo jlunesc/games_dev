@@ -17,8 +17,12 @@ export interface ControllerProfile {
   alt: number;
   dpadLeft: number;
   dpadRight: number;
+  dpadUp: number;
+  dpadDown: number;
   /** Axis number of the left stick, sideways. */
   stickX: number;
+  /** Axis number of the left stick, up and down. */
+  stickY: number;
 }
 
 export const SN30_PRO_ID = '8Bitdo SN30 Pro (STANDARD GAMEPAD Vendor: 045e Product: 02e0)';
@@ -32,7 +36,10 @@ export const SN30_PRO_PROFILE: ControllerProfile = {
   alt: 4,
   dpadLeft: 14,
   dpadRight: 15,
+  dpadUp: 12,
+  dpadDown: 13,
   stickX: 0,
+  stickY: 1,
 };
 
 /** The standard layout, for pads whose browser reports `mapping: standard` and that have no profile of their own. */
@@ -44,7 +51,10 @@ export const STANDARD_PROFILE: ControllerProfile = {
   alt: 3,
   dpadLeft: 14,
   dpadRight: 15,
+  dpadUp: 12,
+  dpadDown: 13,
   stickX: 0,
+  stickY: 1,
 };
 
 export type ProfileSelection =
@@ -90,10 +100,14 @@ export function sampleInput(
   const dpad = (isDown(pad, profile.dpadRight) ? 1 : 0) - (isDown(pad, profile.dpadLeft) ? 1 : 0);
   const stick = pad.axes[profile.stickX] ?? 0;
   const stickDirection = Math.abs(stick) < deadZone ? 0 : stick > 0 ? 1 : -1;
+  const dpadY = (isDown(pad, profile.dpadDown) ? 1 : 0) - (isDown(pad, profile.dpadUp) ? 1 : 0);
+  const stickYValue = pad.axes[profile.stickY] ?? 0;
+  const stickYDirection = Math.abs(stickYValue) < deadZone ? 0 : stickYValue > 0 ? 1 : -1;
 
   const input: InputFrame = {
     ...NO_INPUT,
     moveX: dpad !== 0 ? dpad : stickDirection,
+    moveY: dpadY !== 0 ? dpadY : stickYDirection,
     jumpHeld: held.jump,
     jumpPressed: held.jump && !previous.jump,
     attackPressed: held.attack && !previous.attack,
