@@ -1,7 +1,16 @@
 import type { BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { DT } from '../engine/time';
-import { attackActive, attackBox, bossBox, overlaps } from './geometry';
+import { updateBoss } from './boss';
+import {
+  activeHitBoxes,
+  attackActive,
+  attackBox,
+  bossBox,
+  isInvulnerable,
+  overlaps,
+  playerBox,
+} from './geometry';
 import { GAME, PLAYER, WORLD } from './params';
 import { nextRandom } from './rng';
 import {
@@ -119,6 +128,14 @@ function resolvePlayerAttack(s: GameState, boss: BossDef): void {
   }
 }
 
+/** The boss's active hit boxes hurt a player who is not untouchable. */
+function resolveBossHits(s: GameState, boss: BossDef): void {
+  const p = s.player;
+  if (isInvulnerable(p)) return;
+  const box = playerBox(p);
+  if (activeHitBoxes(s.boss, boss).some((hit) => overlaps(hit, box))) hurtPlayer(s);
+}
+
 /** Advances the game by one update. Pure: returns a new state and never touches the one it is given. */
 export function step(prev: GameState, input: InputFrame, boss: BossDef): GameState {
   const s = structuredClone(prev);
@@ -135,6 +152,8 @@ export function step(prev: GameState, input: InputFrame, boss: BossDef): GameSta
   }
 
   updatePlayer(s.player, input, s.events);
+  updateBoss(s, boss);
   resolvePlayerAttack(s, boss);
+  resolveBossHits(s, boss);
   return s;
 }

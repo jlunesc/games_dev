@@ -43,3 +43,18 @@ export function attackActive(p: PlayerState): boolean {
 export function isInvulnerable(p: PlayerState): boolean {
   return p.invulnerableTicks > 0 || p.dashTick >= 0;
 }
+
+/** The boxes that hurt the player right now: the active hit windows of the attack the boss is performing. */
+export function activeHitBoxes(b: BossState, boss: BossDef): Box[] {
+  if (b.mode !== 'attack' || b.attackId === null) return [];
+  const attack = boss.attacks.find((a) => a.id === b.attackId);
+  if (attack === undefined) return [];
+  return attack.hits
+    .filter((hit) => b.attackTick >= hit.from && b.attackTick < hit.to)
+    .map((hit) => ({
+      x: b.facing === 1 ? b.x + hit.x0 : b.x - hit.x1,
+      y: WORLD.floorY - hit.top,
+      w: hit.x1 - hit.x0,
+      h: hit.top - hit.bottom,
+    }));
+}

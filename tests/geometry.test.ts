@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activeHitBoxes,
   attackActive,
   attackBox,
   bossBox,
@@ -68,5 +69,37 @@ describe('predicates', () => {
     p.invulnerableTicks = 0;
     p.dashTick = 0;
     expect(isInvulnerable(p)).toBe(true);
+  });
+});
+
+describe('activeHitBoxes', () => {
+  const slam = DUELIST.attacks.find((a) => a.id === 'slam')!;
+  const hit = slam.hits[0]!;
+  const bossAt = (tick: number, facing: 1 | -1) => {
+    const b = createInitialState(DUELIST).boss;
+    b.mode = 'attack';
+    b.attackId = 'slam';
+    b.attackTick = tick;
+    b.facing = facing;
+    return b;
+  };
+  const size = { y: WORLD.floorY - hit.top, w: hit.x1 - hit.x0, h: hit.top - hit.bottom };
+
+  it('is empty when the boss is not attacking', () => {
+    expect(activeHitBoxes(createInitialState(DUELIST).boss, DUELIST)).toEqual([]);
+  });
+
+  it('is empty before and after the hit window', () => {
+    expect(activeHitBoxes(bossAt(hit.from - 1, -1), DUELIST)).toEqual([]);
+    expect(activeHitBoxes(bossAt(hit.to, -1), DUELIST)).toEqual([]);
+  });
+
+  it('places the box on the side the boss faces, measured from its centre', () => {
+    expect(activeHitBoxes(bossAt(hit.from, -1), DUELIST)).toEqual([
+      { x: DUELIST.startX - hit.x1, ...size },
+    ]);
+    expect(activeHitBoxes(bossAt(hit.to - 1, 1), DUELIST)).toEqual([
+      { x: DUELIST.startX + hit.x0, ...size },
+    ]);
   });
 });
