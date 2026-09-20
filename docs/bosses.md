@@ -37,7 +37,7 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 | `startX` | Horizontal centre where it starts. | number, at least 0 |
 | `maxHp` | Health at the start. Each of the player's hits does 1 damage (double while staggered, see `counter`). | whole number, at least 1 |
 | `spacing` | `{ min, max }`: the distance from the player it tries to keep while it waits. Farther than `max`: it walks toward the player. Closer than `min`: it backs off. In between: it stands still. It always faces the player while walking. | numbers, `min` at least 0, `max` greater than `min` |
-| `approachTimeout` | Most updates it spends walking into an attack's `range`; after that it starts the attack from wherever it is (for example when cornered by the arena wall). | whole number, at least 1 |
+| `approachTimeout` | Most updates it spends walking into an attack's `range`; after that it starts the attack from wherever it is. (It also starts at once when it cannot make progress because it is against the arena wall.) | whole number, at least 1 |
 | `predictability` | 0 = pick attacks by weighted random, 1 = go through the phase's list in order. In between: that fraction of the time it follows the list, otherwise weighted random. | number, 0 to 1 |
 | `counter` | See below. | |
 | `transitionTicks` | Length of the powering-up pause between phases, in which the boss cannot be hurt. | whole number, at least 0 |
@@ -86,9 +86,9 @@ Times are in updates counted from the first update of the attack (`t = 0`). A hi
 
 A box hurts the player when it overlaps the player's body and the player is not untouchable (after a hit, or during a dash).
 
-**Worked example: the slam** (`x0` 40, `x1` 150, `bottom` 0, `top` 180). The boss is 80 wide, so its body edge is 40 from its centre and the box starts right at the body. The box reaches 150 from the centre, so it sticks out 110 units past the body, and it goes from the floor up to 180 high. If the boss stands at x = 900 and faces left, the box covers x = 750 to 860; facing right, x = 940 to 1050. Jumping reaches only about 150 units, so a 180-high box cannot be jumped: the player has to dash through it or stay out of reach.
+**Worked example: the slam** (`x0` 0, `x1` 150, `bottom` 0, `top` 180). The box starts at the boss's centre, so it also covers the ground under the boss's own body: a player who runs into the boss and stands on it is hit. (An `x0` of 40, the body's edge, would leave a safe pocket in the middle of the boss.) The box reaches 150 from the centre, so it sticks out 110 units past the body (the boss is 80 wide, so its body edge is 40 from its centre), and it goes from the floor up to 180 high. If the boss stands at x = 900 and faces left, the box covers x = 750 to 900; facing right, x = 900 to 1050. Jumping reaches only about 150 units, so a 180-high box cannot be jumped: the player has to dash through it or stay out of reach.
 
-For comparison, the sweep is `x0` 40, `x1` 250, `top` 100: a long, low box that a jump clears (the player's feet must be above `top`).
+For comparison, the sweep is `x0` 0, `x1` 250, `top` 100: a long, low box that a jump clears (the player's feet must be above `top`).
 
 ### Each phase in `phases`
 The phases are listed in order. **A phase does not inherit anything from the one before:** every phase field is given in every phase.
@@ -110,7 +110,7 @@ The phases are listed in order. **A phase does not inherit anything from the one
 The boss is always in one of five modes (`BossState.mode` in `src/game/state.ts`). Its code is `src/game/boss.ts`.
 
 - **`gap`** (waiting): it faces the player and walks or backs off to stay between `spacing.min` and `spacing.max`. After the phase's `gap` updates it chooses an attack, decides whether a chain follows (below) and goes to `approach`.
-- **`approach`**: it faces the player and walks toward them (at `walkSpeed`) if farther than the attack's `range.max`, or backs off (at `retreatSpeed`) if closer than `range.min`. As soon as the distance is inside the range, or `approachTimeout` updates have passed, the attack starts. The start of an attack is the moment the warning event (gold or red) fires, which also drives the sound.
+- **`approach`**: it faces the player and walks toward them (at `walkSpeed`) if farther than the attack's `range.max`, or backs off (at `retreatSpeed`) if closer than `range.min`. As soon as the distance is inside the range, `approachTimeout` updates have passed, or it could not move at all this update (it is pinned against the arena wall), the attack starts. The start of an attack is the moment the warning event (gold or red) fires, which also drives the sound.
 - **`attack`**: the wind-up (the cue), the active part (hit windows and `move` run) and the recovery, then it goes back to `gap`, or straight to `approach` for the next attack of a chain.
 - **`stagger`**: after a counter. It cannot move, attack or turn for `counter.staggerTicks` updates and takes `damageMultiplier` damage per hit. Then it goes back to `gap`.
 - **`transition`**: powering up between phases. It cannot be hurt (the player's swings pass through) and does nothing for `transitionTicks` updates. Then it starts the new phase's `opening` attack (walking into range first), or goes to `gap` if there is no `opening`.
@@ -142,6 +142,7 @@ All times are in updates (60 = 1 second); speeds are units per second.
 | Longer `staggerTicks` or higher `damageMultiplier` | The counter is worth more damage. | Do the arithmetic against `maxHp`: with `staggerTicks` 90 the player has time for roughly 5 swings; each one does `damageMultiplier` damage. |
 | Larger `maxHp` | A longer fight. | The phase thresholds are fractions of it: recheck the health at which each phase starts. |
 | Larger `top` on a hit box | Taller box. | A jump rises roughly 150 units, so a box whose `top` is above that cannot be jumped. That is intended for the slam; make sure a `mustDodge` attack with a tall box can still be dashed. |
+| `x0` above 0 on a hit box | The box starts away from the boss's centre. | It leaves a dead zone directly in front of (and under) the boss where the player is safe from that attack: a player standing on the boss's centre would be untouched. The Duelist uses `x0` 0 on every attack for that reason. Only raise it on purpose. |
 | Larger `x1` on a hit box | Longer reach. | The attack's `range` should let the player stand outside the reach at the moment the attack starts, or the player cannot avoid it without dashing. |
 | Larger `move.speed` or longer `move` | The boss covers more ground: distance = `speed / 60 * (to - from)` (the lunge: 1500 / 60 * 10 = 250). | The boss is clamped to the arena: it cannot leave it. Check the lunge still lands on a player it started 220 to 320 away. |
 | Higher `predictability` | Attack order more repeatable. | 1 makes the whole fight a fixed cycle. |

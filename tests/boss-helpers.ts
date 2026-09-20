@@ -1,4 +1,8 @@
 import type { BossDef } from '../src/bosses/schema';
+import { DT } from '../src/engine/time';
+import { PLAYER } from '../src/game/params';
+import { step } from '../src/game/step';
+import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { createInitialState, type GameEvent, type GameState } from '../src/game/state';
 import { DUELIST } from './helpers';
 
@@ -46,4 +50,21 @@ export function standAt(boss: BossDef, distance: number, seed = 1): GameState {
   s.player.x = s.boss.x - distance;
   s.player.prevX = s.player.x;
   return s;
+}
+
+/** The move input of a player who runs at the boss and stops exactly on its centre (never attacks or dashes). */
+export const crowdInput = (s: GameState): InputFrame => {
+  const perUpdate = PLAYER.runSpeed * DT;
+  return { ...NO_INPUT, moveX: Math.max(-1, Math.min(1, (s.boss.x - s.player.x) / perUpdate)) };
+};
+
+/** Runs `count` updates with the player crowding the boss all the time; returns every resulting state (index 0 is update 1). */
+export function runCrowding(state: GameState, count: number, boss: BossDef): GameState[] {
+  const states: GameState[] = [];
+  let s = state;
+  for (let n = 0; n < count; n++) {
+    s = step(s, crowdInput(s), boss);
+    states.push(s);
+  }
+  return states;
 }

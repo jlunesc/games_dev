@@ -5,7 +5,16 @@ import { attackLength } from '../src/game/boss';
 import { GAME, PLAYER, WORLD } from '../src/game/params';
 import { step } from '../src/game/step';
 import { createInitialState, type GameEvent, type GameState } from '../src/game/state';
-import { anywhere, attackIds, solo, standAt, updatesWith, WALKER, windupUpdates } from './boss-helpers';
+import {
+  anywhere,
+  attackIds,
+  runCrowding,
+  solo,
+  standAt,
+  updatesWith,
+  WALKER,
+  windupUpdates,
+} from './boss-helpers';
 import { DUELIST, run, withInput } from './helpers';
 
 describe('walking', () => {
@@ -304,5 +313,48 @@ describe('approach and facing', () => {
     expect(s.boss.mode).toBe('gap');
     s = step(s, NO_INPUT, boss);
     expect(s.boss.facing).toBe(1);
+  });
+});
+
+describe('crowding the boss', () => {
+  it.each(['slam', 'sweep', 'burst'])(
+    'a player standing on the boss is hurt by the %s inside its active updates',
+    (id) => {
+      const boss = solo(id);
+      const attack = DUELIST.attacks.find((a) => a.id === id)!;
+      // The player runs into the boss (it backs off to the wall) and stays on its centre.
+      const states = runCrowding(standAt(boss, 100), 500, boss);
+      const first = windupUpdates(states)[0]!;
+      const at = states[first - 1]!;
+      expect(Math.abs(at.player.x - at.boss.x)).toBeLessThan(1);
+      const hit = updatesWith(states, 'playerHit')[0] ?? -1; // -1: never hurt
+      expect(hit).toBeGreaterThanOrEqual(first + attack.windup);
+      expect(hit).toBeLessThan(first + attack.windup + attack.active);
+    },
+  );
+
+  it.each(DUELIST.attacks.map((a) => a.id))(
+    'a boss pinned against the wall with the player too close starts the %s promptly',
+    (id) => {
+      const boss = solo(id);
+      const s = createInitialState(boss);
+      s.boss.x = WORLD.width - boss.width / 2;
+      s.player.x = s.boss.x - 40;
+      s.player.prevX = s.player.x;
+      const attack = boss.attacks.find((a) => a.id === id)!;
+      expect(40).toBeLessThan(attack.range.min);
+      const states = run(s, 60, () => NO_INPUT, boss);
+      // Update 1 is the gap (one update) and enters the approach; the attack starts on update 2. Far below approachTimeout.
+      expect(windupUpdates(states)[0] ?? Infinity).toBeLessThanOrEqual(3);
+      expect(boss.approachTimeout).toBeGreaterThan(3);
+    },
+  );
+
+  it('a player who keeps crowding the real boss is hurt and the boss keeps attacking', () => {
+    const states = runCrowding(createInitialState(DUELIST, 3), 600, DUELIST);
+    expect(updatesWith(states, 'playerHit').length).toBeGreaterThanOrEqual(1);
+    // One attack cycle is about an attack (66 to 76 updates) plus the gap (70) plus at most approachTimeout of walking, so
+    // 600 updates hold three attacks (the brief's "five" cannot fit: five cycles are over 700 updates).
+    expect(windupUpdates(states).length).toBeGreaterThanOrEqual(3);
   });
 });

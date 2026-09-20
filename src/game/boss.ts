@@ -27,15 +27,20 @@ function enterGap(b: BossState): void {
   b.attackId = null;
   b.attackTick = 0;
   b.pendingAttackId = null;
+  b.chainLeft = 0;
 }
 
 function faceTarget(b: BossState, targetX: number): void {
   b.facing = targetX < b.x ? -1 : 1;
 }
 
-function moveBoss(b: BossState, boss: BossDef, direction: 1 | -1, speed: number): void {
+/** Moves the boss along the floor, inside the arena. Returns whether its position changed (false when it is against a wall). */
+function moveBoss(b: BossState, boss: BossDef, direction: 1 | -1, speed: number): boolean {
   const half = boss.width / 2;
-  b.x = Math.min(Math.max(b.x + direction * speed * DT, half), WORLD.width - half);
+  const next = Math.min(Math.max(b.x + direction * speed * DT, half), WORLD.width - half);
+  const moved = next !== b.x;
+  b.x = next;
+  return moved;
 }
 
 /**
@@ -130,11 +135,12 @@ function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef): void {
     return;
   }
   const toward: 1 | -1 = p.x < b.x ? -1 : 1;
-  if (distance > attack.range.max) {
-    moveBoss(b, boss, toward, phase.walkSpeed);
-  } else {
-    moveBoss(b, boss, toward === 1 ? -1 : 1, phase.retreatSpeed);
-  }
+  const moved =
+    distance > attack.range.max
+      ? moveBoss(b, boss, toward, phase.walkSpeed)
+      : moveBoss(b, boss, toward === 1 ? -1 : 1, phase.retreatSpeed);
+  // Pinned against a wall it cannot make progress, so it attacks from where it stands instead of waiting.
+  if (!moved) startAttack(s, boss, id);
 }
 
 /** After an attack: straight into the next one of a chain, otherwise back to waiting. */

@@ -51,7 +51,8 @@ describe('a counter', () => {
     const sweepBoss = solo('sweep');
     const sweep = DUELIST.attacks.find((a) => a.id === 'sweep')!;
     const sweepFirst = windupUpdates(run(standAt(sweepBoss, 150), 60, () => NO_INPUT, sweepBoss))[0]!;
-    const at = sweepFirst + sweep.windup - 5;
+    const sweepHit = sweepFirst + sweep.windup;
+    const at = sweepHit - 5;
     const states = run(
       standAt(sweepBoss, 150),
       at + 40,
@@ -59,6 +60,20 @@ describe('a counter', () => {
       sweepBoss,
     );
     expect(updatesWith(states, 'counter')).toEqual([]);
+    // Control: the swing really was inside the sweep's warning, and the sweep still hurts (as the slam counters
+    // above show, the same timing on the slam would have been a counter).
+    expect(at).toBeGreaterThanOrEqual(sweepFirst);
+    expect(at).toBeLessThan(sweepHit);
+    expect(states[at - 1]!.boss.attackId).toBe('sweep');
+    expect(states[at - 1]!.boss.mode).toBe('attack');
+    expect(updatesWith(states, 'playerHit')[0]).toBe(sweepHit);
+  });
+
+  it('control: the same timing on the counterable slam is a counter', () => {
+    // The last five updates of the slam's warning, as the sweep test above uses on the sweep.
+    const at = hitStart - 5;
+    expect(at).toBeGreaterThanOrEqual(windowStart);
+    expect(updatesWith(swingAt(at), 'counter')).toEqual([at]);
   });
 });
 
