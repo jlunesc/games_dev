@@ -29,13 +29,13 @@ If the controller shows nothing, note which mode it was in and whether the page 
 ### The menu
 Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Tweak difficulty**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
 
-How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
+How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty). On the Boss row they do nothing for now, because there is only one boss. The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
 
-The menu remembers your last choices (boss, difficulty and any tweaks), even after you close the app. It opens with Fight highlighted, so pressing the bottom button twice starts the same fight as last time.
+The menu remembers your last choices (boss, difficulty and any tweaks), even after you close the app. It opens with Fight highlighted, so pressing the bottom button once starts the same fight as last time. After a fight the summary comes first, so it takes two presses: one to leave the summary, one for Fight.
 
-**Difficulty** has three names: **Easy**, **Normal** and **Hard**. Left and right switch between them. Normal is the fight as designed. Easy gives longer warnings, slower and less frequent attacks, less boss health and fewer kinds of attack. Hard does the opposite, and each attack that hits you costs 2 hits instead of 1. If you change any value in the Tweak screen, the menu shows **Custom (from Normal)**, or from whichever name you started with.
+**Difficulty** has three presets (a preset is a ready-made set of values): **Easy**, **Normal** and **Hard**. Left and right switch between them. Normal is the fight as designed. Easy gives longer warnings, slower and less frequent attacks, less boss health and fewer kinds of attack. Hard is faster, attacks more often, gives shorter warnings and gives the boss more health, and each attack that hits you costs 2 hits instead of 1. If you change any value in the Tweak screen, the menu shows **Custom (from Normal)**, or from whichever preset you started with.
 
-**Tweak difficulty** lets you change the fight one value at a time. Up and down pick a value, left and right change it, and the top button goes back to the menu. There are seven values:
+**Tweak difficulty** lets you change the fight one value at a time (each value has a short explanation under the list). Up and down pick a value, left and right change it, and the top button goes back to the menu. There are seven values:
 - **Speed**: how fast the boss moves and how soon it recovers after an attack.
 - **Attack frequency**: how often it attacks (higher means shorter pauses).
 - **Warning length**: how long you get to read an attack before it lands (lower is harder).
@@ -44,11 +44,11 @@ The menu remembers your last choices (boss, difficulty and any tweaks), even aft
 - **Attack range**: how far the attacks reach and how far away the boss starts them.
 - **Variety**: how many different attacks it uses (lower means fewer kinds).
 
-The last row, **Reset to preset**, puts every value back to the Easy, Normal or Hard you started from. Choosing a different name in the Difficulty row also starts again from that name's values.
+The last row, **Reset to preset**, puts every value back to the preset (Easy, Normal or Hard) you started from. It reacts to the bottom button. Choosing a different preset in the Difficulty row also starts again from that preset's values.
 
-**Settings** switches four things on or off: Hit freeze, Screen shake, Flashes and Sound. They only change how a fight looks and sounds; the fight itself plays exactly the same. Left, right or the bottom button switch one; the top button goes back.
+**Settings** switches four things on or off: **Hit freeze** (a tiny pause when a hit lands), **Screen shake**, **Flashes** (white and red flashes when something is hit) and **Sound**. They only change how a fight looks and sounds, and the fight rules stay the same. One honest catch: switching Hit freeze off does not change the rules, but you get slightly less time to react after a hit, so timing can feel different. Left, right or the bottom button switch one; the top button goes back.
 
-**The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time, the phase reached, the hits you took, the boss's health left, and the attack that hurt you most. The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident.
+**The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time, the phase reached, the hits you took, the boss's health left, and the attack that hurt you most (if nothing hit you, it says "You were never hit."). The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident.
 
 ### The fight
 The installed app opens sideways (landscape) by itself. If it does not after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site. In a normal Chrome tab, turn the phone sideways yourself.
@@ -77,10 +77,11 @@ Try each of these and note anything that feels off:
 The menu and the summary (M3a):
 - [ ] The menu opens with Fight highlighted; up and down move the highlight and it wraps around.
 - [ ] Left and right on Difficulty switch between Easy, Normal and Hard. Easy feels clearly easier (longer warnings, slower and less frequent attacks, less boss health) and Hard clearly harder.
-- [ ] In Tweak, each dial changes with left and right, the menu then shows "Custom (from ...)", "Reset to preset" puts it back, and your choice is still there after closing and reopening the app.
+- [ ] In Tweak, each value changes with left and right, the menu then shows "Custom (from ...)", "Reset to preset" puts it back, and your choice is still there after closing and reopening the app.
 - [ ] In Settings, switching off Hit freeze, Screen shake, Flashes or Sound removes exactly that effect in a fight, and the fight itself plays the same.
-- [ ] After a win, a loss, and after leaving with the top button, the summary appears with time, phase reached, hits taken, boss health left, and the attack that hurt you most; the bottom button returns to the menu.
-- [ ] The menu no longer shows button names on the buttons.
+- [ ] After a win, a loss, and after leaving with the top button, the summary appears with time, phase reached, hits taken, boss health left, and the attack that hurt you most (or "You were never hit." if nothing hit you); the bottom button returns to the menu.
+- [ ] The menu rows show only their names, with no "top button" or "bottom button" text inside them.
+- [ ] Tapping Fight with no controller connected does nothing except show a message ("Connect a controller and press a button first.").
 - [ ] Tapping the rows with a finger works too.
 
 All of the Duelist's attacks are meant to be dodged from their warning (the arm pose and the glow), not reacted to after they start: jump or dash during the warning. If you feel you "could not dodge in time", tell me, that is useful to know and the timing can be tuned.
@@ -93,6 +94,7 @@ After playing, answer these in plain words:
 - Is the fight too short or too long?
 - Is the Victory / Defeated message too quick? It shows for 1 second before the summary appears.
 - Would a sign of when the counter window opens help (for example a flash on the boss)?
-- Which of the seven dials matters most for how hard the fight feels?
+- Which of the seven values matters most for how hard the fight feels?
 - Do the Easy and Hard presets feel right, or should some values change?
+- Does Hard feel like a step up from Normal, or like a wall (several values change at once)? Is 3 damage (two mistakes end the fight) too harsh?
 - Was anything in the menu confusing?

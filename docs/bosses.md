@@ -1,6 +1,6 @@
 # Boss files
 
-How a boss is described, and how to add or tune one. Everything here matches `src/bosses/schema.ts` (the types and their doc comments), `src/bosses/parse.ts` (the checks), `src/game/boss.ts` (the boss's movement and choices) and `src/game/step.ts` (the counter, damage and phase change) and `src/game/difficulty.ts` (the difficulty dials, section 5). If you change any of those, update this file and `tests/boss-parse.test.ts`.
+How a boss is described, and how to add or tune one. Everything here matches `src/bosses/schema.ts` (the types and their doc comments), `src/bosses/parse.ts` (the checks), `src/game/boss.ts` (the boss's movement and choices) and `src/game/step.ts` (the counter, damage and phase change), and `src/game/difficulty.ts` (the difficulty dials, section 5). If you change any of those, update this file and `tests/boss-parse.test.ts`.
 
 Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second), distances are in world units (the arena is 1280 wide, the floor is at y = 640; the player is 48 wide and 96 tall), speeds are units per second.
 
@@ -168,7 +168,7 @@ There are seven dials. Each is a multiplier on numbers in the boss file (damage 
 |---|---|---|
 | `speed` | 0.7 to 1.4 | Faster: each phase's `walkSpeed` and `retreatSpeed`, each attack's `move.speed` are multiplied; each attack's `recovery` is divided by it (rounded), so it also recovers sooner. |
 | `frequency` | 0.5 to 2 | Each phase's `gap` is divided by it (rounded, never below 0): higher means shorter pauses. It does not touch chaining. |
-| `readability` | 0.6 to 1.6 | Each attack's `windup` is multiplied (rounded). The `from` and `to` of its `hits` and of its `move` shift by the same number of updates, so they stay inside the active part. A `counterable` attack never gets a `windup` below `counter.window` (any other attack, never below 1). Lower is harder. |
+| `readability` | 0.7 to 1.6 | Each attack's `windup` is multiplied (rounded). The `from` and `to` of its `hits` and of its `move` shift by the same number of updates, so they stay inside the active part. A `counterable` attack never gets a `windup` below `counter.window` (any other attack, never below 1). Lower is harder. Readability changes when the warning opens, but the counter window itself stays the same length, so Easy does not make countering easier. |
 | `health` | 0.5 to 2 | `maxHp` is multiplied (rounded, at least 1). The phase thresholds are fractions, so they scale with it. |
 | `damage` | 1 to 3 | Each attack's `damage` is multiplied (at least 1). It is a whole number of hits: 1, 2 or 3. |
 | `range` | 0.8 to 1.2 | Each attack's `range.min` and `range.max`, and each hit window's `x0` and `x1`, are multiplied: attacks reach farther and start from farther away. `spacing`, `counter.range` and `top`/`bottom` are not changed. |
