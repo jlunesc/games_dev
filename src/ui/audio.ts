@@ -29,7 +29,8 @@ export function createSound(): Sound {
     unlock(): void {
       try {
         context ??= new AudioContext();
-        void context.resume();
+        // Without a user gesture the browser rejects this; that must not surface as an unhandled rejection.
+        void context.resume().catch(() => {});
       } catch {
         context = null;
       }

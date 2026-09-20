@@ -172,7 +172,7 @@ textarea {
 .banner {
   position: fixed;
   left: 50%;
-  bottom: 1.5rem;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   max-width: 90vw;
   margin: 0;

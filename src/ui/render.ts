@@ -146,11 +146,12 @@ export function drawFrame(
     view.offsetY + shake * 0.5 * view.scale,
   );
   ctx.fillStyle = COLORS.arena;
-  ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+  // Drawn 8 units past every edge so the shake never shows the black bars.
+  ctx.fillRect(-8, -8, WORLD.width + 16, WORLD.height + 16);
   ctx.fillStyle = COLORS.floor;
-  ctx.fillRect(0, WORLD.floorY, WORLD.width, WORLD.height - WORLD.floorY);
+  ctx.fillRect(-8, WORLD.floorY, WORLD.width + 16, WORLD.height - WORLD.floorY + 8);
   ctx.fillStyle = COLORS.floorLine;
-  ctx.fillRect(0, WORLD.floorY, WORLD.width, 3);
+  ctx.fillRect(-8, WORLD.floorY, WORLD.width + 16, 3);
 
   drawDummy(ctx, state, feedback);
   drawPlayer(ctx, state, alpha, feedback);

@@ -61,7 +61,10 @@ export function mountApp(root: HTMLElement): void {
   root.replaceChildren(canvas, panel, banner);
 
   const sound = createSound();
-  root.addEventListener('pointerdown', () => sound.unlock());
+  // A phone only counts some events as a tap for sound: touch needs pointerup or click, not just pointerdown.
+  for (const type of ['pointerdown', 'pointerup', 'click']) {
+    root.addEventListener(type, () => sound.unlock());
+  }
 
   let screen: Screen = 'start';
   let held: HeldButtons = NOTHING_HELD;
@@ -70,6 +73,10 @@ export function mountApp(root: HTMLElement): void {
   let feedback: FeedbackState = NO_FEEDBACK;
   let leftoverMs = 0;
   let freezeLeft = 0;
+  // True from the start of a hit-stop until the next real update: the picture stays on the newest state.
+  let hitStopView = false;
+  // False until the first usable read of a pad, so buttons already held then do not count as presses.
+  let padSeen = false;
   let lastTime = performance.now();
   let paused = false;
   let stopTest: (() => void) | null = null;
@@ -89,6 +96,7 @@ export function mountApp(root: HTMLElement): void {
     statusLine = el('p', 'status');
     fightButton = el('button', 'action', 'Fight the dummy (bottom button)');
     fightButton.type = 'button';
+    fightButton.disabled = true;
     fightButton.addEventListener('click', startFight);
     const testButton = el('button', 'action', 'Controller test (top button)');
     testButton.type = 'button';
@@ -120,6 +128,7 @@ export function mountApp(root: HTMLElement): void {
     feedback = NO_FEEDBACK;
     leftoverMs = 0;
     freezeLeft = 0;
+    hitStopView = false;
     pending = NO_PRESSES;
     paused = false;
     lastTime = performance.now();
@@ -178,31 +187,38 @@ export function mountApp(root: HTMLElement): void {
         freezeLeft -= 1;
         continue;
       }
+      hitStopView = false;
       state = step(state, applyPresses(input, pending));
       pending = NO_PRESSES;
       feedback = applyEvents(feedback, state.events);
       freezeLeft = Math.max(freezeLeft, freezeFor(state.events));
+      if (freezeLeft > 0) hitStopView = true;
       sound.play(state.events);
     }
-    draw(plan.alpha);
+    // During a hit-stop nothing moves, so blend at 1 instead of the sweeping leftover (that would make the player judder).
+    draw(hitStopView ? 1 : plan.alpha);
   }
 
   function frame(now: number): void {
     requestAnimationFrame(frame);
-    if (screen === 'test') {
-      lastTime = now;
-      return;
-    }
-
+    // Sample the pad on every frame, on the controller test screen too, so `held` never goes stale.
     const pad = firstPad();
     const selection = pad === null ? null : selectProfile(pad.id, pad.mapping);
     let input = NO_INPUT;
     if (pad !== null && selection?.kind === 'profile') {
       const sampled = sampleInput(pad, selection.profile, held, GAME.deadZone);
-      input = sampled.input;
       held = sampled.held;
+      // The first read after a pad (re)appears only seeds `held`: what is already down is not a new press.
+      if (padSeen) input = sampled.input;
+      padSeen = true;
     } else {
       held = NOTHING_HELD;
+      padSeen = false;
+    }
+
+    if (screen === 'test') {
+      lastTime = now;
+      return;
     }
 
     if (screen === 'start') {

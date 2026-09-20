@@ -61,10 +61,11 @@ export function mountControllerScreen(root: HTMLElement, onBack?: () => void): (
   let running = true;
   root.replaceChildren(title, hint, pads, copyButton, status, fallback);
   if (onBack) {
+    // First in the panel, so it stays reachable on a phone however long the pads list and report get.
     const backButton = el('button', 'action', 'Back');
     backButton.type = 'button';
     backButton.addEventListener('click', onBack);
-    root.append(backButton);
+    root.prepend(backButton);
   }
 
   if (typeof navigator.getGamepads !== 'function') {
