@@ -8,7 +8,7 @@ import { step } from '../src/game/step';
 import { summarize } from '../src/game/summary';
 import { advanceFlow, startFlow } from '../src/ui/fight-flow';
 import { presetDials } from '../src/ui/prefs';
-import { analyzeFight, analyzeRun, POSITION_EVERY } from '../src/stats/analyze';
+import { actionOf, analyzeFight, analyzeRun, POSITION_EVERY } from '../src/stats/analyze';
 import { decodeInputs } from '../src/stats/input-log';
 import { buildRecord, recordUpdate, startRecording, type FightMeta } from '../src/stats/record';
 import { solo, standAt, windupUpdates } from './boss-helpers';
@@ -128,12 +128,48 @@ describe('attack outcomes', () => {
   });
 });
 
-describe('an attack cut off during its recovery', () => {
-  it('stays interrupted: the outcome is decided when the attack ends', () => {
-    // The dash beat the sweep's danger (updates 24 to 31 of the attack) but the run stops at update 45 of 56,
-    // in recovery, so the attack is reported as interrupted (its reaction time is still measured).
-    const a = analyzeRun(sweepBoss, standAt(sweepBoss, 120), frames(sweepFirst + 45, { [sweepFirst + 22]: { dashPressed: true } }));
-    expect(a.attacks[0]).toMatchObject({ outcome: 'interrupted', reactionTicks: 22, marginTicks: null });
+describe('when an attack counts as dodged or interrupted', () => {
+  // The sweep's dangerous updates are attack time 24 to 31 (hits resolve for t in [24, 32)).
+  const dashAt20 = { [sweepFirst + 20]: { dashPressed: true } };
+
+  it('is dodged as soon as the last dangerous update has passed without a hit', () => {
+    const a = analyzeRun(sweepBoss, standAt(sweepBoss, 120), frames(sweepFirst + 31, dashAt20));
+    expect(a.attacks[0]).toMatchObject({
+      outcome: 'dodged',
+      evasion: 'dash',
+      reactionTicks: 20,
+      marginTicks: 4,
+    });
+  });
+
+  it('is interrupted one update earlier, while a dangerous update is still to come', () => {
+    const a = analyzeRun(sweepBoss, standAt(sweepBoss, 120), frames(sweepFirst + 30, dashAt20));
+    expect(a.attacks[0]).toMatchObject({ outcome: 'interrupted', evasion: null, reactionTicks: 20 });
+  });
+
+  it('is dodged when the run ends in the recovery after a survived danger window', () => {
+    const a = analyzeRun(
+      sweepBoss,
+      standAt(sweepBoss, 120),
+      frames(sweepFirst + 45, { [sweepFirst + 22]: { dashPressed: true } }),
+    );
+    expect(a.attacks[0]).toMatchObject({
+      outcome: 'dodged',
+      evasion: 'dash',
+      reactionTicks: 22,
+      marginTicks: 2,
+    });
+  });
+
+  it('is interrupted when a phase change cancels it before its dangerous window', () => {
+    // 20 hp is just above the phase 2 threshold (0.66 * 30 = 19.8): an early swing that hits (not a counter,
+    // the counter window opens at attack time 18) takes it below, and the boss drops the slam to power up.
+    const state = standAt(slamBoss, 120);
+    state.boss.hp = 20;
+    const a = analyzeRun(slamBoss, state, frames(slamFirst + 20, { [slamFirst + 5]: { attackPressed: true } }));
+    expect(a.phaseReached).toBe(2);
+    expect(a.counters).toBe(0);
+    expect(a.attacks[0]).toMatchObject({ attackId: 'slam', outcome: 'interrupted', evasion: null });
   });
 });
 
@@ -152,6 +188,13 @@ describe('punish windows', () => {
     expect(a.swingsThatHit).toBe(1);
     expect(a.accuracy).toBe(1);
     expect(a.bossHitTicks.length).toBe(1);
+  });
+
+  it('does not count a window that was cut short before the player could use it', () => {
+    // Attack time 36 is the first update of the slam's recovery: the run ends there.
+    const a = analyzeRun(slamBoss, standAt(slamBoss, 120), frames(slamFirst + 36));
+    const p = a.behavior.punish;
+    expect(p).toEqual({ opened: 0, taken: 0, missed: 0 });
   });
 
   it('counts a window the player let pass', () => {
@@ -189,6 +232,182 @@ describe('behavior totals', () => {
     const a = analyzeRun(QUIET_BOSS, standAt(QUIET_BOSS, 120), frames(300));
     expect(a.behavior.updatesClose).toBe(a.ticks);
     expect(a.ticks).toBe(300);
+  });
+});
+
+describe('evasion is caused by the attack', () => {
+  const burst = solo('burst');
+  const burstAnywhere: BossDef = {
+    ...burst,
+    attacks: burst.attacks.map((atk) => (atk.id === 'burst' ? { ...atk, range: { min: 0, max: 1e9 } } : atk)),
+  };
+
+  it('a dash that only happens while the player is out of reach is distance, not dash', () => {
+    // Dashing away from the boss: a dash toward it would carry the player through the outer wave, and that
+    // would rightly count as a dash.
+    const first = firstWindup(burstAnywhere, 600);
+    const a = analyzeRun(
+      burstAnywhere,
+      standAt(burstAnywhere, 600),
+      frames(first + 70, { [first + 45]: { dashPressed: true, moveX: -1 } }),
+    );
+    expect(a.dashes).toBe(1);
+    expect(a.attacks[0]).toMatchObject({ attackId: 'burst', outcome: 'dodged', evasion: 'distance', marginTicks: null });
+  });
+
+  it('a jump over the low waves the player really stood in is a jump', () => {
+    // At 200 units the second wave (attack time 34 to 37, 50 high) sweeps over the player's spot.
+    const first = firstWindup(burst, 200);
+    const at: Record<number, Partial<InputFrame>> = { [first + 10]: { jumpPressed: true, jumpHeld: true } };
+    for (let n = first + 11; n <= first + 40; n++) at[n] = { jumpHeld: true };
+    const a = analyzeRun(burst, standAt(burst, 200), frames(first + 60, at));
+    expect(a.attacks[0]).toMatchObject({
+      attackId: 'burst',
+      outcome: 'dodged',
+      evasion: 'jump',
+      reactionTicks: 10,
+      marginTicks: 20,
+    });
+  });
+
+  it('the same player standing still is hit, at the wave that reaches them', () => {
+    const first = firstWindup(burst, 200);
+    const a = analyzeRun(burst, standAt(burst, 200), frames(first + 60));
+    // firstDangerTick is the start of the first wave (30); the wave that reaches the player is the second (34).
+    expect(a.attacks[0]).toMatchObject({ outcome: 'hit', firstDangerTick: first + 30, marginTicks: null });
+    expect(a.playerHitTicks).toEqual([first + 34]);
+  });
+
+  it('a burst survived from far away is decided only after its last wave (attack time 49)', () => {
+    const first = firstWindup(burstAnywhere, 600);
+    const during = analyzeRun(burstAnywhere, standAt(burstAnywhere, 600), frames(first + 48));
+    const after = analyzeRun(burstAnywhere, standAt(burstAnywhere, 600), frames(first + 49));
+    expect(during.attacks[0]!.outcome).toBe('interrupted');
+    expect(after.attacks[0]!.outcome).toBe('dodged');
+  });
+});
+
+describe('frames after the end of a fight', () => {
+  it('are ignored, so the analysis matches the truncated run', () => {
+    const boss = applyDials(DUELIST, { ...presetDials('hard'), damage: 3 });
+    let s = createInitialState(boss, 99);
+    let n = 0;
+    while (s.phase === 'fight') {
+      s = step(s, NO_INPUT, boss);
+      n += 1;
+    }
+    expect(n).toBeLessThan(1500);
+    const truncated = analyzeRun(boss, createInitialState(boss, 99), frames(n));
+    const padded = analyzeRun(boss, createInitialState(boss, 99), frames(n + 300));
+    expect(padded).toEqual(truncated);
+    expect(padded.ticks).toBe(n);
+    expect(padded.behavior.positions.length).toBe(Math.floor(n / POSITION_EVERY));
+  });
+});
+
+describe('a dodge on the very update the attack starts', () => {
+  it('has a reaction time of 0', () => {
+    // From 190 units, so that the dash toward the boss leaves the player inside the sweep's range.
+    const first = firstWindup(sweepBoss, 190);
+    const a = analyzeRun(
+      sweepBoss,
+      standAt(sweepBoss, 190),
+      frames(first + 60, { [first]: { dashPressed: true } }),
+    );
+    // The dash carries the player past the boss, so the sweep (which faces the other way) never reaches
+    // them: it is dodged by distance, with no margin, but the reaction time is measured.
+    expect(a.attacks[0]).toMatchObject({
+      startTick: first,
+      outcome: 'dodged',
+      evasion: 'distance',
+      reactionTicks: 0,
+      reactionMs: 0,
+      marginTicks: null,
+    });
+  });
+});
+
+describe('an attack cancelled on its first update', () => {
+  it('still appears, and counters match the countered occurrences', () => {
+    // A slam whose warning is exactly the counter window: a swing on its first update counters it at once.
+    const quick: BossDef = {
+      ...slamBoss,
+      attacks: slamBoss.attacks.map((atk) =>
+        atk.id === 'slam'
+          ? { ...atk, windup: DUELIST.counter.window, hits: [{ ...atk.hits[0]!, from: 12, to: 18 }] }
+          : atk,
+      ),
+    };
+    const first = firstWindup(quick, 120);
+    const a = analyzeRun(quick, standAt(quick, 120), frames(first + 5, { [first]: { attackPressed: true } }));
+    expect(a.counters).toBe(1);
+    expect(a.attacks.filter((x) => x.outcome === 'countered').length).toBe(a.counters);
+    expect(a.attacks[0]).toMatchObject({ attackId: 'slam', startTick: first, outcome: 'countered' });
+  });
+});
+
+describe('chains, damage and what the player was doing', () => {
+  it('lists every attack of a chain, in order', () => {
+    const chained: BossDef = {
+      ...slamBoss,
+      phases: slamBoss.phases.map((p) => ({ ...p, maxChain: 3, chainChance: 1 })),
+    };
+    const a = analyzeRun(chained, standAt(chained, 120), frames(260));
+    expect(a.attacks.length).toBeGreaterThanOrEqual(3);
+    for (let i = 1; i < 3; i++) {
+      expect(a.attacks[i]!.startTick).toBeGreaterThanOrEqual(a.attacks[i - 1]!.startTick + 66);
+    }
+  });
+
+  it('counts the damage of a heavy attack on the attack and the fight', () => {
+    const heavy: BossDef = {
+      ...slamBoss,
+      attacks: slamBoss.attacks.map((atk) => (atk.id === 'slam' ? { ...atk, damage: 2 } : atk)),
+    };
+    const a = analyzeRun(heavy, standAt(heavy, 120), frames(slamFirst + 40));
+    expect(a.attacks[0]).toMatchObject({ outcome: 'hit', damageTaken: 2 });
+    expect(a.damageTaken).toBe(2);
+    expect(a.hitsTaken).toBe(1);
+  });
+
+  it.each([
+    { name: 'attacking', at: { [slamFirst + 30]: { attackPressed: true } } },
+    {
+      name: 'airborne',
+      at: Object.fromEntries(
+        Array.from({ length: 20 }, (_, i) => [
+          slamFirst + 15 + i,
+          i === 0 ? { jumpPressed: true, jumpHeld: true } : { jumpHeld: true },
+        ]),
+      ),
+    },
+    {
+      name: 'running',
+      at: { [slamFirst + 28]: { moveX: 1 }, [slamFirst + 29]: { moveX: 1 }, [slamFirst + 30]: { moveX: 1 } },
+    },
+  ])('records that the player was $name when hit', ({ name, at }) => {
+    const a = analyzeRun(slamBoss, standAt(slamBoss, 120), frames(slamFirst + 40, at));
+    expect(a.attacks[0]).toMatchObject({ outcome: 'hit', playerActionWhenHit: name });
+  });
+
+  it('records what the player was doing when the warning began', () => {
+    // Slam from 200 units: the boss walks in first, so the warning begins on update 21 whatever the player does.
+    const first = firstWindup(slamBoss, 200);
+    const action = (at: Record<number, Partial<InputFrame>>) =>
+      analyzeRun(slamBoss, standAt(slamBoss, 200), frames(first + 5, at)).attacks[0]!.playerActionAtStart;
+    expect(action({})).toBe('idle');
+    expect(action({ [first]: { moveX: 1 } })).toBe('running');
+    expect(action({ [first - 2]: { attackPressed: true } })).toBe('attacking');
+    expect(action({ [first - 10]: { jumpPressed: true, jumpHeld: true } })).toBe('airborne');
+  });
+
+  it('actionOf ranks dashing over attacking over airborne over running over idle', () => {
+    const p = createInitialState(QUIET_BOSS, 1).player;
+    expect(actionOf(p, withInput({}))).toBe('idle');
+    expect(actionOf(p, withInput({ moveX: -1 }))).toBe('running');
+    expect(actionOf({ ...p, onGround: false }, withInput({ moveX: 1 }))).toBe('airborne');
+    expect(actionOf({ ...p, onGround: false, attackTick: 2 }, withInput({}))).toBe('attacking');
+    expect(actionOf({ ...p, attackTick: 2, dashTick: 0 }, withInput({}))).toBe('dashing');
   });
 });
 

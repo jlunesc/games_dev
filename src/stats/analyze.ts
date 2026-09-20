@@ -3,7 +3,8 @@ import type { BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { TICK_RATE } from '../engine/time';
 import { applyDials } from '../game/difficulty';
-import { PLAYER } from '../game/params';
+import { activeHitBoxes, overlaps, playerBox } from '../game/geometry';
+import { PLAYER, WORLD } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState, type PlayerState } from '../game/state';
 import { decodeInputs } from './input-log';
@@ -38,10 +39,10 @@ export interface AttackOccurrence {
   /** From the start of the warning to the player's first dash or jump before the dangerous moment; null if none. */
   reactionTicks: number | null;
   reactionMs: number | null;
-  /** Dangerous moment minus the start of the dodge: small means a tight dodge, negative means too late. Null when there was no dodge action. */
+  /** Only set for a hit, or for a dodge by dash or jump, and only when the player made a dodge action; small means a tight dodge, negative means too late. */
   marginTicks: number | null;
   marginMs: number | null;
-  /** Hits this attack cost the player, and what the player was doing when hit (null when not hit). */
+  /** Health this attack actually took from the player (a blow larger than the health left counts what was left), and what the player was doing when hit (null when not hit). */
   damageTaken: number;
   playerActionWhenHit: PlayerAction | null;
 }
@@ -62,6 +63,7 @@ export interface Analysis {
   bossHpLeft: number;
   bossMaxHp: number;
   damageDealt: number;
+  /** Health actually lost (a blow larger than the health left counts what was left). */
   damageTaken: number;
   hitsTaken: number;
   bossHitTicks: number[];
@@ -113,18 +115,23 @@ interface OpenAttack {
   countered: boolean;
   damage: number;
   actionWhenHit: PlayerAction | null;
+  /** Attack time on the last update seen while the attack was open. */
+  lastT: number;
   windowOpen: boolean;
   windowTaken: boolean;
 }
 
-function occurrence(open: OpenAttack, interrupted: boolean): AttackOccurrence {
+function occurrence(open: OpenAttack): AttackOccurrence {
+  // Hits resolve for attack time in [from, to), so the last dangerous update is `dangerTo - 1`. An attack that
+  // lived to that update without hurting or being countered was dodged; one cut short before it is interrupted.
+  const resolved = open.lastT >= open.dangerTo - 1;
   const outcome: AttackOutcome = open.countered
     ? 'countered'
     : open.hit
       ? 'hit'
-      : interrupted
-        ? 'interrupted'
-        : 'dodged';
+      : resolved
+        ? 'dodged'
+        : 'interrupted';
   const evasion: Evasion | null =
     outcome !== 'dodged' ? null : open.dashedInDanger ? 'dash' : open.airborneInDanger ? 'jump' : 'distance';
   const firstDanger = open.startTick + open.dangerFrom;
@@ -174,16 +181,64 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
   let maxPhase = state.boss.phase;
   let open: OpenAttack | null = null;
 
-  const finish = (attack: OpenAttack, interrupted: boolean): void => {
-    if (attack.windowOpen) {
+  // `cutShort`: the run ended while the attack was still going. A punish window that was cut short and never
+  // saw a hit is not counted: the player did not get the chance to use it.
+  const finish = (attack: OpenAttack, cutShort: boolean): void => {
+    if (attack.windowOpen && !(cutShort && !attack.windowTaken)) {
+      punish.opened += 1;
       if (attack.windowTaken) punish.taken += 1;
       else punish.missed += 1;
     }
-    attacks.push(occurrence(attack, interrupted));
+    attacks.push(occurrence(attack));
+  };
+
+  /** Feeds what happened on this update to an attack being watched. */
+  const observe = (
+    attack: OpenAttack,
+    before: GameState,
+    after: GameState,
+    frame: InputFrame,
+  ): void => {
+    const { events, tick } = after;
+    const t = tick - attack.startTick;
+    attack.lastT = t;
+    const dodgeStarted =
+      events.includes('dash') ||
+      (before.player.onGround && !after.player.onGround && after.player.vy < 0);
+    if (dodgeStarted && attack.dodgeStart === null && t <= attack.dangerTo) attack.dodgeStart = tick;
+
+    // What saved the player is judged against the boxes that were really dangerous on this update.
+    const boxes = activeHitBoxes(after.boss, boss);
+    if (boxes.length > 0) {
+      const real = playerBox(after.player);
+      const touched = boxes.some((b) => overlaps(b, real));
+      if (touched && after.player.dashTick >= 0) attack.dashedInDanger = true;
+      if (!touched && !after.player.onGround && after.player.dashTick < 0) {
+        const grounded = playerBox({ ...after.player, y: WORLD.floorY });
+        if (boxes.some((b) => overlaps(b, grounded))) attack.airborneInDanger = true;
+      }
+    }
+    if (events.includes('playerHit')) {
+      attack.hit = true;
+      attack.damage += before.player.health - after.player.health;
+      attack.actionWhenHit = actionOf(after.player, frame);
+    }
+    if (events.includes('counter')) attack.countered = true;
+    if (
+      !attack.countered &&
+      after.boss.mode === 'attack' &&
+      t >= attack.recoveryFrom &&
+      !attack.windowOpen
+    ) {
+      attack.windowOpen = true;
+    }
+    if (attack.windowOpen && events.includes('bossHit')) attack.windowTaken = true;
   };
 
   for (const frame of frames) {
     const before = state;
+    // Once the fight is over the game only counts down to a restart; that is not part of this fight.
+    if (before.phase !== 'fight') break;
     state = step(before, frame, boss);
     const after = state;
     const { events, tick } = after;
@@ -210,34 +265,16 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
     else far += 1;
     if (tick % POSITION_EVERY === 0) positions.push(Math.round(after.player.x));
 
-    if (open !== null) {
-      const t = tick - open.startTick;
-      if ((dashStarted || jumpStarted) && open.dodgeStart === null && t <= open.dangerTo) {
-        open.dodgeStart = tick;
-      }
-      if (after.boss.mode === 'attack' && t >= open.dangerFrom && t < open.dangerTo) {
-        if (after.player.dashTick >= 0) open.dashedInDanger = true;
-        if (!after.player.onGround) open.airborneInDanger = true;
-      }
-      if (playerHit) {
-        open.hit = true;
-        open.damage += before.player.health - after.player.health;
-        open.actionWhenHit = actionOf(after.player, frame);
-      }
-      if (events.includes('counter')) open.countered = true;
-      if (!open.countered && after.boss.mode === 'attack' && t >= open.recoveryFrom && !open.windowOpen) {
-        open.windowOpen = true;
-        punish.opened += 1;
-      }
-      if (open.windowOpen && events.includes('bossHit')) open.windowTaken = true;
-    }
+    if (open !== null) observe(open, before, after, frame);
 
     const started = events.includes('bossWindupGold') || events.includes('bossWindupRed');
     if (open !== null && (started || after.boss.mode !== 'attack')) {
       finish(open, false);
       open = null;
     }
-    const def = started ? boss.attacks.find((a) => a.id === after.boss.attackId) : undefined;
+    // An attack countered on its very first update has no attack id any more: it is still the pending one before.
+    const id = after.boss.attackId ?? before.boss.pendingAttackId;
+    const def = started ? boss.attacks.find((a) => a.id === id) : undefined;
     if (def !== undefined) {
       const froms = def.hits.map((h) => h.from);
       const tos = def.hits.map((h) => h.to);
@@ -258,9 +295,16 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
         countered: false,
         damage: 0,
         actionWhenHit: null,
+        lastT: 0,
         windowOpen: false,
         windowTaken: false,
       };
+      // What happened on the update the attack began (a dodge, or a counter that cancels it at once) counts too.
+      observe(open, before, after, frame);
+      if (after.boss.mode !== 'attack') {
+        finish(open, false);
+        open = null;
+      }
     }
   }
   if (open !== null) finish(open, true);
