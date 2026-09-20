@@ -56,7 +56,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 - **Input**: 8BitDo Bluetooth controller. Touch controls are not planned. Pads report buttons differently by model, mode and browser, so the game maps actions to buttons through a per-controller profile keyed by the controller id string, never by the standard button numbers. Measured mappings are in `docs/controllers.md`.
 - **DEFAULT**: layout by physical position: move = left stick or d-pad, jump = bottom face button, attack = left face button, dash = right shoulder. No triggers and no right stick in v1, because the owner's phone pad (8BitDo SN30 Pro in X-input mode, the only mode that connects to the phone) does not report them usably. The owner said "ok" to this proposal; reopen it if it feels wrong in play.
 - **LOCKED**: the dash is limited by a **short fixed cooldown** (no stamina budget for now). **DEFAULT**: about 0.4 seconds, counted from the end of the dash, as a tunable value. A stamina budget can come later as a boss or difficulty setting.
-- **OPEN**: how the player counters a counterable attack (for example an attack press timed inside a flash window).
+- **LOCKED**: the **counter** is an attack press timed inside a short window near the end of a counterable (gold-flashing) attack's wind-up, while the player is close enough. It needs no new button. A successful counter staggers the boss, and the player's hits do extra damage while it is staggered. **DELEGATED**: the window (about 0.2 s), the range, the stagger length (about 1.5 s) and the damage bonus (double) are tunable values in the boss file.
 - **DEFAULT**: if a controller disconnects mid-fight, the game pauses and shows a message; play continues after reconnecting and pressing a button. If a controller reports a non-standard layout and has no profile, the game says so and shows the controller's name instead of guessing buttons.
 - **DEFAULT**: leaving a fight on purpose needs the top button **held for about 1 second** (tunable), so an accidental tap cannot end a round.
 
@@ -95,6 +95,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
    - One attack flashes gold and can be countered for a stagger.
    - Phase 2 at about 66% HP adds a fourth attack and longer chains.
    - Knobs: wind-up time, chain length, pause between chains, HP.
+   - **M2 decisions** (design in `docs/superpowers/specs/2026-09-20-m2-design.md`). **LOCKED** (owner): it walks toward the player and keeps its distance, backing off and closing in like a real duelist. **DELEGATED** (owner left the details to Claude): it picks its next attack mostly at random with simple rules (never the same attack three times in a row; a "predictability" knob slides towards a fixed cycle), using a seeded random generator so a fight can be replayed exactly; the overhead slam is the gold counterable attack, the sweep and the lunge are red must-dodge attacks; phase 2 (at about 66% health) begins with a short powering-up pause in which it cannot be hurt, then attacks faster, chains up to two attacks, and adds a fourth attack, a ground shockwave to jump over. About 30 health.
 2. **Veiled Lantern**: trains patience and not being greedy.
    - A floating boss that takes damage only while its lantern is open, briefly after certain attacks.
    - It leaves lingering embers on the floor.
@@ -144,14 +145,13 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 
 - **M0**: repository, PWA skeleton, and a controller test screen running on the phone.
 - **M1**: player, arena, fixed loop and hit feedback, with a throwaway **training dummy** that can be hit and swings back after a visible warning (design in `docs/superpowers/specs/2026-09-20-m1-design.md`). The effect and sound on/off switches get their settings screen in M3 with the menu; in M1 everything is on.
-- **M2**: boss data format, Ember Duelist, counter mechanic and phase 2.
+- **M2**: boss data format, Ember Duelist (replaces the M1 training dummy), counter mechanic, phase 2, and victory and restart (the summary screen comes in M3). Design in `docs/superpowers/specs/2026-09-20-m2-design.md`; ideas for later are in `docs/backlog.md`.
 - **M3**: menu (boss and difficulty, remembers last choice), summary screen, stats log and export.
 - **M4**: play on the phone and hold the first analysis session.
 - **M5**: next bosses, the security test, and a decision on an APK.
 
 ## 12. Open points
 
-- Exact counter input and timing window.
 - Preset names and values.
 - Controller button layout: default proposed in section 5, to confirm after playtesting.
 - Final parameter list per boss (grows while building).
