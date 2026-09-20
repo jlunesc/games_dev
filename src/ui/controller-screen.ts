@@ -6,17 +6,7 @@ import {
   type PadHistory,
   type PadReading,
 } from '../engine/gamepad-report';
-
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className?: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+import { el } from './dom';
 
 function renderButton(index: number, pressed: boolean, value: number): HTMLElement {
   const cell = el('div', pressed ? 'button pressed' : 'button');
@@ -54,7 +44,7 @@ function renderPad({ snapshot, history }: PadReading): HTMLElement {
   return section;
 }
 
-export function mountControllerScreen(root: HTMLElement): void {
+export function mountControllerScreen(root: HTMLElement, onBack?: () => void): () => void {
   const title = el('h1', undefined, 'Controller test');
   const hint = el(
     'p',
@@ -68,12 +58,19 @@ export function mountControllerScreen(root: HTMLElement): void {
   const fallback = el('textarea');
   fallback.readOnly = true;
   fallback.hidden = true;
+  let running = true;
   root.replaceChildren(title, hint, pads, copyButton, status, fallback);
+  if (onBack) {
+    const backButton = el('button', 'action', 'Back');
+    backButton.type = 'button';
+    backButton.addEventListener('click', onBack);
+    root.append(backButton);
+  }
 
   if (typeof navigator.getGamepads !== 'function') {
     pads.append(el('p', 'hint', 'The Gamepad API is not available here. It needs HTTPS or localhost.'));
     copyButton.disabled = true;
-    return;
+    return () => {};
   }
 
   const noPad = el('p', 'hint', 'No gamepad detected.');
@@ -94,6 +91,7 @@ export function mountControllerScreen(root: HTMLElement): void {
   }
 
   function frame(): void {
+    if (!running) return;
     latest = read();
     pads.replaceChildren(...(latest.length > 0 ? latest.map(renderPad) : [noPad]));
     requestAnimationFrame(frame);
@@ -122,4 +120,7 @@ export function mountControllerScreen(root: HTMLElement): void {
   });
 
   requestAnimationFrame(frame);
+  return () => {
+    running = false;
+  };
 }

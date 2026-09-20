@@ -1,8 +1,8 @@
-import { mountControllerScreen } from './ui/controller-screen';
+import { mountApp } from './ui/app';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app element');
-mountControllerScreen(root);
+mountApp(root);
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   navigator.serviceWorker.register('./sw.js').catch((error: unknown) => {
