@@ -54,7 +54,9 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 - Not in v1: healing and any extra moves. Add moves only when a boss needs them to be fair.
 - **Input**: 8BitDo Bluetooth controller. Touch controls are not planned. Pads report buttons differently by model, mode and browser, so the game maps actions to buttons through a per-controller profile keyed by the controller id string, never by the standard button numbers. Measured mappings are in `docs/controllers.md`.
 - **DEFAULT**: layout by physical position: move = left stick or d-pad, jump = bottom face button, attack = left face button, dash = right shoulder. No triggers and no right stick in v1, because the owner's phone pad (8BitDo SN30 Pro in X-input mode, the only mode that connects to the phone) does not report them usably. The owner said "ok" to this proposal; reopen it if it feels wrong in play.
-- **OPEN**: how the player counters a counterable attack (for example an attack press timed inside a flash window), and whether the dash has a cooldown or a stamina budget.
+- **LOCKED**: the dash is limited by a **short fixed cooldown** (no stamina budget for now). **DEFAULT**: about 0.4 seconds, counted from the end of the dash, as a tunable value. A stamina budget can come later as a boss or difficulty setting.
+- **OPEN**: how the player counters a counterable attack (for example an attack press timed inside a flash window).
+- **DEFAULT**: if a controller disconnects mid-fight, the game pauses and shows a message; play continues after reconnecting and pressing a button. If a controller reports a non-standard layout and has no profile, the game says so and shows the controller's name instead of guessing buttons.
 
 ## 6. Fight rules and flow (LOCKED)
 
@@ -103,6 +105,8 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 ## 8. Feel (v1)
 
 - **LOCKED**: a **geometric visual style** (simple shapes, strong colors, glows, very readable telegraphs), with a possible upgrade to pixel art later. Art is kept **separate from fight logic**, so a boss can be restyled without changing how it fights.
+- **LOCKED**: the arena is a **single fixed screen** in side view with a flat floor and walls, and no camera movement. Platforms and hazards can come later as part of a boss's data.
+- **LOCKED**: the world has a **fixed 16:9 size** in game units and is scaled to the largest size that fits, with dark bars where the screen is wider. Distances and timings are therefore identical on PC and phone, so stats stay comparable.
 - **DELEGATED**: hit feedback with a brief freeze on impact, a small screen shake, a flash on the boss when hit and a clear flash on the player when hurt.
 - **DELEGATED**: simple **sound effects generated in code** (hit, dash, telegraph cue), and **no music in v1**.
 - Each feedback effect and the sound can be switched off in settings.
@@ -128,6 +132,8 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 
 - **Repo layout**: `src/engine` (loop, input, timing, collision, stats), `src/bosses` (data files), `src/game`, `src/ui`, `tests`, `docs`, `tools` (build plugin and scripts), and `public` (manifest and icons). The service worker is generated into `dist/` at build time by `tools/precache-plugin.ts`.
 - **Fixed-timestep game loop** so timings are deterministic and measurable in milliseconds.
+- **LOCKED**: the game is one plain **state object advanced by a pure `step(state, input)` function** at a fixed 60 updates per second. Rendering, sound and controller reading live outside it and only read the state; they never change how a fight plays. Time in stats is counted in updates (1 update = 16.7 ms); the short freeze on impact pauses updates and does not count toward reaction times.
+- **LOCKED**: controls go through **per-controller profiles** keyed by the controller id string, never by standard button numbers (see `docs/controllers.md`).
 - **Automated tests** on PC for the engine and boss data (schema validation, deterministic simulation of attack timelines), plus manual playtests.
 - **Early controller test** on the S21 with the 8BitDo in its different modes, and a documented button mapping.
 - **Tooling (LOCKED)**: TypeScript strict mode, Vite and Vitest, pinned dependencies, CI with an audit step.
@@ -135,7 +141,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 ## 11. Milestones (DEFAULT, pending approval)
 
 - **M0**: repository, PWA skeleton, and a controller test screen running on the phone.
-- **M1**: player, arena, fixed loop and hit feedback.
+- **M1**: player, arena, fixed loop and hit feedback, with a throwaway **training dummy** that can be hit and swings back after a visible warning (design in `docs/superpowers/specs/2026-09-20-m1-design.md`). The effect and sound on/off switches get their settings screen in M3 with the menu; in M1 everything is on.
 - **M2**: boss data format, Ember Duelist, counter mechanic and phase 2.
 - **M3**: menu (boss and difficulty, remembers last choice), summary screen, stats log and export.
 - **M4**: play on the phone and hold the first analysis session.
@@ -144,7 +150,6 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 ## 12. Open points
 
 - Exact counter input and timing window.
-- Dash cooldown or stamina budget.
 - Preset names and values.
 - Controller button layout: default proposed in section 5, to confirm after playtesting.
 - Final parameter list per boss (grows while building).
