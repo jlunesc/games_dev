@@ -116,6 +116,8 @@ function attack(value: unknown, path: string): AttackDef {
     name: text(o.name, `${path}.name`),
     pose: pose as Pose,
     class: cls,
+    damage:
+      o.damage === undefined ? 1 : num(o.damage, `${path}.damage`, { min: 1, integer: true }),
     windup,
     active,
     recovery,

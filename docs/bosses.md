@@ -64,6 +64,7 @@ A counter happens when the player's attack swing **starts** (the first update of
 | `name` | Name for people. | non-empty text |
 | `pose` | Arm pose during the wind-up, the player's cue: `raised`, `sideways`, `back` or `down`. | one of those four |
 | `class` | `counterable` (gold glow, can be countered) or `mustDodge` (red glow). | one of those two |
+| `damage` | How many of the player's hits this attack costs when it lands. Optional, 1 when absent. | whole number, at least 1 |
 | `windup` | Warning updates before anything hurts. | whole number, at least 1 |
 | `active` | Updates during which the attack is live. | whole number, at least 1 |
 | `recovery` | Updates after the active part before the boss does anything else. | whole number, at least 0 |

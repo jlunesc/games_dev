@@ -30,6 +30,8 @@ export interface AttackDef {
   name: string;
   pose: Pose;
   class: AttackClass;
+  /** How many of the player's hits this attack costs when it lands (a whole number, 1 when a file does not say). */
+  damage: number;
   windup: number;
   active: number;
   recovery: number;

@@ -166,3 +166,23 @@ describe('parseBoss rejects broken files, naming the place', () => {
     rejects(noPhases, 'boss.phases');
   });
 });
+
+describe('attack damage', () => {
+  it('defaults to 1 hit when a file does not say', () => {
+    expect(EMBER_DUELIST.attacks.every((a) => a.damage === 1)).toBe(true);
+  });
+
+  it('accepts a whole number of hits', () => {
+    const b = copy();
+    b.attacks[0]!.damage = 3;
+    expect(parseBoss(b).attacks[0]!.damage).toBe(3);
+  });
+
+  it('rejects zero, negative and fractional damage', () => {
+    for (const bad of [0, -1, 1.5]) {
+      const b = copy();
+      b.attacks[0]!.damage = bad;
+      rejects(b, 'boss.attacks[0].damage');
+    }
+  });
+});
