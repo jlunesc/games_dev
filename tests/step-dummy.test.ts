@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { NO_INPUT } from '../src/engine/input-frame';
+import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { sweepBox } from '../src/game/geometry';
-import { PLAYER } from '../src/game/params';
+import { DUMMY, GAME, PLAYER } from '../src/game/params';
 import { createInitialState, type GameEvent, type GameState } from '../src/game/state';
 import { run, withInput } from './helpers';
 
@@ -75,25 +75,50 @@ describe('the sweep hurts', () => {
   });
 });
 
+describe('the sweep has no safe spot inside the dummy', () => {
+  it.each([0, 20, 40])('hits a player standing %i units right of the dummy centre on the first sweeping update', (offset) => {
+    const start = createInitialState();
+    start.player.x = DUMMY.x + offset;
+    start.player.prevX = start.player.x;
+    const firstSweeping = DUMMY.firstSweepIn + DUMMY.sweep.windup;
+    const states = run(start, firstSweeping + 5, () => NO_INPUT);
+    expect(states[firstSweeping - 1]!.dummy.facing).toBe(1);
+    expect(states[firstSweeping - 1]!.dummy.phase).toBe('sweep');
+    expect(updatesWith(states, 'playerHit')).toEqual([firstSweeping]);
+  });
+});
+
 describe('sweepBox', () => {
   it('reaches out low in front of the dummy, on the side it faces', () => {
     const d = createInitialState().dummy;
     d.facing = -1;
-    expect(sweepBox(d)).toEqual({ x: 692, y: 520, w: 220, h: 120 });
+    expect(sweepBox(d)).toEqual({ x: 692, y: 520, w: 268, h: 120 });
     d.facing = 1;
-    expect(sweepBox(d)).toEqual({ x: 1008, y: 520, w: 220, h: 120 });
+    expect(sweepBox(d)).toEqual({ x: 960, y: 520, w: 268, h: 120 });
   });
 });
 
 describe('defeat', () => {
-  const defeated = (): GameState[] => {
+  it('does not leave the player interpolating while the fight is paused', () => {
+    const states = defeated(withInput({ moveX: 1 }));
+    expect(states[0]!.phase).toBe('defeated');
+    expect(states[0]!.player.prevX).not.toBe(states[0]!.player.x);
+    for (let i = 1; i < GAME.defeatRestartTicks; i++) {
+      expect(states[i]!.phase).toBe('defeated');
+      const p = states[i]!.player;
+      expect(p.prevX).toBe(p.x);
+      expect(p.prevY).toBe(p.y);
+    }
+  });
+
+  const defeated = (input: InputFrame = NO_INPUT): GameState[] => {
     const start = standingInReach();
     start.player.health = 1;
     start.dummy.phase = 'sweep';
     start.dummy.phaseTick = 0;
     start.dummy.facing = -1;
     start.dummy.nextSweepIn = 100000;
-    return run(start, 70, () => NO_INPUT);
+    return run(start, 70, () => input);
   };
 
   it('ends the fight when the last hit lands', () => {

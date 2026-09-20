@@ -173,6 +173,9 @@ export function step(prev: GameState, input: InputFrame): GameState {
 
   if (s.phase === 'defeated') {
     s.defeatTicks -= 1;
+    // The player is frozen: without this the renderer would keep blending from the last move.
+    s.player.prevX = s.player.x;
+    s.player.prevY = s.player.y;
     return s.defeatTicks <= 0 ? createInitialState() : s;
   }
 
