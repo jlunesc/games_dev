@@ -191,3 +191,45 @@ textarea {
 body {
   overscroll-behavior: none;
 }
+
+.rows {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 28rem;
+  margin: 0.75rem 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  border: 2px solid transparent;
+  border-radius: 0.4rem;
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+}
+
+.row.focused {
+  border-color: var(--accent);
+}
+
+.row-value {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.help {
+  max-width: 28rem;
+  min-height: 3em;
+  color: var(--dim);
+}
+
+.summary-line {
+  margin: 0.25rem 0;
+  font-size: 1.1rem;
+}

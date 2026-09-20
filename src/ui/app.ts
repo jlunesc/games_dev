@@ -1,4 +1,5 @@
-import { EMBER_DUELIST } from '../bosses';
+import { bossById } from '../bosses';
+import type { BossDef } from '../bosses/schema';
 import {
   NO_INPUT,
   NO_PRESSES,
@@ -16,22 +17,38 @@ import {
 } from '../engine/input-profile';
 import { advanceHold } from '../engine/hold';
 import { planUpdates } from '../engine/loop';
+import { applyDials } from '../game/difficulty';
 import { GAME } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
+import {
+  createTracker,
+  summarize,
+  trackUpdate,
+  type FightSummary,
+  type SummaryTracker,
+} from '../game/summary';
 import { createSound } from './audio';
 import { mountControllerScreen } from './controller-screen';
 import { el } from './dom';
-import {
-  NO_FEEDBACK,
-  advanceFeedback,
-  applyEvents,
-  freezeFor,
-  type FeedbackState,
-} from './feedback';
+import { NO_FEEDBACK, advanceFeedback, applyEvents, freezeFor, type FeedbackState } from './feedback';
+import { createMenu, menuRows, menuStep, type MenuAction, type MenuModel } from './menu-model';
+import { NAV_START, advanceNav, type NavState } from './nav';
+import { loadPrefs, savePrefs, type Prefs } from './prefs';
 import { drawFrame } from './render';
+import { renderList, renderSummary } from './screens';
+import { loadSettings, saveSettings, type Settings } from './settings';
+import {
+  createSettingsModel,
+  settingsRows,
+  settingsStep,
+  type SettingsModel,
+} from './settings-model';
+import { browserStorage } from './storage';
+import { summaryLines } from './summary-text';
+import { createTweak, tweakRows, tweakStep, type TweakModel } from './tweak-model';
 
-type Screen = 'start' | 'fight' | 'test';
+type Screen = 'menu' | 'tweak' | 'settings' | 'summary' | 'fight' | 'test';
 
 function firstPad(): Gamepad | null {
   if (typeof navigator.getGamepads !== 'function') return null;
@@ -59,6 +76,10 @@ function newSeed(): number {
 }
 
 export function mountApp(root: HTMLElement): void {
+  const storage = browserStorage();
+  let prefs: Prefs = loadPrefs(storage);
+  let settings: Settings = loadSettings(storage);
+
   const canvas = el('canvas', 'game-canvas');
   canvas.hidden = true;
   const maybeContext = canvas.getContext('2d');
@@ -72,15 +93,25 @@ export function mountApp(root: HTMLElement): void {
   root.replaceChildren(canvas, panel, banner, leaveHint);
 
   const sound = createSound();
+  sound.setEnabled(settings.sound);
   // A phone only counts some events as a tap for sound: touch needs pointerup or click, not just pointerdown.
   for (const type of ['pointerdown', 'pointerup', 'click']) {
     root.addEventListener(type, () => sound.unlock());
   }
 
-  let screen: Screen = 'start';
+  let screen: Screen = 'menu';
+  let menu: MenuModel = createMenu(prefs);
+  let tweak: TweakModel = createTweak(prefs);
+  let settingsModel: SettingsModel = createSettingsModel(settings);
+  let nav: NavState = NAV_START;
   let held: HeldButtons = NOTHING_HELD;
   let pending: PendingPresses = NO_PRESSES;
-  let state: GameState = createInitialState(EMBER_DUELIST);
+  // The boss as adjusted by the dials for the current fight.
+  let boss: BossDef = bossById(prefs.bossId);
+  let state: GameState = createInitialState(boss);
+  let tracker: SummaryTracker = createTracker();
+  // Set when the fight ends (win or loss); the summary shows once the end pause is over.
+  let ended: FightSummary | null = null;
   let feedback: FeedbackState = NO_FEEDBACK;
   let leftoverMs = 0;
   let freezeLeft = 0;
@@ -93,57 +124,166 @@ export function mountApp(root: HTMLElement): void {
   // How long the top button has been held during a fight (leaving needs GAME.exitHoldMs).
   let exitHoldMs = 0;
   let stopTest: (() => void) | null = null;
-  let statusLine = el('p', 'status');
-  let fightButton = el('button', 'action', 'Fight the Ember Duelist');
+  // The summary ignores controller presses for a moment, so a player still mashing a button in the fight does not skip it by accident.
+  const SUMMARY_LOCK_MS = 600;
+  let summaryUnlockAt = 0;
+  const statusLine = el('p', 'status');
 
   function setBanner(text: string | null): void {
     banner.hidden = text === null;
     if (text !== null) banner.textContent = text;
   }
 
-  function showStart(): void {
-    screen = 'start';
+  /** Hides the fight and its overlays; the next screen fills the panel. */
+  function leaveFightScreen(): void {
     exitHoldMs = 0;
     leaveHint.hidden = true;
     canvas.hidden = true;
     panel.hidden = false;
     setBanner(null);
-    statusLine = el('p', 'status');
-    fightButton = el('button', 'action', 'Fight the Ember Duelist');
-    fightButton.type = 'button';
-    fightButton.disabled = true;
-    fightButton.addEventListener('click', startFight);
-    const testButton = el('button', 'action', 'Controller test');
-    testButton.type = 'button';
-    testButton.addEventListener('click', showTest);
-    panel.replaceChildren(
-      el('h1', undefined, 'Boss Trainer'),
-      el('p', 'hint', 'During a fight, hold the top button for a second to return to this screen.'),
-      fightButton,
-      testButton,
-      statusLine,
+  }
+
+  function updatePrefs(next: Prefs): void {
+    if (next === prefs) return;
+    prefs = next;
+    savePrefs(storage, prefs);
+  }
+
+  function updateSettings(next: Settings): void {
+    if (next === settings) return;
+    settings = next;
+    saveSettings(storage, settings);
+    sound.setEnabled(settings.sound);
+  }
+
+  // Menu
+  function renderMenu(): void {
+    renderList(
+      panel,
+      'Boss Trainer',
+      'Up and down to move, bottom button to choose, top button to go back. During a fight, hold the top button for a second to leave.',
+      menuRows(menu).map((row) => ({ label: row.label, value: row.value })),
+      menu.focus,
+      (index) => {
+        menu = { ...menu, focus: index };
+        handleMenu('confirm');
+      },
+      [statusLine],
     );
   }
 
+  function showMenu(): void {
+    screen = 'menu';
+    leaveFightScreen();
+    menu = createMenu(prefs);
+    renderMenu();
+  }
+
+  function handleMenu(action: MenuAction): void {
+    const result = menuStep(menu, action);
+    menu = result.model;
+    updatePrefs(menu.prefs);
+    if (result.outcome.kind === 'fight') {
+      startFight();
+    } else if (result.outcome.kind === 'open') {
+      if (result.outcome.screen === 'tweak') showTweak();
+      else if (result.outcome.screen === 'settings') showSettings();
+      else showTest();
+    } else {
+      renderMenu();
+    }
+  }
+
+  // Tweak
+  function renderTweak(): void {
+    renderList(
+      panel,
+      'Tweak difficulty',
+      'Left and right change a value, up and down move, top button goes back.',
+      tweakRows(tweak).map((row) => ({ label: row.label, value: row.value, help: row.help })),
+      tweak.focus,
+      (index) => {
+        tweak = { ...tweak, focus: index };
+        handleTweak('confirm');
+      },
+    );
+  }
+
+  function showTweak(): void {
+    screen = 'tweak';
+    tweak = createTweak(prefs);
+    renderTweak();
+  }
+
+  function handleTweak(action: MenuAction): void {
+    const result = tweakStep(tweak, action);
+    tweak = result.model;
+    updatePrefs(tweak.prefs);
+    if (result.outcome === 'back') showMenu();
+    else renderTweak();
+  }
+
+  // Settings
+  function renderSettings(): void {
+    renderList(
+      panel,
+      'Settings',
+      'Left, right or the bottom button switch a setting, top button goes back.',
+      settingsRows(settingsModel).map((row) => ({ label: row.label, value: row.value, help: row.help })),
+      settingsModel.focus,
+      (index) => {
+        settingsModel = { ...settingsModel, focus: index };
+        handleSettings('confirm');
+      },
+    );
+  }
+
+  function showSettings(): void {
+    screen = 'settings';
+    settingsModel = createSettingsModel(settings);
+    renderSettings();
+  }
+
+  function handleSettings(action: MenuAction): void {
+    const result = settingsStep(settingsModel, action);
+    settingsModel = result.model;
+    updateSettings(settingsModel.settings);
+    if (result.outcome === 'back') showMenu();
+    else renderSettings();
+  }
+
+  // Controller test
   function showTest(): void {
     screen = 'test';
-    exitHoldMs = 0;
-    leaveHint.hidden = true;
-    canvas.hidden = true;
-    panel.hidden = false;
-    setBanner(null);
     stopTest = mountControllerScreen(panel, () => {
       stopTest?.();
       stopTest = null;
-      showStart();
+      showMenu();
     });
+  }
+
+  // Summary
+  function showSummary(summary: FightSummary): void {
+    screen = 'summary';
+    summaryUnlockAt = performance.now() + SUMMARY_LOCK_MS;
+    leaveFightScreen();
+    const text = summaryLines(summary);
+    renderSummary(panel, text.title, text.lines, showMenu);
+  }
+
+  /** Leaves the fight for the summary: how it ended, or "left" if it was still going. */
+  function endFight(): void {
+    showSummary(ended ?? summarize(tracker, state, boss, 'left'));
   }
 
   function startFight(): void {
     screen = 'fight';
+    boss = applyDials(bossById(prefs.bossId), prefs.dials);
+    state = createInitialState(boss, newSeed());
+    tracker = createTracker();
+    ended = null;
     exitHoldMs = 0;
     leaveHint.hidden = true;
-    state = createInitialState(EMBER_DUELIST, newSeed());
     feedback = NO_FEEDBACK;
     leftoverMs = 0;
     freezeLeft = 0;
@@ -158,7 +298,7 @@ export function mountApp(root: HTMLElement): void {
   }
 
   banner.addEventListener('click', () => {
-    if (screen === 'fight' && paused) showStart();
+    if (screen === 'fight' && paused) endFight();
   });
 
   function draw(alpha: number): void {
@@ -169,7 +309,7 @@ export function mountApp(root: HTMLElement): void {
       canvas.width = width;
       canvas.height = height;
     }
-    drawFrame(context, width, height, state, EMBER_DUELIST, alpha, feedback);
+    drawFrame(context, width, height, state, boss, alpha, feedback);
   }
 
   function runFight(now: number, selection: ProfileSelection | null, input: InputFrame): void {
@@ -186,7 +326,7 @@ export function mountApp(root: HTMLElement): void {
     exitHoldMs = hold.heldMs;
     leaveHint.hidden = exitHoldMs === 0;
     if (hold.done) {
-      showStart();
+      endFight();
       return;
     }
     if (paused) {
@@ -212,10 +352,20 @@ export function mountApp(root: HTMLElement): void {
         continue;
       }
       hitStopView = false;
-      state = step(state, applyPresses(input, pending), EMBER_DUELIST);
+      const before = state;
+      state = step(state, applyPresses(input, pending), boss);
       pending = NO_PRESSES;
-      feedback = applyEvents(feedback, state.events);
-      freezeLeft = Math.max(freezeLeft, freezeFor(state.events));
+      // After a win or a loss the game shows its message, then starts a new fight: show the summary instead.
+      if (ended !== null && state.phase === 'fight') {
+        showSummary(ended);
+        return;
+      }
+      tracker = trackUpdate(tracker, state, before);
+      if (ended === null && state.phase !== 'fight') {
+        ended = summarize(tracker, state, boss, state.phase === 'victory' ? 'victory' : 'defeat');
+      }
+      feedback = applyEvents(feedback, state.events, settings);
+      freezeLeft = Math.max(freezeLeft, freezeFor(state.events, settings));
       if (freezeLeft > 0) hitStopView = true;
       sound.play(state.events);
     }
@@ -245,19 +395,24 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
 
-    if (screen === 'start') {
-      statusLine.textContent = describeController(pad, selection);
-      fightButton.disabled = selection?.kind !== 'profile';
-      if (selection?.kind === 'profile') {
-        if (input.confirm) startFight();
-        else if (input.alt) showTest();
-      }
-      lastTime = now;
+    if (screen === 'fight') {
+      runFight(now, selection, input);
       return;
     }
-    runFight(now, selection, input);
+
+    // Menu, Tweak, Settings and Summary: one step per press, with repeat while a direction is held.
+    statusLine.textContent = describeController(pad, selection);
+    const walked = advanceNav(nav, input.moveX, input.moveY, now);
+    nav = walked.state;
+    const action: MenuAction | null = input.confirm ? 'confirm' : input.alt ? 'back' : walked.action;
+    lastTime = now;
+    if (action === null) return;
+    if (screen === 'menu') handleMenu(action);
+    else if (screen === 'tweak') handleTweak(action);
+    else if (screen === 'settings') handleSettings(action);
+    else if ((action === 'confirm' || action === 'back') && now >= summaryUnlockAt) showMenu();
   }
 
-  showStart();
+  showMenu();
   requestAnimationFrame(frame);
 }
