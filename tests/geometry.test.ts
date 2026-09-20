@@ -7,6 +7,7 @@ import {
   overlaps,
   playerBox,
 } from '../src/game/geometry';
+import { DUMMY, PLAYER, WORLD } from '../src/game/params';
 import { createInitialState } from '../src/game/state';
 
 describe('overlaps', () => {
@@ -25,27 +26,37 @@ describe('boxes', () => {
 
   it('places the dummy box on the floor', () => {
     const d = createInitialState().dummy;
-    expect(dummyBox(d)).toEqual({ x: 912, y: 480, w: 96, h: 160 });
+    expect(dummyBox(d)).toEqual({
+      x: DUMMY.x - DUMMY.width / 2,
+      y: WORLD.floorY - DUMMY.height,
+      w: DUMMY.width,
+      h: DUMMY.height,
+    });
   });
 
   it('puts the attack box in front of the player, vertically centred', () => {
     const p = createInitialState().player;
+    const { reach, height } = PLAYER.attack;
+    const top = WORLD.floorY - PLAYER.height / 2 - height / 2;
     p.x = 850;
     p.facing = 1;
-    expect(attackBox(p)).toEqual({ x: 874, y: 552, w: 90, h: 80 });
+    expect(attackBox(p)).toEqual({ x: 850 + PLAYER.width / 2, y: top, w: reach, h: height });
     p.facing = -1;
-    expect(attackBox(p)).toEqual({ x: 736, y: 552, w: 90, h: 80 });
+    expect(attackBox(p)).toEqual({ x: 850 - PLAYER.width / 2 - reach, y: top, w: reach, h: height });
   });
 });
 
 describe('predicates', () => {
   it('the attack is active only during its active updates', () => {
     const p = createInitialState().player;
-    const active = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8].map((t) => {
+    const { startup, active } = PLAYER.attack;
+    const ticks = Array.from({ length: startup + active + 3 }, (_, i) => i - 1);
+    const result = ticks.map((t) => {
       p.attackTick = t;
       return attackActive(p);
     });
-    expect(active).toEqual([false, false, false, false, true, true, true, true, false, false]);
+    expect(result).toEqual(ticks.map((t) => t >= startup && t < startup + active));
+    expect(result.filter(Boolean)).toHaveLength(active);
   });
 
   it('the player is untouchable after a hit or while dashing', () => {

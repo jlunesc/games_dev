@@ -9,15 +9,15 @@ import {
 } from '../src/ui/feedback';
 
 describe('freezeFor', () => {
-  it('freezes 4 updates when the dummy is hit and 8 when the player is hurt', () => {
+  it('freezes for the dummy-hit length when the dummy is hit and for the player-hit length when the player is hurt', () => {
     expect(freezeFor(['dummyHit'])).toBe(FEEDBACK.freezeOnDummyHit);
     expect(freezeFor(['playerHit'])).toBe(FEEDBACK.freezeOnPlayerHit);
-    expect(FEEDBACK.freezeOnDummyHit).toBe(4);
-    expect(FEEDBACK.freezeOnPlayerHit).toBe(8);
   });
 
   it('takes the longer freeze when both happen at once, and none for other events', () => {
-    expect(freezeFor(['dummyHit', 'playerHit'])).toBe(8);
+    expect(freezeFor(['dummyHit', 'playerHit'])).toBe(
+      Math.max(FEEDBACK.freezeOnDummyHit, FEEDBACK.freezeOnPlayerHit),
+    );
     expect(freezeFor(['dash', 'dummyWindup'])).toBe(0);
     expect(freezeFor([])).toBe(0);
   });

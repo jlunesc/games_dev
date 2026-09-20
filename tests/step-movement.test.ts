@@ -42,8 +42,10 @@ describe('jumping', () => {
       withInput({ jumpPressed: n === 1, jumpHeld: true }),
     );
     const height = maxHeight(states);
-    expect(height).toBeGreaterThan(150);
-    expect(height).toBeLessThan(175);
+    const ideal = PLAYER.jumpSpeed ** 2 / (2 * PLAYER.gravity);
+    const oneUpdate = PLAYER.jumpSpeed / 60;
+    expect(height).toBeGreaterThan(ideal * 0.9 - oneUpdate);
+    expect(height).toBeLessThan(ideal * 1.1 + oneUpdate);
     expect(states[19]!.player.onGround).toBe(false);
     expect(states[59]!.player.onGround).toBe(true);
   });
@@ -55,7 +57,7 @@ describe('jumping', () => {
     const short = maxHeight(
       run(createInitialState(), 60, (n) => withInput({ jumpPressed: n === 1, jumpHeld: n === 1 })),
     );
-    expect(short).toBeGreaterThan(20);
+    expect(short).toBeGreaterThan(30);
     expect(short).toBeLessThan(full * 0.6);
   });
 

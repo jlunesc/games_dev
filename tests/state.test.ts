@@ -17,12 +17,11 @@ describe('createInitialState', () => {
     expect(s.events).toEqual([]);
   });
 
-  it('starts the dummy idle with the first sweep two seconds away', () => {
+  it('starts the dummy idle with the first sweep still to come', () => {
     const s = createInitialState();
     expect(s.dummy.x).toBe(DUMMY.x);
     expect(s.dummy.phase).toBe('idle');
     expect(s.dummy.nextSweepIn).toBe(DUMMY.firstSweepIn);
-    expect(DUMMY.firstSweepIn).toBe(120);
     expect(s.dummy.hp).toBe(DUMMY.maxHp);
   });
 

@@ -8,41 +8,60 @@ import { run, withInput } from './helpers';
 const updatesWith = (states: GameState[], event: GameEvent): number[] =>
   states.flatMap((s, i) => (s.events.includes(event) ? [i + 1] : []));
 
-/** The player stands 112 units left of the dummy's edge, inside the sweep's reach. */
+/** The update on which the first sweep starts hurting (the warning starts on update DUMMY.firstSweepIn). */
+const SWEEP_START = DUMMY.firstSweepIn + DUMMY.sweep.windup;
+
+/** The player stands halfway into the sweep's reach, left of the dummy's edge. */
 function standingInReach(): GameState {
   const s = createInitialState();
-  s.player.x = 800;
-  s.player.prevX = 800;
+  s.player.x = DUMMY.x - DUMMY.width / 2 - DUMMY.sweep.reach / 2;
+  s.player.prevX = s.player.x;
   return s;
 }
 
 describe('the dummy sweep timeline', () => {
-  const states = run(createInitialState(), 320, () => NO_INPUT);
+  const total = SWEEP_START + DUMMY.sweep.every + DUMMY.sweep.active + 2;
+  const states = run(createInitialState(), total, () => NO_INPUT);
 
-  it('warns at update 120 and again every 180 updates', () => {
-    expect(updatesWith(states, 'dummyWindup')).toEqual([120, 300]);
+  it('warns at the first sweep time and again every sweep period', () => {
+    expect(updatesWith(states, 'dummyWindup')).toEqual([
+      DUMMY.firstSweepIn,
+      DUMMY.firstSweepIn + DUMMY.sweep.every,
+    ]);
   });
 
-  it('is sweeping on exactly 8 updates, starting 30 updates after the warning', () => {
+  it('is sweeping on exactly the active updates, one wind-up after the warning', () => {
+    const first = DUMMY.firstSweepIn + DUMMY.sweep.windup;
     const sweeping = states.flatMap((s, i) => (s.dummy.phase === 'sweep' ? [i + 1] : []));
-    expect(sweeping).toEqual(Array.from({ length: 8 }, (_, i) => 150 + i));
+    expect(sweeping.slice(0, DUMMY.sweep.active)).toEqual(
+      Array.from({ length: DUMMY.sweep.active }, (_, i) => first + i),
+    );
+    expect(sweeping[DUMMY.sweep.active]).toBe(first + DUMMY.sweep.every);
   });
 
   it('does not touch a player who stays far away', () => {
-    expect(states[319]!.player.health).toBe(PLAYER.maxHealth);
+    expect(states[total - 1]!.player.health).toBe(PLAYER.maxHealth);
     expect(updatesWith(states, 'playerHit')).toEqual([]);
   });
 
-  it('turns towards the player when the warning starts', () => {
-    expect(states[119]!.dummy.facing).toBe(-1);
+  it('turns towards a player on its left when the warning starts', () => {
+    expect(states[DUMMY.firstSweepIn - 1]!.dummy.facing).toBe(-1);
+  });
+
+  it('turns towards a player on its right when the warning starts', () => {
+    const start = createInitialState();
+    start.player.x = DUMMY.x + DUMMY.width / 2 + 100;
+    start.player.prevX = start.player.x;
+    const right = run(start, DUMMY.firstSweepIn, () => NO_INPUT);
+    expect(right[DUMMY.firstSweepIn - 1]!.dummy.facing).toBe(1);
   });
 });
 
 describe('the sweep hurts', () => {
   it('hits a player standing in reach on the first sweeping update, once', () => {
-    const states = run(standingInReach(), 200, () => NO_INPUT);
-    expect(updatesWith(states, 'playerHit')).toEqual([150]);
-    expect(states[199]!.player.health).toBe(PLAYER.maxHealth - 1);
+    const states = run(standingInReach(), SWEEP_START + 50, () => NO_INPUT);
+    expect(updatesWith(states, 'playerHit')).toEqual([SWEEP_START]);
+    expect(states[SWEEP_START + 49]!.player.health).toBe(PLAYER.maxHealth - 1);
   });
 
   it('cannot hit twice within the same sweep', () => {
@@ -59,19 +78,21 @@ describe('the sweep hurts', () => {
   });
 
   it('can be jumped over', () => {
-    const states = run(standingInReach(), 200, (n) =>
-      withInput({ jumpPressed: n === 137, jumpHeld: n >= 137 && n <= 170 }),
+    const press = SWEEP_START - 13;
+    const states = run(standingInReach(), SWEEP_START + 50, (n) =>
+      withInput({ jumpPressed: n === press, jumpHeld: n >= press && n <= press + 33 }),
     );
     expect(updatesWith(states, 'playerHit')).toEqual([]);
-    expect(states[199]!.player.health).toBe(PLAYER.maxHealth);
+    expect(states[SWEEP_START + 49]!.player.health).toBe(PLAYER.maxHealth);
   });
 
   it('can be dashed through', () => {
-    const states = run(standingInReach(), 200, (n) =>
-      withInput({ dashPressed: n === 148, moveX: n === 148 ? 1 : 0 }),
+    const press = SWEEP_START - 2;
+    const states = run(standingInReach(), SWEEP_START + 50, (n) =>
+      withInput({ dashPressed: n === press, moveX: n === press ? 1 : 0 }),
     );
     expect(updatesWith(states, 'playerHit')).toEqual([]);
-    expect(states[199]!.player.health).toBe(PLAYER.maxHealth);
+    expect(states[SWEEP_START + 49]!.player.health).toBe(PLAYER.maxHealth);
   });
 });
 
@@ -80,7 +101,7 @@ describe('the sweep has no safe spot inside the dummy', () => {
     const start = createInitialState();
     start.player.x = DUMMY.x + offset;
     start.player.prevX = start.player.x;
-    const firstSweeping = DUMMY.firstSweepIn + DUMMY.sweep.windup;
+    const firstSweeping = SWEEP_START;
     const states = run(start, firstSweeping + 5, () => NO_INPUT);
     expect(states[firstSweeping - 1]!.dummy.facing).toBe(1);
     expect(states[firstSweeping - 1]!.dummy.phase).toBe('sweep');
@@ -118,7 +139,7 @@ describe('defeat', () => {
     start.dummy.phaseTick = 0;
     start.dummy.facing = -1;
     start.dummy.nextSweepIn = 100000;
-    return run(start, 70, () => input);
+    return run(start, GAME.defeatRestartTicks + 10, () => input);
   };
 
   it('ends the fight when the last hit lands', () => {
@@ -128,11 +149,15 @@ describe('defeat', () => {
     expect(states[0]!.events).toContain('playerDefeated');
   });
 
-  it('restarts a fresh fight exactly 60 updates later', () => {
+  it('restarts a fresh fight once the defeat pause is over', () => {
     const states = defeated();
-    expect(states[59]!.phase).toBe('defeated');
-    expect(states[60]!.phase).toBe('fight');
-    expect(states[60]!.tick).toBe(0);
-    expect(states[60]!.player.health).toBe(PLAYER.maxHealth);
+    const last = GAME.defeatRestartTicks;
+    expect(states[last - 1]!.phase).toBe('defeated');
+    expect(states[last]!.phase).toBe('fight');
+    expect(states[last]!.tick).toBe(0);
+    expect(states[last]!.player.health).toBe(PLAYER.maxHealth);
+    expect(states[last]!.dummy.phase).toBe('idle');
+    expect(states[last]!.dummy.nextSweepIn).toBe(DUMMY.firstSweepIn);
+    expect(states[last]!.dummy.hp).toBe(DUMMY.maxHp);
   });
 });
