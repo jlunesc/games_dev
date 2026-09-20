@@ -105,7 +105,14 @@ export function mountApp(root: HTMLElement): void {
   let boss: BossDef = bossById(prefs.bossId);
   let state: GameState = createInitialState(boss);
   // The summary tracker and, once the fight ends (win or loss), its result: the summary shows when the end pause is over.
-  let flow: FightFlow = startFlow();
+  // This first flow is only a placeholder (seed 1 is the default of createInitialState); startFight makes the real one.
+  let flow: FightFlow = startFlow({
+    bossId: boss.id,
+    presetId: prefs.presetId,
+    dials: prefs.dials,
+    seed: 1,
+    playedAt: new Date().toISOString(),
+  });
   let feedback: FeedbackState = NO_FEEDBACK;
   let leftoverMs = 0;
   let freezeLeft = 0;
@@ -288,8 +295,15 @@ export function mountApp(root: HTMLElement): void {
   function startFight(): void {
     screen = 'fight';
     boss = applyDials(bossById(prefs.bossId), prefs.dials);
-    state = createInitialState(boss, newSeed());
-    flow = startFlow();
+    const seed = newSeed();
+    state = createInitialState(boss, seed);
+    flow = startFlow({
+      bossId: bossById(prefs.bossId).id,
+      presetId: prefs.presetId,
+      dials: prefs.dials,
+      seed,
+      playedAt: new Date().toISOString(),
+    });
     nav = NAV_START;
     exitHoldMs = 0;
     leaveHint.hidden = true;
@@ -362,10 +376,11 @@ export function mountApp(root: HTMLElement): void {
       }
       hitStopView = false;
       const before = state;
-      state = step(state, applyPresses(input, pending), boss);
+      const frameInput = applyPresses(input, pending);
+      state = step(state, frameInput, boss);
       pending = NO_PRESSES;
       // After a win or a loss the game shows its message, then starts a new fight: show the summary instead.
-      const advanced = advanceFlow(flow, before, state, boss);
+      const advanced = advanceFlow(flow, before, state, boss, frameInput);
       flow = advanced.flow;
       if (advanced.show !== null) {
         showSummary(advanced.show);

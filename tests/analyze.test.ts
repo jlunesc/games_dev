@@ -206,14 +206,20 @@ function scripted(n: number): InputFrame {
 describe('agreement with the fight summary', () => {
   const check = (boss: BossDef, seed: number, inputFor: (n: number) => InputFrame) => {
     let state = createInitialState(boss, seed);
-    let flow = startFlow();
+    let flow = startFlow({
+      bossId: boss.id,
+      presetId: 'normal',
+      dials: NORMAL_DIALS,
+      seed,
+      playedAt: '2026-09-20T10:00:00.000Z',
+    });
     const inputs: InputFrame[] = [];
     for (let n = 1; n <= 1500; n++) {
       const frame = inputFor(n);
       inputs.push(frame);
       const before = state;
       state = step(before, frame, boss);
-      flow = advanceFlow(flow, before, state, boss).flow;
+      flow = advanceFlow(flow, before, state, boss, frame).flow;
       if (flow.ended !== null) break;
     }
     const summary = summarize(flow.tracker, state, boss, flow.ended?.result ?? 'left');
