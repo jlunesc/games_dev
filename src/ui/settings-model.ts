@@ -1,0 +1,44 @@
+import type { MenuAction } from './menu-model';
+import type { Settings } from './settings';
+
+export interface SettingsModel {
+  focus: number;
+  settings: Settings;
+}
+
+export interface SettingsRow {
+  id: keyof Settings;
+  label: string;
+  value: 'On' | 'Off';
+  help: string;
+}
+
+const ROWS: ReadonlyArray<{ id: keyof Settings; label: string; help: string }> = [
+  { id: 'freeze', label: 'Hit freeze', help: 'A tiny pause when a hit lands, so hits feel heavy.' },
+  { id: 'shake', label: 'Screen shake', help: 'The screen shakes a little when something is hit.' },
+  { id: 'flash', label: 'Flashes', help: 'White and red flashes when something is hit.' },
+  { id: 'sound', label: 'Sound', help: 'The beeps for hits, dashes and warnings.' },
+];
+
+export const createSettingsModel = (settings: Settings): SettingsModel => ({ focus: 0, settings });
+
+export function settingsRows(model: SettingsModel): SettingsRow[] {
+  return ROWS.map((row) => ({ ...row, value: model.settings[row.id] ? 'On' : 'Off' }));
+}
+
+/** What a press does on the Settings screen. Switching a setting never changes how a fight plays. */
+export function settingsStep(
+  model: SettingsModel,
+  action: MenuAction,
+): { model: SettingsModel; outcome: 'stay' | 'back' } {
+  if (action === 'back') return { model, outcome: 'back' };
+  if (action === 'up' || action === 'down') {
+    const direction = action === 'up' ? -1 : 1;
+    const focus = (model.focus + direction + ROWS.length) % ROWS.length;
+    return { model: { ...model, focus }, outcome: 'stay' };
+  }
+  const row = ROWS[model.focus];
+  if (row === undefined) return { model, outcome: 'stay' };
+  const settings = { ...model.settings, [row.id]: !model.settings[row.id] };
+  return { model: { ...model, settings }, outcome: 'stay' };
+}
