@@ -254,3 +254,55 @@ describe('purity', () => {
     expect(JSON.stringify(s)).toBe(snapshot);
   });
 });
+
+describe('approach and facing', () => {
+  it('walks into an attack range before it attacks', () => {
+    const slam = DUELIST.attacks.find((a) => a.id === 'slam')!;
+    const boss = solo('slam');
+    // 250 units away is beyond the slam's reach, so the boss has to close in first.
+    expect(250).toBeGreaterThan(slam.range.max);
+    const states = run(standAt(boss, 250), 120, () => NO_INPUT, boss);
+    const first = windupUpdates(states)[0]!;
+    // With the player already in range the warning comes on update 2 (choose on 1, start on 2).
+    expect(first).toBeGreaterThan(2);
+    const at = states[first - 1]!;
+    const distance = Math.abs(at.player.x - at.boss.x);
+    expect(distance).toBeGreaterThanOrEqual(slam.range.min);
+    expect(distance).toBeLessThanOrEqual(slam.range.max);
+  });
+
+  it('starts the attack anyway once the approach times out', () => {
+    const boss: BossDef = { ...solo('slam'), approachTimeout: 20 };
+    // The player keeps running away, so the boss never gets into range.
+    const states = run(standAt(boss, 250), 60, () => withInput({ moveX: -1 }), boss);
+    const slam = DUELIST.attacks.find((a) => a.id === 'slam')!;
+    const first = windupUpdates(states)[0]!;
+    // Update 1 chooses the attack (gap 1) and enters the approach; it force-starts when modeTick reaches the timeout.
+    expect(first).toBe(1 + 20);
+    const at = states[first - 1]!;
+    expect(Math.abs(at.player.x - at.boss.x)).toBeGreaterThan(slam.range.max);
+  });
+
+  it('never changes facing during an attack, and turns again afterwards', () => {
+    const sweep = DUELIST.attacks.find((a) => a.id === 'sweep')!;
+    const boss = solo('sweep');
+    const first = windupUpdates(run(standAt(boss, 150), 60, () => NO_INPUT, boss))[0]!;
+    let s = run(standAt(boss, 150), first, () => NO_INPUT, boss)[first - 1]!;
+    expect(s.boss.mode).toBe('attack');
+    expect(s.boss.facing).toBe(-1);
+    // The player jumps to the other side of the boss (a copy of the state: the original is not touched).
+    s = structuredClone(s);
+    s.player.x = s.boss.x + 200;
+    s.player.prevX = s.player.x;
+    // The attack has already used its first update; the rest of its length is left.
+    for (let i = 1; i < attackLength(sweep); i++) {
+      s = step(s, NO_INPUT, boss);
+      expect(s.boss.mode).toBe('attack');
+      expect(s.boss.facing).toBe(-1);
+    }
+    s = step(s, NO_INPUT, boss);
+    expect(s.boss.mode).toBe('gap');
+    s = step(s, NO_INPUT, boss);
+    expect(s.boss.facing).toBe(1);
+  });
+});
