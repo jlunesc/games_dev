@@ -103,3 +103,46 @@ describe('the new boss events', () => {
     expect(freezeFor(['bossWindupGold', 'bossWindupRed'])).toBe(0);
   });
 });
+
+describe('the settings', () => {
+  const off = { freeze: false, shake: false, flash: false, sound: true };
+
+  it('turning the freeze off removes every freeze', () => {
+    expect(freezeFor(['bossHit', 'counter', 'playerHit'], { ...off, freeze: false })).toBe(0);
+    expect(freezeFor(['bossHit'], { freeze: true, shake: false, flash: false, sound: true })).toBe(
+      FEEDBACK.freezeOnBossHit,
+    );
+  });
+
+  it('turning the shake off keeps the flashes, and the other way round', () => {
+    const noShake = applyEvents(NO_FEEDBACK, ['bossHit', 'playerHit'], {
+      freeze: true,
+      shake: false,
+      flash: true,
+      sound: true,
+    });
+    expect(noShake.shakeTicks).toBe(0);
+    expect(noShake.bossFlashTicks).toBe(FEEDBACK.bossFlashTicks);
+    expect(noShake.playerFlashTicks).toBe(FEEDBACK.playerFlashTicks);
+    const noFlash = applyEvents(NO_FEEDBACK, ['bossHit', 'playerHit'], {
+      freeze: true,
+      shake: true,
+      flash: false,
+      sound: true,
+    });
+    expect(noFlash.shakeTicks).toBe(FEEDBACK.shakeTicks);
+    expect(noFlash.bossFlashTicks).toBe(0);
+    expect(noFlash.playerFlashTicks).toBe(0);
+  });
+
+  it('with everything off the effects do nothing at all', () => {
+    expect(applyEvents(NO_FEEDBACK, ['bossHit', 'counter', 'playerHit', 'phaseChange'], off)).toEqual(
+      NO_FEEDBACK,
+    );
+  });
+
+  it('default to everything on when no settings are given', () => {
+    expect(freezeFor(['counter'])).toBe(FEEDBACK.freezeOnCounter);
+    expect(applyEvents(NO_FEEDBACK, ['playerHit']).shakeTicks).toBe(FEEDBACK.shakeTicks);
+  });
+});

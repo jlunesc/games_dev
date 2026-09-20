@@ -4,11 +4,14 @@ export interface Sound {
   /** Browsers only allow sound after a user gesture; call this from a tap or button press. */
   unlock(): void;
   play(events: readonly GameEvent[]): void;
+  /** Turns all sound on or off (the Settings switch). */
+  setEnabled(enabled: boolean): void;
 }
 
 /** Simple beeps generated in code (no sound files, so nothing extra to load). */
 export function createSound(): Sound {
   let context: AudioContext | null = null;
+  let enabled = true;
 
   const beep = (frequency: number, milliseconds: number, type: OscillatorType, volume: number): void => {
     if (context === null || context.state !== 'running') return;
@@ -35,7 +38,11 @@ export function createSound(): Sound {
         context = null;
       }
     },
+    setEnabled(value): void {
+      enabled = value;
+    },
     play(events): void {
+      if (!enabled) return;
       for (const event of events) {
         if (event === 'bossHit') beep(220, 90, 'square', 0.15);
         if (event === 'playerHit') beep(110, 200, 'sawtooth', 0.2);

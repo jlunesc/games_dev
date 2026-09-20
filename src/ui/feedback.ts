@@ -1,5 +1,6 @@
 import { FEEDBACK } from '../game/params';
 import type { GameEvent } from '../game/state';
+import { DEFAULT_SETTINGS, type Settings } from './settings';
 
 /** Effect timers that only exist for the eyes: they never feed back into the simulation. */
 export interface FeedbackState {
@@ -11,7 +12,11 @@ export interface FeedbackState {
 export const NO_FEEDBACK: FeedbackState = { shakeTicks: 0, bossFlashTicks: 0, playerFlashTicks: 0 };
 
 /** How many updates the loop should hold still after these events (the longest one wins). */
-export function freezeFor(events: readonly GameEvent[]): number {
+export function freezeFor(
+  events: readonly GameEvent[],
+  settings: Settings = DEFAULT_SETTINGS,
+): number {
+  if (!settings.freeze) return 0;
   let freeze = 0;
   for (const event of events) {
     if (event === 'bossHit') freeze = Math.max(freeze, FEEDBACK.freezeOnBossHit);
@@ -22,18 +27,22 @@ export function freezeFor(events: readonly GameEvent[]): number {
   return freeze;
 }
 
-export function applyEvents(fb: FeedbackState, events: readonly GameEvent[]): FeedbackState {
+export function applyEvents(
+  fb: FeedbackState,
+  events: readonly GameEvent[],
+  settings: Settings = DEFAULT_SETTINGS,
+): FeedbackState {
   const next = { ...fb };
   for (const event of events) {
     if (event === 'bossHit' || event === 'counter' || event === 'bossDefeated') {
-      next.shakeTicks = FEEDBACK.shakeTicks;
-      next.bossFlashTicks = FEEDBACK.bossFlashTicks;
+      if (settings.shake) next.shakeTicks = FEEDBACK.shakeTicks;
+      if (settings.flash) next.bossFlashTicks = FEEDBACK.bossFlashTicks;
     }
     if (event === 'playerHit') {
-      next.shakeTicks = FEEDBACK.shakeTicks;
-      next.playerFlashTicks = FEEDBACK.playerFlashTicks;
+      if (settings.shake) next.shakeTicks = FEEDBACK.shakeTicks;
+      if (settings.flash) next.playerFlashTicks = FEEDBACK.playerFlashTicks;
     }
-    if (event === 'phaseChange') next.shakeTicks = FEEDBACK.shakeTicks;
+    if (event === 'phaseChange' && settings.shake) next.shakeTicks = FEEDBACK.shakeTicks;
   }
   return next;
 }

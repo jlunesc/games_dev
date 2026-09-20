@@ -1,0 +1,102 @@
+import { EMBER_DUELIST } from '../bosses';
+import {
+  DIALS,
+  NORMAL_DIALS,
+  PRESETS,
+  changedDials,
+  clampDial,
+  dialsEqual,
+  type DialId,
+  type Dials,
+  type PresetId,
+} from '../game/difficulty';
+import type { StorageLike } from './storage';
+
+/** What the menu remembers: the boss, the preset, and the dial values (which differ from the preset once tweaked). */
+export interface Prefs {
+  bossId: string;
+  presetId: PresetId;
+  dials: Dials;
+}
+
+export const DEFAULT_PREFS: Prefs = {
+  bossId: EMBER_DUELIST.id,
+  presetId: 'normal',
+  dials: NORMAL_DIALS,
+};
+
+const KEY = 'boss-trainer.prefs';
+
+/** The dial values of a preset, as a new object. */
+export function presetDials(id: PresetId): Dials {
+  return { ...(PRESETS.find((p) => p.id === id)?.dials ?? NORMAL_DIALS) };
+}
+
+/** True once the dials differ from the preset the choice began from. */
+export function isCustom(prefs: Prefs): boolean {
+  return !dialsEqual(prefs.dials, presetDials(prefs.presetId));
+}
+
+export function selectPreset(prefs: Prefs, id: PresetId): Prefs {
+  return { ...prefs, presetId: id, dials: presetDials(id) };
+}
+
+/** Moves one dial by one step up (1) or down (-1), staying inside its range. */
+export function nudgeDial(prefs: Prefs, id: DialId, direction: 1 | -1): Prefs {
+  const def = DIALS.find((d) => d.id === id);
+  if (def === undefined) return prefs;
+  const next = clampDial(id, prefs.dials[id] + direction * def.step);
+  return { ...prefs, dials: { ...prefs.dials, [id]: next } };
+}
+
+/** Back to the values of the preset the choice began from. */
+export function resetDials(prefs: Prefs): Prefs {
+  return selectPreset(prefs, prefs.presetId);
+}
+
+/** The dials that differ from the preset, for the record of a fight. */
+export function changedFromPreset(prefs: Prefs): DialId[] {
+  return changedDials(presetDials(prefs.presetId), prefs.dials);
+}
+
+/** Reads stored choices; anything missing, unknown or out of range falls back safely. */
+export function parsePrefs(raw: string | null): Prefs {
+  const fallback: Prefs = { ...DEFAULT_PREFS, dials: { ...NORMAL_DIALS } };
+  if (raw === null) return fallback;
+  try {
+    const data: unknown = JSON.parse(raw);
+    if (typeof data !== 'object' || data === null) return fallback;
+    const o = data as Record<string, unknown>;
+    const presetId = PRESETS.some((p) => p.id === o.presetId) ? (o.presetId as PresetId) : 'normal';
+    const base = presetDials(presetId);
+    const stored = typeof o.dials === 'object' && o.dials !== null ? (o.dials as Record<string, unknown>) : {};
+    const dials = { ...base };
+    for (const dial of DIALS) {
+      const value = stored[dial.id];
+      if (typeof value === 'number' && Number.isFinite(value)) dials[dial.id] = clampDial(dial.id, value);
+    }
+    return {
+      bossId: typeof o.bossId === 'string' ? o.bossId : fallback.bossId,
+      presetId,
+      dials,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function loadPrefs(storage: StorageLike | null): Prefs {
+  try {
+    return parsePrefs(storage?.getItem(KEY) ?? null);
+  } catch {
+    return parsePrefs(null);
+  }
+}
+
+export function savePrefs(storage: StorageLike | null, prefs: Prefs): void {
+  try {
+    storage?.setItem(KEY, JSON.stringify(prefs));
+  } catch {
+    // Storage is full or blocked: the choices just will not be remembered.
+  }
+}
