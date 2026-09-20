@@ -57,6 +57,7 @@ describe('the phase change', () => {
 describe('chaining in the second phase', () => {
   it('follows an attack straight with another, without the gap, then waits', () => {
     const base = anywhere();
+    // Both phases of this boss are identical on purpose, so the test does not depend on which phase it starts in.
     const boss: BossDef = {
       ...base,
       predictability: 0,
@@ -74,7 +75,6 @@ describe('chaining in the second phase', () => {
     };
     const s = standAt(boss, 120);
     s.player.health = 1000;
-    s.boss.phase = 1;
     const states = run(s, 500, () => NO_INPUT, boss);
     const winds = windupUpdates(states);
     const length = (w: number): number =>
@@ -84,6 +84,65 @@ describe('chaining in the second phase', () => {
     // The chain is used up after two attacks, so the third waits for the gap (one update here).
     expect(winds[2]).toBe(winds[1]! + length(winds[1]!) + 2);
     expect(winds[3]).toBe(winds[2]! + length(winds[2]!) + 1);
+  });
+});
+
+describe('the phase change threshold', () => {
+  // 10 health with the second phase at 0.5: it begins at 5 health or below.
+  const custom: BossDef = {
+    ...DUELIST,
+    maxHp: 10,
+    phases: DUELIST.phases.map((p, i) => (i === 1 ? { ...p, startsAtHpFraction: 0.5 } : p)),
+  };
+  const edge = custom.maxHp * custom.phases[1]!.startsAtHpFraction;
+  const oneSwing = (n: number) => withInput({ attackPressed: n === 1 });
+
+  it('starts when a hit brings health exactly to the threshold', () => {
+    expect(edge).toBe(5);
+    const states = run(inReach(custom, edge + 1), HIT + 2, oneSwing, custom);
+    expect(states[HIT - 1]!.boss.hp).toBe(edge);
+    expect(updatesWith(states, 'phaseChange')).toEqual([HIT]);
+  });
+
+  it('does not start when a hit leaves health just above the threshold', () => {
+    const states = run(inReach(custom, edge + 2), HIT + 2, oneSwing, custom);
+    expect(states[HIT - 1]!.boss.hp).toBe(edge + 1);
+    expect(updatesWith(states, 'phaseChange')).toEqual([]);
+  });
+});
+
+describe('a phase change in the middle of an attack', () => {
+  const sweep = DUELIST.attacks.find((a) => a.id === 'sweep')!;
+  const boss = anywhere();
+  /** The boss is mid-sweep with a chain pending, and its hit box becomes active on update HIT (the update the swing lands). */
+  const midAttack = (hp: number): GameState => {
+    const s = standAt(boss, 120);
+    s.boss.hp = hp;
+    s.boss.facing = -1;
+    s.boss.mode = 'attack';
+    s.boss.attackId = 'sweep';
+    s.boss.attackTick = sweep.hits[0]!.from - HIT;
+    s.boss.chainLeft = 1;
+    return s;
+  };
+  const swing = (n: number) => withInput({ attackPressed: n === 1 });
+
+  it('would hurt the player if nothing cancelled it (control)', () => {
+    const states = run(midAttack(DUELIST.maxHp), HIT, swing, boss);
+    expect(states[HIT - 1]!.boss.mode).toBe('attack');
+    expect(updatesWith(states, 'playerHit')).toEqual([HIT]);
+  });
+
+  it('is dropped, with its chain and its hit boxes, when the hit crosses the threshold', () => {
+    const start = midAttack(Math.floor(threshold) + 1);
+    const states = run(start, HIT + 5, swing, boss);
+    const at = states[HIT - 1]!;
+    expect(updatesWith(states, 'phaseChange')).toEqual([HIT]);
+    expect(at.boss.mode).toBe('transition');
+    expect(at.boss.attackId).toBeNull();
+    expect(at.boss.pendingAttackId).toBeNull();
+    expect(at.boss.chainLeft).toBe(0);
+    expect(updatesWith(states, 'playerHit')).toEqual([]);
   });
 });
 

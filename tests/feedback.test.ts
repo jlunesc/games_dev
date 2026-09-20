@@ -77,6 +77,12 @@ describe('the new boss events', () => {
     expect(FEEDBACK.freezeOnCounter).toBeGreaterThan(FEEDBACK.freezeOnBossHit);
   });
 
+  it('take the longest freeze when several events happen at once', () => {
+    expect(freezeFor(['bossHit', 'counter'])).toBe(FEEDBACK.freezeOnCounter);
+    expect(freezeFor(['counter', 'bossDefeated'])).toBe(FEEDBACK.freezeOnBossDefeated);
+    expect(freezeFor(['playerHit', 'bossHit'])).toBe(FEEDBACK.freezeOnPlayerHit);
+  });
+
   it('shake the screen and flash the boss on a counter and on victory', () => {
     for (const event of ['counter', 'bossDefeated'] as const) {
       const fb = applyEvents(NO_FEEDBACK, [event]);

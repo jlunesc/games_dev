@@ -31,6 +31,23 @@ describe('armRect', () => {
     expect(r.y).toBe(300);
     expect(r.h).toBeGreaterThan(r.w);
   });
+
+  it('raises the arm above the shoulder for both facings', () => {
+    for (const facing of [1, -1] as const) {
+      const r = armRect('raised', facing, 100, 300);
+      expect(r.x + r.w / 2).toBe(100);
+      expect(r.y + r.h).toBe(300);
+    }
+  });
+
+  it('hangs the downward arm on the side the boss faces', () => {
+    const right = armRect('down', 1, 100, 300);
+    expect(right.x).toBeGreaterThan(100);
+    const left = armRect('down', -1, 100, 300);
+    expect(left.x + left.w).toBeLessThan(100);
+    expect(left.y).toBe(300);
+    expect(left.h).toBeGreaterThan(left.w);
+  });
 });
 
 describe('bossLook', () => {

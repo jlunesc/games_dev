@@ -13,6 +13,16 @@ function sequence(seed: number, count: number): number[] {
 }
 
 describe('nextRandom', () => {
+  it('gives the known answers for seed 0', () => {
+    // These pin the algorithm (mulberry32): if they change, recorded seeds no longer replay the same fight.
+    const first = nextRandom(0);
+    expect(first.value).toBeCloseTo(0.26642920868471265, 12);
+    expect(first.state).toBe(1831565813);
+    const second = nextRandom(first.state);
+    expect(second.value).toBeCloseTo(0.0003297457005828619, 12);
+    expect(second.state).toBe(3663131626);
+  });
+
   it('gives the same numbers for the same seed', () => {
     expect(sequence(7, 50)).toEqual(sequence(7, 50));
   });

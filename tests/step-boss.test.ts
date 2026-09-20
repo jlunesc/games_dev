@@ -56,12 +56,13 @@ describe('walking', () => {
   });
 });
 
-const CASES = [
-  { id: 'slam', distance: 120 },
-  { id: 'sweep', distance: 150 },
-  { id: 'lunge', distance: 270 },
-  { id: 'burst', distance: 250 },
-];
+/** The middle of an attack's range, where the boss starts it without walking first. */
+const middleOfRange = (id: string): number => {
+  const { range } = DUELIST.attacks.find((a) => a.id === id)!;
+  return Math.round((range.min + range.max) / 2);
+};
+
+const CASES = ['slam', 'sweep', 'lunge', 'burst'].map((id) => ({ id, distance: middleOfRange(id) }));
 
 describe.each(CASES)('the $id attack', ({ id, distance }) => {
   const boss = solo(id);
@@ -133,7 +134,10 @@ describe('dodging', () => {
   });
 
   it('a dash through the sweep is untouchable', () => {
-    const dashAt = hitStart - 2;
+    // Start the dash so it covers the sweep's active updates with the same margin before and after.
+    const dashAt = hitStart - Math.floor((PLAYER.dash.duration - sweep.active) / 2);
+    expect(dashAt).toBeLessThanOrEqual(hitStart);
+    expect(dashAt + PLAYER.dash.duration).toBeGreaterThanOrEqual(hitStart + sweep.active);
     const states = run(
       standAt(sweepBoss, 150),
       attackEnd,
@@ -303,7 +307,7 @@ describe('approach and facing', () => {
     s = structuredClone(s);
     s.player.x = s.boss.x + 200;
     s.player.prevX = s.player.x;
-    // The attack has already used its first update; the rest of its length is left.
+    // The warning update left attackTick at 0; the attack lasts through attackTick 1 to length - 1, and the update after that ends it.
     for (let i = 1; i < attackLength(sweep); i++) {
       s = step(s, NO_INPUT, boss);
       expect(s.boss.mode).toBe('attack');
