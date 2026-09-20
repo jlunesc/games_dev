@@ -1,8 +1,22 @@
 import type { InputFrame } from '../engine/input-frame';
 import { DT } from '../engine/time';
-import { attackActive, attackBox, dummyBox, overlaps } from './geometry';
-import { DUMMY, PLAYER, WORLD } from './params';
-import type { GameEvent, GameState, PlayerState } from './state';
+import {
+  attackActive,
+  attackBox,
+  dummyBox,
+  isInvulnerable,
+  overlaps,
+  playerBox,
+  sweepBox,
+} from './geometry';
+import { DUMMY, GAME, PLAYER, WORLD } from './params';
+import {
+  createInitialState,
+  type DummyState,
+  type GameEvent,
+  type GameState,
+  type PlayerState,
+} from './state';
 
 const ATTACK_TOTAL = PLAYER.attack.startup + PLAYER.attack.active + PLAYER.attack.recovery;
 
@@ -88,6 +102,43 @@ export function updatePlayer(p: PlayerState, input: InputFrame, events: GameEven
   }
 }
 
+/** The dummy waits, warns (turning towards the player), sweeps, recovers, and waits again. */
+function updateDummy(d: DummyState, p: PlayerState, events: GameEvent[]): void {
+  const sweep = DUMMY.sweep;
+  switch (d.phase) {
+    case 'idle':
+      d.nextSweepIn -= 1;
+      if (d.nextSweepIn <= 0) {
+        d.phase = 'windup';
+        d.phaseTick = 0;
+        d.facing = p.x < d.x ? -1 : 1;
+        events.push('dummyWindup');
+      }
+      break;
+    case 'windup':
+      d.phaseTick += 1;
+      if (d.phaseTick >= sweep.windup) {
+        d.phase = 'sweep';
+        d.phaseTick = 0;
+      }
+      break;
+    case 'sweep':
+      d.phaseTick += 1;
+      if (d.phaseTick >= sweep.active) {
+        d.phase = 'recovery';
+        d.phaseTick = 0;
+      }
+      break;
+    case 'recovery':
+      d.phaseTick += 1;
+      if (d.phaseTick >= sweep.recovery) {
+        d.phase = 'idle';
+        d.nextSweepIn = sweep.every - sweep.windup - sweep.active - sweep.recovery;
+      }
+      break;
+  }
+}
+
 /** The player's swing hurts the dummy once per swing. The dummy's display health refills instead of reaching zero. */
 function resolveAttack(s: GameState): void {
   const { player: p, dummy: d } = s;
@@ -99,12 +150,35 @@ function resolveAttack(s: GameState): void {
   }
 }
 
+/** The sweep hurts a player who is not untouchable. The last hit ends the fight. */
+function resolveSweep(s: GameState): void {
+  const { player: p, dummy: d } = s;
+  if (d.phase !== 'sweep' || isInvulnerable(p) || !overlaps(sweepBox(d), playerBox(p))) return;
+  p.health -= 1;
+  p.invulnerableTicks = PLAYER.hitInvulnerability;
+  s.events.push('playerHit');
+  if (p.health <= 0) {
+    p.health = 0;
+    s.phase = 'defeated';
+    s.defeatTicks = GAME.defeatRestartTicks;
+    s.events.push('playerDefeated');
+  }
+}
+
 /** Advances the game by one update. Pure: returns a new state and never touches the one it is given. */
 export function step(prev: GameState, input: InputFrame): GameState {
   const s = structuredClone(prev);
   s.events = [];
   s.tick += 1;
+
+  if (s.phase === 'defeated') {
+    s.defeatTicks -= 1;
+    return s.defeatTicks <= 0 ? createInitialState() : s;
+  }
+
   updatePlayer(s.player, input, s.events);
+  updateDummy(s.dummy, s.player, s.events);
   resolveAttack(s);
+  resolveSweep(s);
   return s;
 }

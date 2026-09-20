@@ -42,3 +42,10 @@ export function attackActive(p: PlayerState): boolean {
 export function isInvulnerable(p: PlayerState): boolean {
   return p.invulnerableTicks > 0 || p.dashTick >= 0;
 }
+
+/** The area the dummy's sweep hurts: low, on the side the dummy faces, so it can be jumped over. */
+export function sweepBox(d: DummyState): Box {
+  const { reach, height } = DUMMY.sweep;
+  const x = d.facing === 1 ? d.x + DUMMY.width / 2 : d.x - DUMMY.width / 2 - reach;
+  return { x, y: WORLD.floorY - height, w: reach, h: height };
+}
