@@ -33,6 +33,8 @@ export const DUMMY = {
 export const GAME = {
   defeatRestartTicks: 60,
   deadZone: 0.25,
+  // How long the top button must be held to leave a fight, in ms.
+  exitHoldMs: 1000,
 };
 
 export const FEEDBACK = {
