@@ -109,11 +109,11 @@ export function mountApp(root: HTMLElement): void {
     panel.hidden = false;
     setBanner(null);
     statusLine = el('p', 'status');
-    fightButton = el('button', 'action', 'Fight the Ember Duelist (bottom button)');
+    fightButton = el('button', 'action', 'Fight the Ember Duelist');
     fightButton.type = 'button';
     fightButton.disabled = true;
     fightButton.addEventListener('click', startFight);
-    const testButton = el('button', 'action', 'Controller test (top button)');
+    const testButton = el('button', 'action', 'Controller test');
     testButton.type = 'button';
     testButton.addEventListener('click', showTest);
     panel.replaceChildren(
