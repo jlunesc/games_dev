@@ -26,7 +26,7 @@ If the controller shows nothing, note which mode it was in and whether the page 
 `npm run dev`, open http://localhost:5173, plug in or pair the PC controller, and follow the controller check above. Reports from different controllers are expected to differ.
 
 ## Playing the fight (M1)
-Hold the phone sideways (landscape) before you start.
+The installed app opens sideways (landscape) by itself. If it does not after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site. In a normal Chrome tab, turn the phone sideways yourself.
 
 Open the app with the controller connected. The start screen shows which controller it found. Press the bottom button (or tap "Fight the dummy") to start. During a fight, the top button returns to the start screen, where you can also open the controller test. If the start screen says "No controller detected", press any button on the controller so the phone notices it.
 
