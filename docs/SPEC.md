@@ -65,7 +65,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 - Menu: pick a **boss** and a **difficulty**, then the fight starts immediately. The menu **remembers the last boss and difficulty**.
 - **Death returns to the menu.** Every attempt starts from the beginning of the fight. There are no phase checkpoints.
 - After a fight, a short **summary screen** shows result, time, phase reached, hits taken and the most dangerous attack. Then back to the menu.
-- **Difficulty** comes as **presets** (Easy, Normal, Hard, etc.), and the owner can **tweak individual parameters on top of a preset**. **OPEN**: preset names and values. Every logged attempt records the preset and every changed value.
+- **Difficulty** comes as **presets** (Easy, Normal, Hard, etc.), and the owner can **tweak individual parameters on top of a preset**. **LOCKED** (owner): the presets are Easy, Normal and Hard, made of **dials** for what makes a boss harder: speed, frequency of attack, hardness to read an attack (warning length), health ("tank"), damage, range, and variety of attacks. A Tweak screen changes each dial on top of a preset. The dial system must be able to take player traits and environment dials later (`docs/backlog.md`). **DELEGATED**: the dial ranges and the preset values (Normal is the boss file as written), tunable in `src/game/difficulty.ts`. Every logged attempt records the preset and every changed value.
 
 ## 7. Bosses
 
@@ -127,7 +127,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 **Derived (computed afterwards)**: hit rate per attack across attempts, learning curve, fatigue over a session, death cause and phase distribution.
 
 **Storage and export**
-- Stats are stored on the device and exported as a file. **DEFAULT**: JSON with a documented, versioned schema. **OPEN**: whether CSV is needed too.
+- Stats are stored on the device and exported as a file. **LOCKED** (owner): an Export button opens the phone's share sheet or saves a file, never an upload. **DEFAULT**: JSON with a documented, versioned schema (`docs/stats.md`). Because the game is deterministic, each fight also stores its seed, the dials and the full input log, so it can be replayed exactly and any measurement recomputed later. **OPEN**: whether CSV is needed too.
 - Browser storage can be cleared by Android, so export regularly.
 - Exports are git-ignored and never committed. Analysis is done together with Claude after each play session.
 
@@ -146,13 +146,12 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 - **M0**: repository, PWA skeleton, and a controller test screen running on the phone.
 - **M1**: player, arena, fixed loop and hit feedback, with a throwaway **training dummy** that can be hit and swings back after a visible warning (design in `docs/superpowers/specs/2026-09-20-m1-design.md`). The effect and sound on/off switches get their settings screen in M3 with the menu; in M1 everything is on.
 - **M2**: boss data format, Ember Duelist (replaces the M1 training dummy), counter mechanic, phase 2, and victory and restart (the summary screen comes in M3). Design in `docs/superpowers/specs/2026-09-20-m2-design.md`; ideas for later are in `docs/backlog.md`.
-- **M3**: menu (boss and difficulty, remembers last choice), summary screen, stats log and export.
+- **M3**: menu (boss and difficulty, remembers last choice), summary screen, stats log and export, and the settings screen. Built in two steps: **M3a** the menu, difficulty dials and Tweak screen, summary screen and settings; **M3b** the stats recording, storage and export. Design in `docs/superpowers/specs/2026-09-20-m3-design.md`.
 - **M4**: play on the phone and hold the first analysis session.
 - **M5**: next bosses, the security test, and a decision on an APK.
 
 ## 12. Open points
 
-- Preset names and values.
 - Controller button layout: default proposed in section 5, to confirm after playtesting.
 - Final parameter list per boss (grows while building).
 - Stats export format details (JSON only, or also CSV).
