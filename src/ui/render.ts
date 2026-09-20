@@ -110,7 +110,7 @@ function drawBoss(
   ctx.fillStyle = feedback.bossFlashTicks > 0 ? COLORS.flash : look.body;
   ctx.fillRect(left, top, boss.width, boss.height);
   if (look.glow !== null) {
-    ctx.globalAlpha = 0.55 + 0.35 * Math.sin(state.tick / 2);
+    ctx.globalAlpha = 0.55 + 0.35 * Math.sin(state.tick / 6);
     ctx.strokeStyle = look.glow;
     ctx.lineWidth = 8;
     ctx.strokeRect(left - 4, top - 4, boss.width + 8, boss.height + 8);

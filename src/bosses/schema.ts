@@ -53,9 +53,9 @@ export interface PhaseDef {
   opening?: string;
   /** Updates the boss waits (walking and keeping its distance) before choosing its next attack. */
   gap: number;
-  /** Most attacks in one chain (1 means no chaining). */
+  /** Attacks in a chain, in total: the first plus `maxChain - 1` follow-ups with no gap between them. 1 means never chain. */
   maxChain: number;
-  /** Chance that an attack is followed straight away by another, up to `maxChain`. */
+  /** Chance, rolled once per attack, that it starts a chain: on success the boss does exactly `maxChain` attacks in a row. */
   chainChance: number;
   walkSpeed: number;
   retreatSpeed: number;

@@ -20,9 +20,9 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 
 ### Adding a boss
 1. Create `src/bosses/<id>.json` with every field below (copy `ember-duelist.json` as a starting point).
-2. Load and export it in `src/bosses/index.ts` the same way as the Duelist (`export const <NAME> = parseBoss(raw);`).
+2. Load and export it in `src/bosses/index.ts` the same way as the Duelist, with its own import name: `import rawNext from './next-boss.json'; export const NEXT_BOSS = parseBoss(rawNext);`.
 3. Add tests: the real file is accepted and has the shape you planned; and behavior tests for anything new about it. `tests/boss-parse.test.ts` (checker) and `tests/step-boss.test.ts`, `tests/step-counter.test.ts`, `tests/step-phases.test.ts` (behavior, with helpers in `tests/boss-helpers.ts` and `tests/helpers.ts`) show the pattern.
-4. The app currently starts the Ember Duelist directly (`src/ui/app.ts`). Choosing between several bosses is a menu, planned for a later milestone, and needs its own design.
+4. The app currently starts the Ember Duelist directly (`src/ui/app.ts`). Choosing between several bosses is the menu of milestone M3 (see `docs/SPEC.md`), which needs its own design.
 5. Drawing is separate from the boss file. The body colors, the arm poses and the glow live in `src/ui/render.ts`; a boss file only chooses one of the existing poses.
 
 ## 2. Every field
@@ -134,9 +134,9 @@ All times are in updates (60 = 1 second); speeds are units per second.
 |---|---|---|
 | Larger `spacing` (both numbers) | The boss stays farther away. | Every attack's `range` must still be reachable: the boss walks into range first, so a far spacing means longer walks (up to `approachTimeout`) before each attack. Compare with the counter `range` too, since the counter needs the player close. |
 | Narrower `spacing` (`max - min` small) | It moves back and forth more, reacting to every step. | Watch that it still looks calm. |
-| Longer `windup` | A longer warning: easier to read and dodge, and for the slam, easier to counter. | It must not fall below the counter `window` for a counterable attack. The `hits`' `from`/`to` and any `move` shift with it (the checker rejects hit windows that are no longer inside the active updates). |
+| Longer `windup` | A longer warning: easier to read and dodge. It does not make the slam easier to counter: the counter window stays `counter.window` updates long, it just opens later. | It must not fall below the counter `window` for a counterable attack. The `hits`' `from`/`to` and any `move` shift with it (the checker rejects hit windows that are no longer inside the active updates). |
 | Shorter `windup` | Less time to react. The sweep's 24 updates (0.4 s) is the shortest warning the Duelist has. | Play it: the owner should be able to dodge from the pose and glow, not by guessing. |
-| Longer `active` | The attack stays dangerous longer. | Extend `hits` (or add more windows) to cover it; windows must end by `windup + active`. |
+| Longer `active` | On its own it only lengthens the glow and the attack (the recovery starts later); what hurts the player are the hit windows in `hits`. | Extend the `hits` (or add more windows) to cover the extra updates; windows must end by `windup + active`. |
 | Longer `recovery` | A bigger opening for the player to punish. | |
 | Larger counter `window` | The counter is easier to time. | `window` must not exceed the shortest counterable `windup`. |
 | Longer `staggerTicks` or higher `damageMultiplier` | The counter is worth more damage. | Do the arithmetic against `maxHp`: with `staggerTicks` 90 the player has time for roughly 5 swings; each one does `damageMultiplier` damage. |
@@ -160,4 +160,6 @@ After any change: run `npm test` (the checker and the behavior tests read the re
 Recorded in `docs/backlog.md`, not part of the format today:
 - **Ranges instead of single numbers** (for example a `gap` that varies a little on each fight), using the seeded random generator so a fight stays replayable.
 - **An arena section** for hazards with their own timing (falling objects, moving hazards).
-- Playable character types, and more bosses with a menu to choose them.
+- Playable character types.
+
+More bosses and the menu to choose between them are not in the backlog: the menu is milestone M3 in `docs/SPEC.md`.

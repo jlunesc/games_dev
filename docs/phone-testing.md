@@ -36,13 +36,14 @@ Try each of these and note anything that feels off:
 - [ ] Moving with the stick and with the d-pad feels the same and responds at once.
 - [ ] A quick tap of jump gives a small hop, holding gives a high jump.
 - [ ] Dash: a quick burst, and you cannot dash again for a short moment.
-- [ ] The Ember Duelist walks up to you, keeps a fighting distance, and backs off if you crowd it. It always faces you.
+- [ ] The Ember Duelist walks up to you, keeps a fighting distance, and backs off if you crowd it. It turns to face you while it walks; during an attack it keeps facing the way it started, so dashing past it works (it swings at the empty side).
 - [ ] Its arm shows which attack is coming: raised (a slam, gold glow), sideways (a low sweep, red glow), pulled back (a lunge across the screen, red glow).
 - [ ] Red attacks are dodged: jump over the sweep, dash through the lunge or the sweep. The slam is tall, so jumping does not help; dash through it or back away.
 - [ ] Countering: press attack in the last fifth of a second of the gold slam's warning while you are close. The Duelist turns blue and is staggered for about a second and a half, and your hits do double damage. Too early or too late is just a normal swing.
 - [ ] Hits feel right: the freeze, the shake and the flash when you hit it and when it hits you; a counter feels bigger.
 - [ ] Getting hit: red flash, a short freeze, blinking for about a second. Five hits and you are defeated.
-- [ ] Phase 2 at about two thirds of its health: it powers up (white glow, cannot be hurt), then attacks faster, sometimes chains two attacks, and adds a ground shockwave that you jump over.
+- [ ] Phase 2 at about two thirds of its health: it powers up (white glow, cannot be hurt). After that it attacks more often with less pause, walks faster, and sometimes does two attacks in a row. It always opens phase 2 with the ground burst (arm pointing down, red glow): a low shockwave that travels along the floor away from it. Jump over it.
+- [ ] In a two-attack chain, the second attack still shows its full warning (pose and glow), and it can start a little late while the boss walks into range first.
 - [ ] Beating it shows "Victory" and a new fight starts; losing shows "Defeated" and a new fight starts.
 - [ ] Fights are not identical: the order of attacks differs from fight to fight.
 - [ ] Sounds play for hits, dashes and the Duelist's warnings. Sound needs one tap on the screen after the app starts. If you started the fight with the controller and there is no sound, tap the screen once (it should then work from the next hit).
@@ -53,3 +54,10 @@ Try each of these and note anything that feels off:
 All of the Duelist's attacks are meant to be dodged from their warning (the arm pose and the glow), not reacted to after they start: jump or dash during the warning. If you feel you "could not dodge in time", tell me, that is useful to know and the timing can be tuned.
 
 Send me your impressions in plain words: what feels too fast, too slow, too hard, too easy, unfair or boring. Every number is tunable, so "the slam is too quick" is enough.
+
+## Things I would like to know
+After playing, answer these in plain words:
+- Does the counter feel too easy or too hard? Note that it can also be triggered by mashing attack, and by a swing that faces away from the boss (the game only checks that you are close and press attack in the window).
+- Is the fight too short or too long?
+- Is the Victory / Defeated message too quick? It shows for 1 second before the next fight starts.
+- Would a sign of when the counter window opens help (for example a flash on the boss)?
