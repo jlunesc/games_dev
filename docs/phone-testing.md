@@ -25,25 +25,31 @@ If the controller shows nothing, note which mode it was in and whether the page 
 ## On the PC
 `npm run dev`, open http://localhost:5173, plug in or pair the PC controller, and follow the controller check above. Reports from different controllers are expected to differ.
 
-## Playing the fight (M1)
+## Playing the fight (M2)
 The installed app opens sideways (landscape) by itself. If it does not after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site. In a normal Chrome tab, turn the phone sideways yourself.
 
-Open the app with the controller connected. The start screen shows which controller it found. Press the bottom button (or tap "Fight the dummy") to start. During a fight, hold the top button for about a second to return to the start screen, where you can also open the controller test. If the start screen says "No controller detected", press any button on the controller so the phone notices it.
+Open the app with the controller connected. The start screen shows which controller it found. Press the bottom button (or tap "Fight the Ember Duelist") to start. During a fight, hold the top button for about a second to return to the start screen, where you can also open the controller test. If the start screen says "No controller detected", press any button on the controller so the phone notices it.
 
 Controls: left stick or d-pad to move, bottom button to jump (hold it for a higher jump), left button to attack, right shoulder to dash.
 
 Try each of these and note anything that feels off:
 - [ ] Moving with the stick and with the d-pad feels the same and responds at once.
 - [ ] A quick tap of jump gives a small hop, holding gives a high jump.
-- [ ] Attack: a short swing in front of you. Hitting the dummy makes it flash white, the screen shakes a little, and the game freezes for a moment.
 - [ ] Dash: a quick burst, and you cannot dash again for a short moment.
-- [ ] The dummy changes color and pulls back as a warning, then sweeps low along the floor. You can jump over it or dash through it.
-- [ ] Getting hit: red flash, a short freeze, blinking for about a second. Five hits end the round and the arena restarts by itself.
-- [ ] Sounds play for hits, dashes and the dummy's warning. Sound needs one tap on the screen after the app starts. If you started the fight with the controller and there is no sound, tap the screen once (it should then work from the next hit).
+- [ ] The Ember Duelist walks up to you, keeps a fighting distance, and backs off if you crowd it. It always faces you.
+- [ ] Its arm shows which attack is coming: raised (a slam, gold glow), sideways (a low sweep, red glow), pulled back (a lunge across the screen, red glow).
+- [ ] Red attacks are dodged: jump over the sweep, dash through the lunge or the sweep. The slam is tall, so jumping does not help; dash through it or back away.
+- [ ] Countering: press attack in the last fifth of a second of the gold slam's warning while you are close. The Duelist turns blue and is staggered for about a second and a half, and your hits do double damage. Too early or too late is just a normal swing.
+- [ ] Hits feel right: the freeze, the shake and the flash when you hit it and when it hits you; a counter feels bigger.
+- [ ] Getting hit: red flash, a short freeze, blinking for about a second. Five hits and you are defeated.
+- [ ] Phase 2 at about two thirds of its health: it powers up (white glow, cannot be hurt), then attacks faster, sometimes chains two attacks, and adds a ground shockwave that you jump over.
+- [ ] Beating it shows "Victory" and a new fight starts; losing shows "Defeated" and a new fight starts.
+- [ ] Fights are not identical: the order of attacks differs from fight to fight.
+- [ ] Sounds play for hits, dashes and the Duelist's warnings. Sound needs one tap on the screen after the app starts. If you started the fight with the controller and there is no sound, tap the screen once (it should then work from the next hit).
 - [ ] Turn the controller off in the middle of a fight. The game pauses and says so. Turn it on and press the bottom, left or dash button to continue (holding the top button for about a second goes back to the start screen).
 - [ ] Tapping the top button during a fight does nothing; holding it for about a second shows 'Keep holding to leave the fight…' and then returns to the start screen.
 - [ ] Pressing several buttons at once (for example moving while jumping and attacking) works, and fast repeated taps are not lost.
 
-The dummy's sweep is meant to be dodged from its warning (the color change and pull-back), not reacted to after it starts: jump or dash during the warning. If you feel you "could not dodge in time", tell me, that is useful to know and the timing can be tuned.
+All of the Duelist's attacks are meant to be dodged from their warning (the arm pose and the glow), not reacted to after they start: jump or dash during the warning. If you feel you "could not dodge in time", tell me, that is useful to know and the timing can be tuned.
 
-Send me your impressions in plain words: what feels too fast, too slow, too floaty, too heavy, too easy or too hard. Every number is tunable, so "the jump is too floaty" is enough.
+Send me your impressions in plain words: what feels too fast, too slow, too hard, too easy, unfair or boring. Every number is tunable, so "the slam is too quick" is enough.

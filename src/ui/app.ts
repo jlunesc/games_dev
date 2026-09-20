@@ -51,6 +51,13 @@ function describeController(pad: Gamepad | null, selection: ProfileSelection | n
   return `Controller: ${selection.profile.name}`;
 }
 
+/** A fresh seed for a fight, from the browser's random source (outside the simulation, which stays reproducible). */
+function newSeed(): number {
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+  return values[0] ?? 1;
+}
+
 export function mountApp(root: HTMLElement): void {
   const canvas = el('canvas', 'game-canvas');
   canvas.hidden = true;
@@ -136,7 +143,7 @@ export function mountApp(root: HTMLElement): void {
     screen = 'fight';
     exitHoldMs = 0;
     leaveHint.hidden = true;
-    state = createInitialState(EMBER_DUELIST);
+    state = createInitialState(EMBER_DUELIST, newSeed());
     feedback = NO_FEEDBACK;
     leftoverMs = 0;
     freezeLeft = 0;

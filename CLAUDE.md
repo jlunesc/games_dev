@@ -16,6 +16,7 @@ A public-repo web game (TypeScript, PWA) that trains boss-fight skills for metro
 - TypeScript in strict mode.
 - Game loop uses a fixed timestep so timings are deterministic and measurable in ms.
 - The stats schema is versioned and documented. Do not change it without updating the docs.
+- Bosses are JSON files in `src/bosses/`, checked by `parseBoss`. The format is documented in `docs/bosses.md`; when the format changes, update that file and the tests.
 - The CSP blocks inline scripts and `style="..."` attributes. Style through CSS classes or `el.style.setProperty(...)`, and write DOM with `textContent`, never `innerHTML`.
 
 ## Working style
