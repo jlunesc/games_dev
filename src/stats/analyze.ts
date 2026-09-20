@@ -17,7 +17,10 @@ export const MID_UP_TO = 400;
 export const POSITION_EVERY = 6;
 
 export type PlayerAction = 'idle' | 'running' | 'airborne' | 'dashing' | 'attacking';
-/** `interrupted`: the fight ended (or was left) while the attack was still going. */
+/**
+ * `interrupted`: the attack was cut short before its dangerous window finished (the fight ended or was left,
+ * or a phase change cancelled it).
+ */
 export type AttackOutcome = 'hit' | 'countered' | 'dodged' | 'interrupted';
 export type Evasion = 'dash' | 'jump' | 'distance';
 
@@ -30,7 +33,7 @@ export interface AttackOccurrence {
   windupTicks: number;
   /** The first update on which the attack could hurt. */
   firstDangerTick: number;
-  /** Distance to the player when the warning began, and what the player was doing. */
+  /** Distance to the player when the warning began (rounded to 0.1 world units), and what the player was doing. */
   distance: number;
   playerActionAtStart: PlayerAction;
   outcome: AttackOutcome;
@@ -48,7 +51,7 @@ export interface AttackOccurrence {
 }
 
 export interface PunishWindows {
-  /** Recovery periods of attacks that were not countered. */
+  /** Recovery periods that closed or were hit; a window cut short by the end of the fight without a hit is not counted. */
   opened: number;
   /** Windows in which the player hit the boss. */
   taken: number;
@@ -145,7 +148,7 @@ function occurrence(open: OpenAttack): AttackOccurrence {
     startTick: open.startTick,
     windupTicks: open.windup,
     firstDangerTick: firstDanger,
-    distance: open.distance,
+    distance: Math.round(open.distance * 10) / 10,
     playerActionAtStart: open.actionAtStart,
     outcome,
     evasion,

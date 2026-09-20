@@ -8,7 +8,7 @@ import { step } from '../src/game/step';
 import { summarize } from '../src/game/summary';
 import { advanceFlow, startFlow } from '../src/ui/fight-flow';
 import { presetDials } from '../src/ui/prefs';
-import { actionOf, analyzeFight, analyzeRun, POSITION_EVERY } from '../src/stats/analyze';
+import { actionOf, analyzeFight, analyzeRun, CLOSE_BELOW, MID_UP_TO, POSITION_EVERY } from '../src/stats/analyze';
 import { decodeInputs } from '../src/stats/input-log';
 import { buildRecord, recordUpdate, startRecording, type FightMeta } from '../src/stats/record';
 import { solo, standAt, windupUpdates } from './boss-helpers';
@@ -27,8 +27,9 @@ const sweepBoss = solo('sweep');
 const slamFirst = firstWindup(slamBoss, 120);
 const sweepFirst = firstWindup(sweepBoss, 120);
 
-// The sweep lasts 24 + 8 + 24 = 56 updates; an attack only gets its outcome once it is over (until then it is
-// 'interrupted'), so the dodge scenarios below run first + 60 updates, not first + 45.
+// The sweep lasts 24 + 8 + 24 = 56 updates. An attack is 'dodged' (or 'hit' or 'countered') once its dangerous
+// window has finished; a run that ends before that leaves it 'interrupted'. The dodge scenarios below run
+// first + 60 updates so that the whole sweep is over.
 describe('attack outcomes', () => {
   it('a hit: an idle player is hit by the slam', () => {
     const first = slamFirst;
@@ -207,6 +208,29 @@ describe('punish windows', () => {
   });
 });
 
+describe('distance', () => {
+  it('is rounded to 0.1 world units', () => {
+    const at = (distance: number) =>
+      analyzeRun(slamBoss, standAt(slamBoss, distance), frames(slamFirst + 5)).attacks[0]!.distance;
+    expect(at(120.07)).toBe(120.1);
+    expect(at(120.04)).toBe(120);
+    expect(at(120)).toBe(120);
+  });
+});
+
+describe('distance bands', () => {
+  // Close is below CLOSE_BELOW, mid is CLOSE_BELOW up to and including MID_UP_TO, far is beyond.
+  it.each([
+    { distance: CLOSE_BELOW - 1, band: 'updatesClose' },
+    { distance: CLOSE_BELOW, band: 'updatesMid' },
+    { distance: MID_UP_TO, band: 'updatesMid' },
+    { distance: MID_UP_TO + 1, band: 'updatesFar' },
+  ] as const)('a player standing $distance units away is counted in $band', ({ distance, band }) => {
+    const a = analyzeRun(QUIET_BOSS, standAt(QUIET_BOSS, distance), frames(30));
+    expect(a.behavior[band]).toBe(30);
+  });
+});
+
 describe('behavior totals', () => {
   const cases: Array<{ name: string; a: ReturnType<typeof analyzeRun> }> = [
     { name: 'a hit', a: analyzeRun(slamBoss, standAt(slamBoss, 120), frames(slamFirst + 40)) },
@@ -347,16 +371,25 @@ describe('an attack cancelled on its first update', () => {
 });
 
 describe('chains, damage and what the player was doing', () => {
-  it('lists every attack of a chain, in order', () => {
-    const chained: BossDef = {
+  it('lists every attack of a chain, one attack length apart, where a boss without chains waits', () => {
+    const length = 30 + 6 + 30; // the slam: windup + active + recovery
+    const withChain = (maxChain: number, chainChance: number): BossDef => ({
       ...slamBoss,
-      phases: slamBoss.phases.map((p) => ({ ...p, maxChain: 3, chainChance: 1 })),
-    };
-    const a = analyzeRun(chained, standAt(chained, 120), frames(260));
-    expect(a.attacks.length).toBeGreaterThanOrEqual(3);
-    for (let i = 1; i < 3; i++) {
-      expect(a.attacks[i]!.startTick).toBeGreaterThanOrEqual(a.attacks[i - 1]!.startTick + 66);
-    }
+      phases: slamBoss.phases.map((p) => ({ ...p, gap: 40, maxChain, chainChance })),
+    });
+    const startsOf = (boss: BossDef): number[] =>
+      analyzeRun(boss, standAt(boss, 120), frames(700)).attacks.map((x) => x.startTick);
+    const gapsOf = (starts: number[]): number[] => starts.slice(1).map((t, i) => t - starts[i]!);
+
+    const chained = gapsOf(startsOf(withChain(3, 1)));
+    const single = gapsOf(startsOf(withChain(1, 0)));
+    expect(chained.length).toBeGreaterThanOrEqual(3);
+    // Inside a chain the next attack starts as soon as the last one is over (one update to line up).
+    expect(chained[0]).toBe(length + 1);
+    expect(chained[1]).toBe(length + 1);
+    // After the chain the boss waits its gap; and a boss without chains always waits.
+    expect(chained[2]).toBe(length + 40 + 1);
+    for (const g of single) expect(g).toBe(length + 40 + 1);
   });
 
   it('counts the damage of a heavy attack on the attack and the fight', () => {
