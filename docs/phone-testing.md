@@ -24,3 +24,21 @@ If the controller shows nothing, note which mode it was in and whether the page 
 
 ## On the PC
 `npm run dev`, open http://localhost:5173, plug in or pair the PC controller, and follow the controller check above. Reports from different controllers are expected to differ.
+
+## Playing the fight (M1)
+Open the app with the controller connected. The start screen shows which controller it found. Press the bottom button (or tap "Fight the dummy") to start. During a fight, the top button returns to the start screen, where you can also open the controller test.
+
+Controls: left stick or d-pad to move, bottom button to jump (hold it for a higher jump), left button to attack, right shoulder to dash.
+
+Try each of these and note anything that feels off:
+- [ ] Moving with the stick and with the d-pad feels the same and responds at once.
+- [ ] A quick tap of jump gives a small hop, holding gives a high jump.
+- [ ] Attack: a short swing in front of you. Hitting the dummy makes it flash white, the screen shakes a little, and the game freezes for a moment.
+- [ ] Dash: a quick burst, and you cannot dash again for a short moment.
+- [ ] The dummy changes color and pulls back as a warning, then sweeps low along the floor. You can jump over it or dash through it.
+- [ ] Getting hit: red flash, a short freeze, blinking for about a second. Five hits end the round and the arena restarts by itself.
+- [ ] Sounds play for hits, dashes and the dummy's warning. If there is no sound, tap the screen once.
+- [ ] Turn the controller off in the middle of a fight. The game pauses and says so. Turn it on and press a button to continue.
+- [ ] Pressing several buttons at once (for example moving while jumping and attacking) works, and fast repeated taps are not lost.
+
+Send me your impressions in plain words: what feels too fast, too slow, too floaty, too heavy, too easy or too hard. Every number is tunable, so "the jump is too floaty" is enough.
