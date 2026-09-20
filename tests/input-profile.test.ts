@@ -89,6 +89,12 @@ describe('moving up and down (menus)', () => {
     expect(sampleInput(pad([13]), STANDARD_PROFILE, NOTHING_HELD, 0.25).input.moveY).toBe(1);
   });
 
+  it('reads the standard profile stick vertically on axis 1, with down as +1', () => {
+    expect(sampleInput(pad([], [0, 0.9, 0, 0]), STANDARD_PROFILE, NOTHING_HELD, 0.25).input.moveY).toBe(1);
+    expect(sampleInput(pad([], [0, -0.9, 0, 0]), STANDARD_PROFILE, NOTHING_HELD, 0.25).input.moveY).toBe(-1);
+    expect(sampleInput(pad([], [0.9, 0, 0, 0]), STANDARD_PROFILE, NOTHING_HELD, 0.25).input.moveY).toBe(0);
+  });
+
   it('reads the left stick vertically beyond the dead zone, like the d-pad', () => {
     expect(sample(pad([], [0, 0.5, 0, 0])).input.moveY).toBe(1);
     expect(sample(pad([], [0, -0.9, 0, 0])).input.moveY).toBe(-1);

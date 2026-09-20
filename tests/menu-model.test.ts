@@ -46,12 +46,15 @@ describe('moving in the menu', () => {
     expect(press(start, ...Array<MenuAction>(MENU_ITEMS.length).fill('down')).focus).toBe(0);
   });
 
-  it('left and right do nothing on rows that have no choice, and back does nothing in the menu', () => {
-    const start = at('settings');
-    expect(menuStep(start, 'left')).toEqual({ model: start, outcome: { kind: 'stay' } });
-    expect(menuStep(start, 'right')).toEqual({ model: start, outcome: { kind: 'stay' } });
-    expect(menuStep(start, 'back')).toEqual({ model: start, outcome: { kind: 'stay' } });
-  });
+  it.each(['fight', 'tweak', 'settings', 'test'] as const)(
+    'left and right do nothing on %s, which has no choice, and back does nothing in the menu',
+    (item) => {
+      const start = at(item);
+      expect(menuStep(start, 'left')).toEqual({ model: start, outcome: { kind: 'stay' } });
+      expect(menuStep(start, 'right')).toEqual({ model: start, outcome: { kind: 'stay' } });
+      expect(menuStep(start, 'back')).toEqual({ model: start, outcome: { kind: 'stay' } });
+    },
+  );
 });
 
 describe('choosing in the menu', () => {

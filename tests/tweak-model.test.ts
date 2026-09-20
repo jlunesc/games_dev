@@ -65,6 +65,12 @@ describe('the tweak screen', () => {
     expect(tweakStep(m, 'confirm').model.prefs.dials.damage).toBe(1);
   });
 
+  it('confirm on a decimal dial wraps from its maximum to its minimum too', () => {
+    const speed = row(createTweak(DEFAULT_PREFS), 'speed');
+    const atMax = at(speed, createTweak({ ...DEFAULT_PREFS, dials: { ...DEFAULT_PREFS.dials, speed: 1.4 } }));
+    expect(tweakStep(atMax, 'confirm').model.prefs.dials.speed).toBe(0.7);
+  });
+
   it('the reset row restores the preset dials', () => {
     const tweaked = at(row(createTweak(DEFAULT_PREFS), 'health'), createTweak(selectPreset(DEFAULT_PREFS, 'hard')));
     const changed = tweakStep(tweakStep(tweaked, 'right').model, 'right').model;
