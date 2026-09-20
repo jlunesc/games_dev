@@ -31,6 +31,8 @@ export const GAME = {
 export const FEEDBACK = {
   freezeOnBossHit: 4,
   freezeOnPlayerHit: 8,
+  freezeOnCounter: 10,
+  freezeOnBossDefeated: 12,
   shakeTicks: 10,
   shakeAmplitude: 6,
   bossFlashTicks: 6,

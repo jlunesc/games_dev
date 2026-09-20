@@ -1,7 +1,7 @@
-import type { BossDef } from '../bosses/schema';
-import { attackActive, attackBox } from '../game/geometry';
+import type { BossDef, Pose } from '../bosses/schema';
+import { activeHitBoxes, attackActive, attackBox } from '../game/geometry';
 import { PLAYER, WORLD } from '../game/params';
-import type { GameState } from '../game/state';
+import type { BossState, GameState } from '../game/state';
 import { shakeOffset, type FeedbackState } from './feedback';
 
 export interface Viewport {
@@ -20,6 +20,65 @@ export function computeViewport(canvasWidth: number, canvasHeight: number): View
   };
 }
 
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const ARM_LENGTH = 90;
+const ARM_THICKNESS = 16;
+
+/** The boss's arm for a pose, as a rectangle hanging from the shoulder point. The pose tells the player which attack is coming. */
+export function armRect(pose: Pose, facing: 1 | -1, shoulderX: number, shoulderY: number): Rect {
+  const t = ARM_THICKNESS;
+  const l = ARM_LENGTH;
+  switch (pose) {
+    case 'raised':
+      return { x: shoulderX - t / 2, y: shoulderY - l, w: t, h: l };
+    case 'down':
+      return { x: shoulderX + facing * 30 - t / 2, y: shoulderY, w: t, h: l };
+    case 'sideways':
+      return { x: facing === 1 ? shoulderX : shoulderX - l, y: shoulderY - t / 2, w: l, h: t };
+    case 'back':
+      return { x: facing === 1 ? shoulderX - l : shoulderX, y: shoulderY - t / 2, w: l, h: t };
+  }
+}
+
+export const BOSS_COLORS = {
+  ember: '#c8642a',
+  stagger: '#7fd6ff',
+  power: '#ffffff',
+  gold: '#f5c542',
+  red: '#e0403a',
+};
+
+export interface BossLook {
+  body: string;
+  /** The colour of the glow around the boss, or null for none. */
+  glow: string | null;
+}
+
+/**
+ * How the boss looks right now: gold glow while a counterable attack winds up or is active, red for a
+ * must-dodge one, blue when staggered, white while powering up between phases.
+ */
+export function bossLook(b: BossState, boss: BossDef): BossLook {
+  if (b.mode === 'transition') return { body: BOSS_COLORS.ember, glow: BOSS_COLORS.power };
+  if (b.mode === 'stagger') return { body: BOSS_COLORS.stagger, glow: null };
+  if (b.mode === 'attack' && b.attackId !== null) {
+    const attack = boss.attacks.find((a) => a.id === b.attackId);
+    if (attack !== undefined && b.attackTick < attack.windup + attack.active) {
+      return {
+        body: BOSS_COLORS.ember,
+        glow: attack.class === 'counterable' ? BOSS_COLORS.gold : BOSS_COLORS.red,
+      };
+    }
+  }
+  return { body: BOSS_COLORS.ember, glow: null };
+}
+
 const COLORS = {
   bars: '#000000',
   arena: '#12121a',
@@ -28,7 +87,6 @@ const COLORS = {
   player: '#e8e8f0',
   playerDash: '#7fd6ff',
   playerHurt: '#ff3b3b',
-  boss: '#c8642a',
   bossHp: '#e0403a',
   flash: '#ffffff',
   slash: '#ffffff',
@@ -45,8 +103,42 @@ function drawBoss(
   feedback: FeedbackState,
 ): void {
   const b = state.boss;
-  ctx.fillStyle = feedback.bossFlashTicks > 0 ? COLORS.flash : COLORS.boss;
-  ctx.fillRect(b.x - boss.width / 2, WORLD.floorY - boss.height, boss.width, boss.height);
+  const look = bossLook(b, boss);
+  const left = b.x - boss.width / 2;
+  const top = WORLD.floorY - boss.height;
+
+  ctx.fillStyle = feedback.bossFlashTicks > 0 ? COLORS.flash : look.body;
+  ctx.fillRect(left, top, boss.width, boss.height);
+  if (look.glow !== null) {
+    ctx.globalAlpha = 0.55 + 0.35 * Math.sin(state.tick / 2);
+    ctx.strokeStyle = look.glow;
+    ctx.lineWidth = 8;
+    ctx.strokeRect(left - 4, top - 4, boss.width + 8, boss.height + 8);
+    ctx.globalAlpha = 1;
+  }
+
+  // The arm shows the pose of the attack being performed; when waiting it hangs at the side.
+  const attack =
+    b.mode === 'attack' && b.attackId !== null
+      ? boss.attacks.find((a) => a.id === b.attackId)
+      : undefined;
+  const shoulderY = top + boss.height * 0.3;
+  const arm =
+    attack !== undefined
+      ? armRect(attack.pose, b.facing, b.x, shoulderY)
+      : { x: b.x + b.facing * 18 - 8, y: shoulderY, w: 16, h: 50 };
+  ctx.fillStyle = look.glow ?? '#e8965a';
+  ctx.fillRect(arm.x, arm.y, arm.w, arm.h);
+  // A small notch on the side the boss faces.
+  ctx.fillStyle = COLORS.arena;
+  ctx.fillRect(b.x + b.facing * (boss.width / 2 - 14) - 5, top + 24, 10, 10);
+
+  for (const box of activeHitBoxes(b, boss)) {
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = look.glow ?? COLORS.bossHp;
+    ctx.fillRect(box.x, box.y, box.w, box.h);
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawPlayer(
@@ -89,12 +181,20 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState, boss: BossDef)
     ctx.fillRect(24 + i * 30, 24, 22, 22);
   }
   ctx.globalAlpha = 1;
-  const width = 220;
+  const width = 260;
   const left = WORLD.width - 24 - width;
   ctx.fillStyle = COLORS.hudBack;
   ctx.fillRect(left, 24, width, 14);
   ctx.fillStyle = COLORS.bossHp;
   ctx.fillRect(left, 24, (width * state.boss.hp) / boss.maxHp, 14);
+  ctx.fillStyle = COLORS.hud;
+  for (const phase of boss.phases.slice(1)) {
+    ctx.fillRect(left + width * phase.startsAtHpFraction - 1, 20, 3, 22);
+  }
+  ctx.font = '600 16px system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText(boss.name, WORLD.width - 24, 46);
 }
 
 /** Draws one frame. `alpha` (0 to just under 1) blends the player between the last two updates. */
@@ -135,11 +235,11 @@ export function drawFrame(
   drawPlayer(ctx, state, alpha, feedback);
   drawHud(ctx, state, boss);
 
-  if (state.phase === 'defeated') {
+  if (state.phase !== 'fight') {
     ctx.fillStyle = COLORS.hud;
     ctx.font = '600 56px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Defeated', WORLD.width / 2, WORLD.height / 2);
+    ctx.fillText(state.phase === 'victory' ? 'Victory' : 'Defeated', WORLD.width / 2, WORLD.height / 2);
   }
 }

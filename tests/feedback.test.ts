@@ -68,3 +68,32 @@ describe('shakeOffset', () => {
     expect(Math.abs(shakeOffset({ ...NO_FEEDBACK, shakeTicks: 1 }))).toBeLessThan(1);
   });
 });
+
+describe('the new boss events', () => {
+  it('freeze longer on a counter and on victory, and not at all on a phase change', () => {
+    expect(freezeFor(['counter'])).toBe(FEEDBACK.freezeOnCounter);
+    expect(freezeFor(['bossDefeated'])).toBe(FEEDBACK.freezeOnBossDefeated);
+    expect(freezeFor(['phaseChange'])).toBe(0);
+    expect(FEEDBACK.freezeOnCounter).toBeGreaterThan(FEEDBACK.freezeOnBossHit);
+  });
+
+  it('shake the screen and flash the boss on a counter and on victory', () => {
+    for (const event of ['counter', 'bossDefeated'] as const) {
+      const fb = applyEvents(NO_FEEDBACK, [event]);
+      expect(fb.shakeTicks).toBe(FEEDBACK.shakeTicks);
+      expect(fb.bossFlashTicks).toBe(FEEDBACK.bossFlashTicks);
+    }
+  });
+
+  it('shake the screen on a phase change without flashing anyone', () => {
+    const fb = applyEvents(NO_FEEDBACK, ['phaseChange']);
+    expect(fb.shakeTicks).toBe(FEEDBACK.shakeTicks);
+    expect(fb.bossFlashTicks).toBe(0);
+    expect(fb.playerFlashTicks).toBe(0);
+  });
+
+  it('ignore the warning events', () => {
+    expect(applyEvents(NO_FEEDBACK, ['bossWindupGold', 'bossWindupRed'])).toEqual(NO_FEEDBACK);
+    expect(freezeFor(['bossWindupGold', 'bossWindupRed'])).toBe(0);
+  });
+});

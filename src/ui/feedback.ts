@@ -16,6 +16,8 @@ export function freezeFor(events: readonly GameEvent[]): number {
   for (const event of events) {
     if (event === 'bossHit') freeze = Math.max(freeze, FEEDBACK.freezeOnBossHit);
     if (event === 'playerHit') freeze = Math.max(freeze, FEEDBACK.freezeOnPlayerHit);
+    if (event === 'counter') freeze = Math.max(freeze, FEEDBACK.freezeOnCounter);
+    if (event === 'bossDefeated') freeze = Math.max(freeze, FEEDBACK.freezeOnBossDefeated);
   }
   return freeze;
 }
@@ -23,7 +25,7 @@ export function freezeFor(events: readonly GameEvent[]): number {
 export function applyEvents(fb: FeedbackState, events: readonly GameEvent[]): FeedbackState {
   const next = { ...fb };
   for (const event of events) {
-    if (event === 'bossHit') {
+    if (event === 'bossHit' || event === 'counter' || event === 'bossDefeated') {
       next.shakeTicks = FEEDBACK.shakeTicks;
       next.bossFlashTicks = FEEDBACK.bossFlashTicks;
     }
@@ -31,6 +33,7 @@ export function applyEvents(fb: FeedbackState, events: readonly GameEvent[]): Fe
       next.shakeTicks = FEEDBACK.shakeTicks;
       next.playerFlashTicks = FEEDBACK.playerFlashTicks;
     }
+    if (event === 'phaseChange') next.shakeTicks = FEEDBACK.shakeTicks;
   }
   return next;
 }

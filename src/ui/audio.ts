@@ -40,8 +40,12 @@ export function createSound(): Sound {
         if (event === 'bossHit') beep(220, 90, 'square', 0.15);
         if (event === 'playerHit') beep(110, 200, 'sawtooth', 0.2);
         if (event === 'dash') beep(660, 70, 'triangle', 0.1);
-        if (event === 'bossWindupGold') beep(440, 120, 'sine', 0.12);
-        if (event === 'bossWindupRed') beep(440, 120, 'sine', 0.12);
+        // Two different warnings: a high clear note for the counterable (gold) attack, a low rough one for red.
+        if (event === 'bossWindupGold') beep(880, 140, 'sine', 0.14);
+        if (event === 'bossWindupRed') beep(330, 140, 'sawtooth', 0.1);
+        if (event === 'counter') beep(1100, 160, 'triangle', 0.18);
+        if (event === 'phaseChange') beep(140, 450, 'sawtooth', 0.18);
+        if (event === 'bossDefeated') beep(523, 320, 'triangle', 0.2);
         if (event === 'playerDefeated') beep(80, 500, 'sawtooth', 0.2);
       }
     },
