@@ -21,12 +21,16 @@ import { applyDials } from '../game/difficulty';
 import { GAME } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
-import type { FightSummary } from '../game/summary';
+import type { FightResult, FightSummary } from '../game/summary';
+import { analyzeFight } from '../stats/analyze';
+import { buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
+import { buildRecord, type Recording } from '../stats/record';
+import { openIndexedDbStore, type FightStore } from '../stats/store';
 import { createSound } from './audio';
 import { mountControllerScreen } from './controller-screen';
 import { el } from './dom';
 import { NO_FEEDBACK, advanceFeedback, applyEvents, freezeFor, type FeedbackState } from './feedback';
-import { advanceFlow, leaveSummary, startFlow, type FightFlow } from './fight-flow';
+import { advanceFlow, leaveRecording, leaveSummary, startFlow, type FightFlow } from './fight-flow';
 import { createMenu, menuRows, menuStep, type MenuAction, type MenuModel } from './menu-model';
 import { NAV_START, advanceNav, type NavState } from './nav';
 import { loadPrefs, savePrefs, type Prefs } from './prefs';
@@ -39,7 +43,16 @@ import {
   settingsStep,
   type SettingsModel,
 } from './settings-model';
-import { createStats, statsRows, statsStep, type StatsModel } from './stats-model';
+import {
+  createStats,
+  describeLastExport,
+  statsRows,
+  statsStep,
+  withCount,
+  withExported,
+  withNotice,
+  type StatsModel,
+} from './stats-model';
 import { browserStorage } from './storage';
 import { summaryLines } from './summary-text';
 import { createTweak, tweakRows, tweakStep, type TweakModel } from './tweak-model';
@@ -88,6 +101,17 @@ export function mountApp(root: HTMLElement): void {
   leaveHint.hidden = true;
   root.replaceChildren(canvas, panel, banner, leaveHint);
 
+  // The fight store opens once, in the background. It stays null when the device cannot store stats (the game plays on).
+  let store: FightStore | null = null;
+  openIndexedDbStore().then(
+    (opened) => {
+      store = opened;
+    },
+    () => {
+      store = null;
+    },
+  );
+
   const sound = createSound();
   sound.setEnabled(settings.sound);
   // A phone only counts some events as a tap for sound: touch needs pointerup or click, not just pointerdown.
@@ -100,6 +124,16 @@ export function mountApp(root: HTMLElement): void {
   let tweak: TweakModel = createTweak(prefs);
   let settingsModel: SettingsModel = createSettingsModel(settings);
   let statsModel: StatsModel = createStats(null, null);
+  // Bumped each time the Stats screen opens, so a slow read, export or delete from an earlier visit is ignored.
+  let statsSession = 0;
+  // True while an export or delete is running: further presses (except back) wait.
+  let statsBusy = false;
+  // The extra last line on the summary: whether the fight just played was saved. Null while unknown.
+  let saveLine: string | null = null;
+  // Bumped when a new fight starts, so a save still running from an earlier fight does not write its line into the new one.
+  let saveEpoch = 0;
+  // What the summary screen currently shows, kept so the save line can be added when the save finishes.
+  let shownSummary: FightSummary | null = null;
   let nav: NavState = NAV_START;
   let held: HeldButtons = NOTHING_HELD;
   let pending: PendingPresses = NO_PRESSES;
@@ -239,8 +273,13 @@ export function mountApp(root: HTMLElement): void {
     else renderTweak();
   }
 
-  // Stats (export and delete are wired later; for now every press but back just redraws)
+  // Stats
   function renderStats(): void {
+    const footer = [
+      el('p', 'hint', describeLastExport(statsModel.lastExportAt)),
+      el('p', 'hint', 'Android can clear browser data, so export now and then.'),
+    ];
+    if (statsModel.notice !== null) footer.push(el('p', 'hint', statsModel.notice));
     renderList(
       panel,
       'Stats',
@@ -248,23 +287,87 @@ export function mountApp(root: HTMLElement): void {
       statsRows(statsModel).map((row) => ({ label: row.label, value: row.value, help: row.help })),
       statsModel.focus,
       (index) => {
+        if (statsBusy) return;
         statsModel = { ...statsModel, focus: index };
         handleStats('confirm');
       },
+      footer,
     );
   }
 
   function showStats(): void {
     screen = 'stats';
-    statsModel = createStats(null, null);
+    statsBusy = false;
+    const session = ++statsSession;
+    statsModel = createStats(null, loadLastExport(storage));
+    renderStats();
+    void loadStatsCount(session);
+  }
+
+  /** Reads how many fights are saved and shows it. A failed read shows "unavailable". */
+  async function loadStatsCount(session: number): Promise<void> {
+    let count: number | null = null;
+    try {
+      count = store === null ? null : await store.count();
+    } catch {
+      count = null;
+    }
+    if (session !== statsSession || screen !== 'stats') return;
+    statsModel = withCount(statsModel, count);
     renderStats();
   }
 
   function handleStats(action: MenuAction): void {
+    if (statsBusy && action !== 'back') return;
     const result = statsStep(statsModel, action);
     statsModel = result.model;
-    if (result.outcome === 'back') showMenu();
-    else renderStats();
+    if (result.outcome === 'back') {
+      showMenu();
+      return;
+    }
+    renderStats();
+    if (result.outcome === 'export') void runExport(statsSession);
+    else if (result.outcome === 'delete') void runDelete(statsSession);
+  }
+
+  /** Runs an export or delete as the current visit to the Stats screen, and ignores it if the player has since left or reopened it. */
+  async function runStatsTask(session: number, task: () => Promise<(model: StatsModel) => StatsModel>): Promise<void> {
+    statsBusy = true;
+    let change: (model: StatsModel) => StatsModel;
+    try {
+      change = await task();
+    } catch {
+      change = (model) => withNotice(model, 'That did not work.');
+    }
+    if (session !== statsSession) return;
+    statsBusy = false;
+    if (screen !== 'stats') return;
+    statsModel = change(statsModel);
+    renderStats();
+  }
+
+  function runExport(session: number): Promise<void> {
+    return runStatsTask(session, async () => {
+      if (store === null) return (model) => withNotice(model, 'This device cannot store stats.');
+      const fights = await store.all();
+      const result = await shareOrDownload(buildExport(fights, new Date()));
+      if (result === 'shared' || result === 'downloaded') {
+        const iso = new Date().toISOString();
+        saveLastExport(storage, iso);
+        const message = result === 'shared' ? 'Sent.' : 'File saved to your downloads.';
+        return (model) => withNotice(withExported(model, iso), message);
+      }
+      const message = result === 'cancelled' ? 'Export cancelled.' : 'Export failed.';
+      return (model) => withNotice(model, message);
+    });
+  }
+
+  function runDelete(session: number): Promise<void> {
+    return runStatsTask(session, async () => {
+      if (store === null) return (model) => withNotice(model, 'This device cannot store stats.');
+      await store.clear();
+      return (model) => withNotice(withCount(model, 0), 'All fights deleted.');
+    });
   }
 
   // Settings
@@ -308,23 +411,72 @@ export function mountApp(root: HTMLElement): void {
   }
 
   // Summary
+  function renderSummaryScreen(): void {
+    if (shownSummary === null) return;
+    const text = summaryLines(shownSummary);
+    renderSummary(panel, text.title, saveLine === null ? text.lines : [...text.lines, saveLine], showMenu);
+  }
+
   function showSummary(summary: FightSummary): void {
     screen = 'summary';
+    shownSummary = summary;
     summaryUnlockAt = performance.now() + SUMMARY_LOCK_MS;
     leaveFightScreen();
-    const text = summaryLines(summary);
-    renderSummary(panel, text.title, text.lines, showMenu);
+    renderSummaryScreen();
+  }
+
+  /**
+   * Saves one fight on this device and sets the summary's save line. Never throws: any failure becomes a line
+   * on screen and the game carries on.
+   */
+  async function saveFight(recording: Recording, result: FightResult): Promise<void> {
+    const epoch = saveEpoch;
+    let line: string;
+    try {
+      const target = store;
+      if (target === null) {
+        line = 'This fight was not saved: this device cannot store stats.';
+      } else {
+        const attempt = (await target.count()) + 1;
+        const analysis = analyzeFight({
+          bossId: recording.meta.bossId,
+          dials: recording.meta.dials,
+          seed: recording.meta.seed,
+          input: recording.runs,
+        });
+        await target.add(buildRecord(recording, result, attempt, analysis));
+        line = `Fight saved (${await target.count()} on this device).`;
+      }
+    } catch {
+      line = 'This fight could not be saved.';
+    }
+    // A new fight has started since: its summary must not show this line.
+    if (epoch !== saveEpoch) return;
+    saveLine = line;
+    if (screen === 'summary') renderSummaryScreen();
   }
 
   /** Leaves the fight for the summary: how it ended, or "left" if it was still going. */
   function endFight(): void {
-    // A fight that never ran has nothing to summarise.
-    if (state.tick === 0) showMenu();
-    else showSummary(leaveSummary(flow, state, boss));
+    // A fight that never ran has nothing to summarise and is not saved.
+    if (state.tick === 0) {
+      showMenu();
+      return;
+    }
+    // A fight that already ended was saved when it ended; only a fight still going is saved here.
+    const leaving = leaveRecording(flow);
+    if (leaving !== null) {
+      saveLine = null;
+      void saveFight(leaving.recording, 'left');
+    }
+    showSummary(leaveSummary(flow, state, boss));
   }
 
   function startFight(): void {
     screen = 'fight';
+    saveEpoch += 1;
+    saveLine = null;
+    shownSummary = null;
     boss = applyDials(bossById(prefs.bossId), prefs.dials);
     const seed = newSeed();
     state = createInitialState(boss, seed);
@@ -413,6 +565,10 @@ export function mountApp(root: HTMLElement): void {
       // After a win or a loss the game shows its message, then starts a new fight: show the summary instead.
       const advanced = advanceFlow(flow, before, state, boss, frameInput);
       flow = advanced.flow;
+      if (advanced.finished !== null) {
+        saveLine = null;
+        void saveFight(advanced.finished.recording, advanced.finished.result);
+      }
       if (advanced.show !== null) {
         showSummary(advanced.show);
         return;
