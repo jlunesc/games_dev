@@ -6,6 +6,7 @@ const base: FightSummary = {
   result: 'victory',
   ticks: 4344,
   seconds: 72.4,
+  studySeconds: 0,
   phaseReached: 2,
   phaseCount: 2,
   hitsTaken: 3,
@@ -48,5 +49,45 @@ describe('summaryLines', () => {
     expect(
       summaryLines({ ...base, mostDangerousAttack: { id: 'slam', name: 'Ember slam', hits: 1 } }).lines.at(-1),
     ).toBe('Hurt you most: Ember slam (1 hit)');
+  });
+
+  it('adds the study time after the time when there was a study', () => {
+    expect(summaryLines({ ...base, studySeconds: 65.2 }).lines).toEqual([
+      'Time: 1:12',
+      'Study time: 1:05',
+      'Phase reached: 2 of 2',
+      'Hits taken: 3',
+      'Boss health left: 0 of 30',
+      'Hurt you most: Ember slam (2 hits)',
+    ]);
+  });
+
+  it('says when the fight was left during the study, keeping the title', () => {
+    const left: FightSummary = {
+      ...base,
+      result: 'left',
+      seconds: 0,
+      studySeconds: 12.5,
+      phaseReached: 1,
+      hitsTaken: 0,
+      bossHpLeft: 30,
+      mostDangerousAttack: null,
+    };
+    const text = summaryLines(left);
+    expect(text.title).toBe('You left the fight');
+    expect(text.lines).toEqual([
+      'You left during the study.',
+      'Time: 0:00',
+      'Study time: 0:12',
+      'Phase reached: 1 of 2',
+      'Hits taken: 0',
+      'Boss health left: 30 of 30',
+      'You were never hit.',
+    ]);
+  });
+
+  it('does not say it for a fight left after the study, or for a fight that ended', () => {
+    expect(summaryLines({ ...base, result: 'left', seconds: 40, studySeconds: 12 }).lines[0]).toBe('Time: 0:40');
+    expect(summaryLines({ ...base, studySeconds: 12 }).lines).not.toContain('You left during the study.');
   });
 });

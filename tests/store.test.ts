@@ -12,6 +12,7 @@ function sampleFight(playedAt: string, seed = 1): StoredFight {
     presetId: 'normal',
     dials: { ...NORMAL_DIALS },
     seed,
+    study: 0,
     playedAt,
   });
   for (let n = 0; n < 5; n++) rec = recordUpdate(rec, withInput({ moveX: 1 }));

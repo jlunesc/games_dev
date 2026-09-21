@@ -25,6 +25,7 @@ const metaOf = (over: Partial<FightMeta> = {}): FightMeta => ({
   presetId: 'normal',
   dials: { ...NORMAL_DIALS },
   seed: 7,
+  study: 0,
   playedAt: '2026-09-20T10:00:00.000Z',
   ...over,
 });
@@ -47,7 +48,7 @@ function playLive(
   inputFor: (n: number) => InputFrame,
 ): { state: GameState; rec: Recording } {
   const boss = applyDials(bossById(meta.bossId), meta.dials);
-  let state = createInitialState(boss, meta.seed);
+  let state = createInitialState(boss, meta.seed, meta.study);
   let rec = startRecording(meta);
   for (let n = 1; n <= updates; n++) {
     const frame = inputFor(n);
@@ -100,6 +101,7 @@ describe('buildRecord', () => {
       dials: NORMAL_DIALS,
       changedDials: [],
       seed: 7,
+      study: 0,
       result: 'victory',
       ticks: 5,
       input: rec.runs,
@@ -115,6 +117,15 @@ describe('buildRecord', () => {
   it('uses the seed as an unsigned number in the id', () => {
     const rec = startRecording(metaOf({ seed: -1 }));
     expect(buildRecord(rec, 'left', 1, null).id).toBe('2026-09-20T10:00:00.000Z#ffffffff');
+  });
+
+  it('carries the study rounds and is schema version 2', () => {
+    expect(STATS_SCHEMA_VERSION).toBe(2);
+    for (const study of [0, 1, 2] as const) {
+      const record = buildRecord(startRecording(metaOf({ study })), 'left', 1, null);
+      expect(record.study).toBe(study);
+      expect(record.schemaVersion).toBe(2);
+    }
   });
 
   it('copies the dials, so changing them later cannot change a stored record', () => {
@@ -182,5 +193,39 @@ describe('replay guarantee', () => {
     const recordA = buildRecord(a.rec, 'left', 1, null);
     const recordB = buildRecord(b.rec, 'left', 1, null);
     expect(replayFinalState(recordA).boss).not.toEqual(replayFinalState(recordB).boss);
+  });
+});
+
+describe('replay guarantee with a study', () => {
+  const cases: Array<{ name: string; meta: FightMeta }> = [
+    { name: 'study 1 at Normal', meta: metaOf({ study: 1, seed: 11 }) },
+    { name: 'study 2 at Hard', meta: metaOf({ study: 2, presetId: 'hard', dials: presetDials('hard'), seed: 12 }) },
+  ];
+
+  it.each(cases)('replays $name to the identical final state, also through JSON', ({ meta }) => {
+    const { state, rec } = playLive(meta, 1500, scripted);
+    const record = buildRecord(rec, 'left', 1, null);
+    expect(record.study).toBe(meta.study);
+    // The study really ran and ended inside the recording.
+    expect(state.study.active).toBe(false);
+    expect(state.study.endTick).toBeGreaterThan(0);
+    expect(replayFinalState(record)).toEqual(state);
+    const copy = JSON.parse(JSON.stringify(record)) as typeof record;
+    expect(replayFinalState(copy)).toEqual(state);
+  });
+
+  it('a study changes the fight: study 1 is not the same fight as study 0', () => {
+    const a = playLive(metaOf({ study: 1 }), 600, scripted);
+    const b = playLive(metaOf({ study: 0 }), 600, scripted);
+    expect(a.state).not.toEqual(b.state);
+  });
+
+  it('a record without the study field (version 1) replays as study 0', () => {
+    const meta = metaOf({ study: 0, seed: 21 });
+    const { state, rec } = playLive(meta, 900, scripted);
+    const record = buildRecord(rec, 'left', 1, null);
+    const { study: _study, ...old } = record;
+    expect(replayFinalState(old)).toEqual(state);
+    expect(replayFinalState(old)).toEqual(replayFinalState(record));
   });
 });

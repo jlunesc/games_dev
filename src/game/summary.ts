@@ -44,7 +44,10 @@ export interface FightSummary {
   result: FightResult;
   /** Updates played. */
   ticks: number;
+  /** Time in the fight itself, without the study (0 while the study is still on). */
   seconds: number;
+  /** Time the study took (the time played so far if it is still on); 0 when there was none. */
+  studySeconds: number;
   phaseReached: number;
   phaseCount: number;
   hitsTaken: number;
@@ -66,10 +69,12 @@ export function summarize(
     const hits = tracker.hitsByAttack[attack.id] ?? 0;
     if (hits > (worst?.hits ?? 0)) worst = { id: attack.id, name: attack.name, hits };
   }
+  const studyTicks = state.study.active ? state.tick : state.study.endTick;
   return {
     result,
     ticks: state.tick,
-    seconds: state.tick / TICK_RATE,
+    seconds: (state.tick - studyTicks) / TICK_RATE,
+    studySeconds: studyTicks / TICK_RATE,
     phaseReached: tracker.phaseReached,
     phaseCount: boss.phases.length,
     hitsTaken: tracker.hitsTaken,

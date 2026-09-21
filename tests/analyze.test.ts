@@ -462,6 +462,7 @@ describe('agreement with the fight summary', () => {
       presetId: 'normal',
       dials: NORMAL_DIALS,
       seed,
+      study: 0,
       playedAt: '2026-09-20T10:00:00.000Z',
     });
     const inputs: InputFrame[] = [];
@@ -504,6 +505,7 @@ describe('the replay path', () => {
     presetId: 'hard',
     dials: presetDials('hard'),
     seed: 5,
+    study: 0,
     playedAt: '2026-09-20T10:00:00.000Z',
   };
   const record = (() => {
@@ -549,5 +551,168 @@ describe('speed', () => {
     expect(a.ticks).toBe(18000);
     expect(a.attacks.length).toBeGreaterThan(50);
     expect(ms).toBeLessThan(5000);
+  });
+});
+
+describe('the study', () => {
+  const boss = applyDials(DUELIST, NORMAL_DIALS);
+  const standing = (): InputFrame => NO_INPUT;
+
+  /** Plays a study fight like the app does (state + flow), returning the states, the inputs and the summary. */
+  function play(seed: number, rounds: 0 | 1 | 2, inputFor: (n: number) => InputFrame, count = 2500) {
+    let state = createInitialState(boss, seed, rounds);
+    const initial = state;
+    let flow = startFlow({
+      bossId: boss.id,
+      presetId: 'normal',
+      dials: NORMAL_DIALS,
+      seed,
+      study: rounds,
+      playedAt: '2026-09-20T10:00:00.000Z',
+    });
+    const inputs: InputFrame[] = [];
+    const states: GameState[] = [];
+    for (let n = 1; n <= count; n++) {
+      const frame = inputFor(n);
+      inputs.push(frame);
+      const before = state;
+      state = step(before, frame, boss);
+      states.push(state);
+      flow = advanceFlow(flow, before, state, boss, frame).flow;
+      if (flow.ended !== null) break;
+    }
+    const summary = summarize(flow.tracker, state, boss, flow.ended?.result ?? 'left');
+    return { initial, states, inputs, summary, final: state };
+  }
+
+  const studyEvents = (states: GameState[], name: 'studyHit' | 'studyEnd'): number =>
+    states.filter((s) => s.events.includes(name)).length;
+
+  it('reports the study block and flags the study occurrences (study 1, standing player)', () => {
+    const { initial, states, inputs, summary } = play(3, 1, standing);
+    const a = analyzeRun(boss, initial, inputs, 1);
+    const endTick = states.find((s) => s.events.includes('studyEnd'))!.tick;
+    const hits = studyEvents(states, 'studyHit');
+    expect(hits).toBeGreaterThan(0);
+    expect(a.study).toEqual({ rounds: 1, ticks: endTick, attacks: 3, hits });
+
+    const queue = initial.study.queue;
+    expect(queue).toHaveLength(3);
+    const studyOnes = a.attacks.filter((x) => x.study);
+    expect(studyOnes.map((x) => x.attackId)).toEqual(queue);
+    // The real fight follows: nothing after the study is flagged, and it started after the study ended.
+    const real = a.attacks.filter((x) => !x.study);
+    expect(real.length).toBeGreaterThan(0);
+    expect(real.every((x) => x.startTick > endTick)).toBe(true);
+    expect(a.attacks.slice(0, 3).every((x) => x.study)).toBe(true);
+
+    // Fight-level numbers count real hits only, and agree with the fight summary.
+    expect(a.ticks).toBe(summary.ticks);
+    expect(a.hitsTaken).toBe(summary.hitsTaken);
+    expect(a.phaseReached).toBe(summary.phaseReached);
+    expect(a.hitsTaken).toBe(real.filter((x) => x.outcome === 'hit').length);
+    expect(a.playerHitTicks.length).toBe(a.hitsTaken);
+    expect(a.playerHitTicks.every((t) => t > endTick)).toBe(true);
+    expect(a.damageTaken).toBe(real.reduce((sum, x) => sum + x.damageTaken, 0));
+    expect(a.attacks.filter((x) => x.outcome === 'hit').length).toBe(a.hitsTaken + studyOnes.filter((x) => x.outcome === 'hit').length);
+  });
+
+  it('a study occurrence hit by a demonstration has outcome hit and no damage', () => {
+    const { initial, inputs } = play(3, 1, standing);
+    const a = analyzeRun(boss, initial, inputs, 1);
+    const hit = a.attacks.filter((x) => x.study && x.outcome === 'hit');
+    expect(hit.length).toBeGreaterThan(0);
+    for (const x of hit) {
+      expect(x.damageTaken).toBe(0);
+      expect(x.playerActionWhenHit).toBe('idle');
+    }
+  });
+
+  it('opens no punish window for a study attack', () => {
+    const { initial, inputs } = play(3, 1, standing);
+    const a = analyzeRun(boss, initial, inputs, 1);
+    // With a standing player nothing is ever taken; every counted window comes from a real attack that ended.
+    const real = a.attacks.filter((x) => !x.study);
+    expect(a.behavior.punish.opened).toBe(a.behavior.punish.taken + a.behavior.punish.missed);
+    expect(a.behavior.punish.taken).toBe(0);
+    expect(a.behavior.punish.opened).toBeLessThanOrEqual(real.length);
+    // The same fight analysed without the study attacks' flag would count more windows: compare with study 0 of the same length of study.
+    const studyOnly = analyzeRun(boss, initial, inputs.slice(0, a.study.ticks), 1);
+    expect(studyOnly.behavior.punish).toEqual({ opened: 0, taken: 0, missed: 0 });
+  });
+
+  it('study 2 has two rounds of demonstrations', () => {
+    const { initial, states, inputs } = play(8, 2, standing);
+    const a = analyzeRun(boss, initial, inputs, 2);
+    expect(a.study.rounds).toBe(2);
+    expect(a.study.attacks).toBe(6);
+    expect(a.attacks.filter((x) => x.study).map((x) => x.attackId)).toEqual(initial.study.queue);
+    expect(a.study.ticks).toBe(states.find((s) => s.events.includes('studyEnd'))!.tick);
+  });
+
+  it('an attack that starts in the study and ends after the study ended keeps study true', () => {
+    // The last demonstration finishes on the studyEnd update, so its occurrence is flagged from where it started.
+    const { initial, inputs } = play(3, 1, standing);
+    const a = analyzeRun(boss, initial, inputs, 1);
+    const last = a.attacks.filter((x) => x.study).at(-1)!;
+    expect(last.study).toBe(true);
+    expect(a.attacks[3]!.study).toBe(false);
+  });
+
+  it('a study 0 fight has an empty study block and no flagged occurrence', () => {
+    const { initial, inputs } = play(3, 0, standing);
+    const a = analyzeRun(boss, initial, inputs);
+    expect(a.study).toEqual({ rounds: 0, ticks: 0, attacks: 0, hits: 0 });
+    expect(a.attacks.length).toBeGreaterThan(0);
+    expect(a.attacks.every((x) => !x.study)).toBe(true);
+  });
+
+  it('a run that ends during the study reports the updates played so far as its length', () => {
+    const { initial, inputs } = play(3, 2, standing, 100);
+    const a = analyzeRun(boss, initial, inputs, 2);
+    expect(a.ticks).toBe(100);
+    expect(a.study.rounds).toBe(2);
+    expect(a.study.ticks).toBe(100);
+    expect(a.hitsTaken).toBe(0);
+    expect(a.damageTaken).toBe(0);
+  });
+
+  it('counts swings, dashes and jumps over the whole session, the study included', () => {
+    const inputFor = (n: number): InputFrame =>
+      withInput({ attackPressed: n % 20 === 0, dashPressed: n % 50 === 0 });
+    const { initial, inputs, states } = play(3, 1, inputFor, 900);
+    const a = analyzeRun(boss, initial, inputs, 1);
+    const endTick = states.find((s) => s.events.includes('studyEnd'))!.tick;
+    expect(endTick).toBeLessThan(900);
+    expect(a.ticks).toBe(inputs.length);
+    // Swings and dashes fire on fixed beats from the first update, so the study's beats are counted too.
+    expect(a.swings).toBeGreaterThanOrEqual(Math.floor(endTick / 20));
+    expect(a.dashes).toBeGreaterThanOrEqual(Math.floor(endTick / 50));
+    expect(a.study.hits).toBe(studyEvents(states, 'studyHit'));
+  });
+
+  it('analyzeFight uses the recorded study, and a record without it (version 1) analyses as study 0', () => {
+    const { inputs } = play(3, 1, standing);
+    let rec = startRecording({
+      bossId: boss.id,
+      presetId: 'normal',
+      dials: NORMAL_DIALS,
+      seed: 3,
+      study: 1,
+      playedAt: '2026-09-20T10:00:00.000Z',
+    });
+    for (const frame of inputs) rec = recordUpdate(rec, frame);
+    const record = buildRecord(rec, 'left', 1, null);
+    const a = analyzeFight(record);
+    expect(a.study.rounds).toBe(1);
+    expect(a.study.attacks).toBe(3);
+    expect(analyzeFight(JSON.parse(JSON.stringify(record)) as typeof record)).toEqual(a);
+
+    // A version-1 record: no study field, replayed as study 0.
+    const { study: _study, ...old } = record;
+    const b = analyzeFight(old);
+    const plain = analyzeRun(boss, createInitialState(boss, 3), decodeInputs(record.input));
+    expect(b).toEqual(plain);
+    expect(b.study).toEqual({ rounds: 0, ticks: 0, attacks: 0, hits: 0 });
   });
 });

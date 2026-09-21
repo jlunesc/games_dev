@@ -48,6 +48,8 @@ export interface AttackOccurrence {
   /** Health this attack actually took from the player (a blow larger than the health left counts what was left), and what the player was doing when hit (null when not hit). */
   damageTaken: number;
   playerActionWhenHit: PlayerAction | null;
+  /** True for a demonstration in the study (decided when the attack started); it hurts nobody. */
+  study: boolean;
 }
 
 export interface PunishWindows {
@@ -56,6 +58,17 @@ export interface PunishWindows {
   /** Windows in which the player hit the boss. */
   taken: number;
   missed: number;
+}
+
+/** The study before the fight: how long it lasted and what the boss showed. All zero when there was none. */
+export interface StudyAnalysis {
+  rounds: number;
+  /** Updates the study took (its end update; the updates played so far if the run ended during it). */
+  ticks: number;
+  /** Demonstrations shown (occurrences flagged `study`). */
+  attacks: number;
+  /** Demonstrations that reached the player (`studyHit` events); they take no health. */
+  hits: number;
 }
 
 export interface Analysis {
@@ -79,6 +92,7 @@ export interface Analysis {
   dashes: number;
   jumps: number;
   attacks: AttackOccurrence[];
+  study: StudyAnalysis;
   behavior: {
     updatesClose: number;
     updatesMid: number;
@@ -118,6 +132,8 @@ interface OpenAttack {
   countered: boolean;
   damage: number;
   actionWhenHit: PlayerAction | null;
+  /** The attack began while the study was on. */
+  study: boolean;
   /** Attack time on the last update seen while the attack was open. */
   lastT: number;
   windowOpen: boolean;
@@ -158,6 +174,7 @@ function occurrence(open: OpenAttack): AttackOccurrence {
     marginMs: marginTicks === null ? null : toMs(marginTicks),
     damageTaken: open.damage,
     playerActionWhenHit: open.actionWhenHit,
+    study: open.study,
   };
 }
 
@@ -165,7 +182,13 @@ function occurrence(open: OpenAttack): AttackOccurrence {
  * Replays a fight through the real game and measures it. Pure: it only reads the states and events that
  * `step` produces, so the numbers can never disagree with what the game did.
  */
-export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly InputFrame[]): Analysis {
+export function analyzeRun(
+  boss: BossDef,
+  initial: GameState,
+  frames: readonly InputFrame[],
+  /** Only for the report's `study.rounds`; everything else is read from the states. */
+  studyRounds = 0,
+): Analysis {
   let state = initial;
   const attacks: AttackOccurrence[] = [];
   const bossHitTicks: number[] = [];
@@ -178,6 +201,8 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
   let dashes = 0;
   let jumps = 0;
   let hitsTaken = 0;
+  let studyHits = 0;
+  let studyUpdates = 0;
   let close = 0;
   let mid = 0;
   let far = 0;
@@ -187,7 +212,8 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
   // `cutShort`: the run ended while the attack was still going. A punish window that was cut short and never
   // saw a hit is not counted: the player did not get the chance to use it.
   const finish = (attack: OpenAttack, cutShort: boolean): void => {
-    if (attack.windowOpen && !(cutShort && !attack.windowTaken)) {
+    // The boss cannot be hurt in the study, so a demonstration has no punish window.
+    if (!attack.study && attack.windowOpen && !(cutShort && !attack.windowTaken)) {
       punish.opened += 1;
       if (attack.windowTaken) punish.taken += 1;
       else punish.missed += 1;
@@ -221,7 +247,8 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
         if (boxes.some((b) => overlaps(b, grounded))) attack.airborneInDanger = true;
       }
     }
-    if (events.includes('playerHit')) {
+    // A demonstration that reaches the player counts as a hit for this attack (it just takes no health).
+    if (events.includes('playerHit') || events.includes('studyHit')) {
       attack.hit = true;
       attack.damage += before.player.health - after.player.health;
       attack.actionWhenHit = actionOf(after.player, frame);
@@ -261,6 +288,8 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
       hitsTaken += 1;
       playerHitTicks.push(tick);
     }
+    if (events.includes('studyHit')) studyHits += 1;
+    if (after.study.active) studyUpdates += 1;
     maxPhase = Math.max(maxPhase, after.boss.phase);
     const distance = Math.abs(after.player.x - after.boss.x);
     if (distance < CLOSE_BELOW) close += 1;
@@ -298,6 +327,7 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
         countered: false,
         damage: 0,
         actionWhenHit: null,
+        study: after.study.active,
         lastT: 0,
         windowOpen: false,
         windowTaken: false,
@@ -331,6 +361,12 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
     dashes,
     jumps,
     attacks,
+    study: {
+      rounds: studyRounds,
+      ticks: state.study.active ? studyUpdates : state.study.endTick,
+      attacks: attacks.filter((x) => x.study).length,
+      hits: studyHits,
+    },
     behavior: {
       updatesClose: close,
       updatesMid: mid,
@@ -344,8 +380,10 @@ export function analyzeRun(boss: BossDef, initial: GameState, frames: readonly I
 
 /** Analyzes a stored fight: rebuilds the boss from its id and dials and replays the recorded input. */
 export function analyzeFight(
-  record: Pick<FightRecord, 'bossId' | 'dials' | 'seed' | 'input'>,
+  // `study` is missing in records of schema version 1: those analyse as a fight without a study.
+  record: Pick<FightRecord, 'bossId' | 'dials' | 'seed' | 'input'> & { study?: FightRecord['study'] },
 ): Analysis {
   const boss = applyDials(bossById(record.bossId), record.dials);
-  return analyzeRun(boss, createInitialState(boss, record.seed), decodeInputs(record.input));
+  const study = record.study ?? 0;
+  return analyzeRun(boss, createInitialState(boss, record.seed, study), decodeInputs(record.input), study);
 }

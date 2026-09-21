@@ -24,6 +24,7 @@ const meta: FightMeta = {
   presetId: 'normal',
   dials: { ...NORMAL_DIALS },
   seed: 7,
+  study: 0,
   playedAt: '2026-09-20T10:00:00.000Z',
 };
 
@@ -64,6 +65,7 @@ describe('buildExport', () => {
     const parsed = JSON.parse(file.json) as ExportDocument;
     expect(parsed.format).toBe(EXPORT_FORMAT);
     expect(parsed.schemaVersion).toBe(STATS_SCHEMA_VERSION);
+    expect(parsed.schemaVersion).toBe(2);
     expect(parsed.gameVersion).toBe(GAME_VERSION);
     expect(parsed.exportedAt).toBe(NOW.toISOString());
     expect(parsed.fights).toEqual([fight]);

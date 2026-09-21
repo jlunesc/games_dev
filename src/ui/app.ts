@@ -140,6 +140,7 @@ export function mountApp(root: HTMLElement): void {
     presetId: prefs.presetId,
     dials: prefs.dials,
     seed: 1,
+    study: 0, // wired to the menu setting in Task 4
     playedAt: new Date().toISOString(),
   });
   let feedback: FeedbackState = NO_FEEDBACK;
@@ -486,6 +487,7 @@ export function mountApp(root: HTMLElement): void {
       presetId: prefs.presetId,
       dials: prefs.dials,
       seed,
+      study: 0, // wired to the menu setting in Task 4
       playedAt: new Date().toISOString(),
     });
     nav = NAV_START;

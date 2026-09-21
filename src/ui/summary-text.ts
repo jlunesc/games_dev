@@ -17,10 +17,14 @@ const TITLES = {
 /** The words of the summary screen. */
 export function summaryLines(summary: FightSummary): { title: string; lines: string[] } {
   const worst = summary.mostDangerousAttack;
+  // The fight was left while the boss was still demonstrating: no fight time has passed yet.
+  const leftInStudy = summary.result === 'left' && summary.seconds === 0 && summary.studySeconds > 0;
   return {
     title: TITLES[summary.result],
     lines: [
+      ...(leftInStudy ? ['You left during the study.'] : []),
       `Time: ${formatTime(summary.seconds)}`,
+      ...(summary.studySeconds > 0 ? [`Study time: ${formatTime(summary.studySeconds)}`] : []),
       `Phase reached: ${summary.phaseReached} of ${summary.phaseCount}`,
       `Hits taken: ${summary.hitsTaken}`,
       `Boss health left: ${summary.bossHpLeft} of ${summary.bossMaxHp}`,

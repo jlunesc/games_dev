@@ -111,3 +111,63 @@ describe('trackUpdate', () => {
     expect(JSON.stringify(t)).toBe(before);
   });
 });
+
+describe('a fight with a study', () => {
+  const study = () => createInitialState(DUELIST, 3, 1);
+
+  it('leaves the study out of the time and reports it on its own', () => {
+    let s = study();
+    let tracker = createTracker();
+    let endTick = 0;
+    for (let n = 1; n <= 1500; n++) {
+      const next = step(s, NO_INPUT, DUELIST);
+      tracker = trackUpdate(tracker, next, s);
+      s = next;
+      if (next.events.includes('studyEnd')) endTick = next.tick;
+      if (n === 1200) break;
+    }
+    expect(endTick).toBeGreaterThan(0);
+    expect(s.study.endTick).toBe(endTick);
+    const summary = summarize(tracker, s, DUELIST, 'left');
+    expect(summary.ticks).toBe(s.tick);
+    expect(summary.studySeconds).toBe(endTick / 60);
+    expect(summary.seconds).toBe((s.tick - endTick) / 60);
+  });
+
+  it('does not count a study hit as a hit taken', () => {
+    let s = study();
+    let tracker = createTracker();
+    let studyHits = 0;
+    while (s.study.active) {
+      const next = step(s, NO_INPUT, DUELIST);
+      tracker = trackUpdate(tracker, next, s);
+      studyHits += next.events.filter((e) => e === 'studyHit').length;
+      s = next;
+    }
+    expect(studyHits).toBeGreaterThan(0);
+    expect(tracker.hitsTaken).toBe(0);
+    expect(summarize(tracker, s, DUELIST, 'left').mostDangerousAttack).toBeNull();
+  });
+
+  it('a fight left during the study has no fight time yet', () => {
+    let s = study();
+    let tracker = createTracker();
+    for (let n = 1; n <= 90; n++) {
+      const next = step(s, NO_INPUT, DUELIST);
+      tracker = trackUpdate(tracker, next, s);
+      s = next;
+    }
+    expect(s.study.active).toBe(true);
+    const summary = summarize(tracker, s, DUELIST, 'left');
+    expect(summary.seconds).toBe(0);
+    expect(summary.studySeconds).toBe(1.5);
+  });
+
+  it('with no study, the study time is zero and the time is all the fight', () => {
+    const summary = summarize(createTracker(), createInitialState(DUELIST), DUELIST, 'left');
+    expect(summary.studySeconds).toBe(0);
+    expect(summary.seconds).toBe(0);
+    const later = { ...createInitialState(DUELIST), tick: 120 };
+    expect(summarize(createTracker(), later, DUELIST, 'left')).toMatchObject({ seconds: 2, studySeconds: 0 });
+  });
+});

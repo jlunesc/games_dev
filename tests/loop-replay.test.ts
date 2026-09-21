@@ -57,6 +57,8 @@ interface PlayOptions {
   presetId: PresetId;
   dials: Dials;
   seed: number;
+  /** Study rounds before the fight; none when left out. */
+  study?: 0 | 1 | 2;
   deltas: () => number;
   player?: (frame: number) => InputFrame;
   /** The boss to fight; the Ember Duelist when left out. */
@@ -83,10 +85,11 @@ interface Played {
 
 function playLikeTheApp(options: PlayOptions): Played {
   const { presetId, dials, seed, deltas } = options;
+  const study = options.study ?? 0;
   const player = options.player ?? pad;
   const boss = applyDials(options.bossDef ?? EMBER_DUELIST, dials);
-  let state = createInitialState(boss, seed);
-  let flow = startFlow({ bossId: boss.id, presetId, dials, seed, playedAt: '2026-09-20T10:00:00.000Z' });
+  let state = createInitialState(boss, seed, study);
+  let flow = startFlow({ bossId: boss.id, presetId, dials, seed, study, playedAt: '2026-09-20T10:00:00.000Z' });
   let pending = NO_PRESSES;
   let leftoverMs = 0;
   let freezeLeft = 0;
@@ -177,8 +180,12 @@ function expectFaithful(played: Played): void {
   expect(analysis.hitsTaken).toBe(summary.hitsTaken);
   expect(analysis.bossHpLeft).toBe(summary.bossHpLeft);
   expect(analysis.phaseReached).toBe(summary.phaseReached);
-  expect(analysis.attacks.filter((a) => a.outcome === 'hit').length).toBe(summary.hitsTaken);
+  expect(analysis.attacks.filter((a) => !a.study && a.outcome === 'hit').length).toBe(summary.hitsTaken);
   expect(summary.result).toBe(record.result);
+  // The study block is always there, and agrees with the record.
+  expect(analysis.study.rounds).toBe(record.study);
+  expect(analysis.attacks.filter((a) => a.study).length).toBe(analysis.study.attacks);
+  expect(analysis.hitsTaken).toBe(summary.hitsTaken);
 }
 
 const CASES: Array<{ name: string; presetId: PresetId; dials: Dials }> = [
@@ -290,5 +297,87 @@ describe('the update loop of the app, replayed', () => {
     // The updates that ran after the ending update in the same frame are not part of the record.
     expect(played.record.ticks).toBe(played.finalState.tick);
     expectFaithful(played);
+  });
+});
+
+describe('the update loop of the app with a study, replayed', () => {
+  const STUDY_CASES: Array<{
+    name: string;
+    presetId: PresetId;
+    bossDef: BossDef;
+    study: 1 | 2;
+    seed: number;
+  }> = [
+    { name: 'the Ember Duelist, study 1 at Normal', presetId: 'normal', bossDef: EMBER_DUELIST, study: 1, seed: 21 },
+    { name: 'the Ashen Hound, study 2 at Hard', presetId: 'hard', bossDef: ASHEN_HOUND, study: 2, seed: 22 },
+  ];
+
+  it.each(STUDY_CASES)('$name: replays and analyzes faithfully through a messy loop', (c) => {
+    const played = playLikeTheApp({
+      presetId: c.presetId,
+      dials: presetDials(c.presetId),
+      seed: c.seed,
+      study: c.study,
+      bossDef: c.bossDef,
+      deltas: messyDeltas(c.seed),
+      leaveAfterFrames: 2400,
+    });
+    expect(played.framesWithoutUpdate).toBeGreaterThan(0);
+    expect(played.record.study).toBe(c.study);
+    expectFaithful(played);
+
+    // The study really ran and ended before the fight was left.
+    expect(played.finalState.study.active).toBe(false);
+    const analysis = analyzeFight(played.record);
+    const phaseOne = played.boss.phases[0]!.attacks.length;
+    expect(analysis.study).toEqual({
+      rounds: c.study,
+      ticks: played.finalState.study.endTick,
+      attacks: phaseOne * c.study,
+      hits: analysis.study.hits,
+    });
+    expect(analysis.study.ticks).toBeGreaterThan(0);
+    // The study occurrences come first, then the real fight; the summary time leaves the study out.
+    const flags = analysis.attacks.map((a) => a.study);
+    expect(flags.slice(0, analysis.study.attacks).every(Boolean)).toBe(true);
+    expect(flags.slice(analysis.study.attacks).some(Boolean)).toBe(false);
+    expect(played.summary.studySeconds).toBe(analysis.study.ticks / 60);
+    expect(played.summary.seconds).toBe((played.summary.ticks - analysis.study.ticks) / 60);
+  });
+
+  it('a fight left during the study replays, is saved as left and has no real time', () => {
+    const played = playLikeTheApp({
+      presetId: 'normal',
+      dials: presetDials('normal'),
+      seed: 5,
+      study: 2,
+      deltas: messyDeltas(3),
+      leaveAfterFrames: 60,
+    });
+    expect(played.result).toBe('left');
+    expect(played.finalState.study.active).toBe(true);
+    expect(played.summary.seconds).toBe(0);
+    expect(played.summary.studySeconds).toBeGreaterThan(0);
+    expectFaithful(played);
+    const analysis = analyzeFight(played.record);
+    expect(analysis.study.rounds).toBe(2);
+    expect(analysis.study.ticks).toBe(played.record.ticks);
+    expect(analysis.hitsTaken).toBe(0);
+  });
+
+  it('a passive player is never hurt during the study, and a study hit is not a hit taken', () => {
+    const played = playLikeTheApp({
+      presetId: 'normal',
+      dials: presetDials('normal'),
+      seed: 4,
+      study: 1,
+      deltas: messyDeltas(9),
+      player: passive,
+    });
+    expect(played.result).toBe('defeat');
+    expectFaithful(played);
+    const analysis = analyzeFight(played.record);
+    expect(analysis.study.hits).toBeGreaterThan(0);
+    for (const t of analysis.playerHitTicks) expect(t).toBeGreaterThan(analysis.study.ticks);
   });
 });

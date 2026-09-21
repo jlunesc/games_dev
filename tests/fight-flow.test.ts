@@ -24,6 +24,7 @@ const META: FightMeta = {
   presetId: 'normal',
   dials: { ...NORMAL_DIALS },
   seed: 1,
+  study: 0,
   playedAt: '2026-09-20T10:00:00.000Z',
 };
 
@@ -301,5 +302,29 @@ describe('recording', () => {
     expect(result.flow.recording).not.toBe(a.recording);
     expect(a.recording.ticks).toBe(0);
     expect(b.recording.ticks).toBe(0);
+  });
+});
+
+describe('a fight with a study', () => {
+  it('keeps the study in the recording meta, records the study updates, and counts no study hit', () => {
+    const meta: FightMeta = { ...META, study: 1, seed: 3 };
+    let state = createInitialState(DUELIST, meta.seed, meta.study);
+    let flow = startFlow(meta);
+    let studyHits = 0;
+    while (state.study.active) {
+      const before = state;
+      state = step(before, NO_INPUT, DUELIST);
+      studyHits += state.events.filter((e) => e === 'studyHit').length;
+      flow = advanceFlow(flow, before, state, DUELIST, NO_INPUT).flow;
+    }
+    expect(flow.recording.meta.study).toBe(1);
+    expect(flow.recording.ticks).toBe(state.tick);
+    expect(studyHits).toBeGreaterThan(0);
+    expect(flow.tracker.hitsTaken).toBe(0);
+    expect(flow.ended).toBeNull();
+    // Leaving right now saves the study part as a left fight that replays.
+    const leaving = leaveRecording(flow)!;
+    expect(replayFinalState(buildRecord(leaving.recording, leaving.result, 1, null))).toEqual(state);
+    expect(leaveSummary(flow, state, DUELIST).seconds).toBe(0);
   });
 });
