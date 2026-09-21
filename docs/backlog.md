@@ -16,7 +16,6 @@ Things happening in the background of the arena that can hurt the player, on top
 - **Moving or destroyable pieces**: platforms that move, cover that breaks.
 - **A boss blocked by cover**: the real fix for the weak wall (the Hound walks through it, so a rush can end inside the cover and still hit a player behind it). The boss would be stopped by cover or walk around it.
 - **A narrower foot test for ledges**: today any overlap of the 48-wide body lands the player on a ledge, so a body can hang over an edge with up to 47 units off it. A test on the feet only (or the body's centre) would fix that.
-- **The top of the Hound's wall is a place nothing can reach.** It is 120 high and every Hound window tops out at 110, 100 or 60, so a player standing on it cannot be hurt (nor hit the boss). The play test will say whether that matters; a lower wall or a taller attack would change it. (The platforms were lowered to 90 for the same reason.)
 - **Arena pieces chosen at random** (the generator, M5e).
 
 ## Random variation of enemies (raised 2026-09-20)

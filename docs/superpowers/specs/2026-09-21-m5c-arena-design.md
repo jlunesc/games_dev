@@ -21,15 +21,18 @@ An optional `arena` on the boss: `{ platforms: [{ x, width, height }], covers: [
 - `STATS_SCHEMA_VERSION` becomes 3 (new evasion values are a change of meaning) and `docs/stats.md` is updated. `GAME_VERSION` becomes `0.4.0`: giving the Hound an arena changes how Hound fights replay, so Hound records made by 0.3.0 no longer replay exactly (the analysis stored inside them stays valid data); Ember Duelist records still replay exactly (guarded by the golden test).
 
 ## The Ashen Hound's arena (first guess, tuned by feel)
-Two platforms and one cover: platforms at x 330 and x 950, width 200, height 90; a cover at x 640, width 60, height 120 (it stops the bite, the rush and the pounce's shockwave, none of which is taller than 120; the player can hop over it). The Duelist stays flat.
+Two platforms and one cover: platforms at x 330 and x 950, width 200, height 90; a cover at x 640, width 60, height 100 (it stops the rush (top 100) and the pounce's shockwave (top 60), but not the bite (top 110), which passes over it; the player can hop over it or onto it). The Duelist stays flat.
 
 The platforms are 90 high and not 130 (the first guess) because a player standing 130 up is above every Hound window (tops: bite 110, rush 100, pounce shockwave 60), so a player who camps there cannot be hurt and the fight never ends. At 90 a player on a platform is still reached by the bite and the rush; only the pounce's low shockwave passes below. A bot test (a player who jumps onto the left platform and stays) checks that the camper takes hits and the fight ends.
+
+The cover was first 120 high, which had the same problem: its top was above every Hound window, so a player standing on it could not be hurt. At 100 the bite (top 110) reaches a player on top of it, while the rush (top 100) only touches the feet and the shockwave passes below. The price is that the wall no longer stops the bite: behind it a player is safe from the rush and the shockwave but not from the bite. A second bot test (a player who jumps onto the wall and stays) checks that this camper takes hits and the fight ends, and direct tests check what reaches whom.
 
 ### Known consequences of the first version
 - The boss is not blocked by cover. A rush from the boss's normal start x 960 ends around x 640, inside the cover, so its window is then uncut (the boss stands inside the cover) and can still hit a player just behind the cover.
 - The pounce lands on the player's take-off spot, so cover only helps if the player moves behind it after take-off. A hider probe showed about 13% fewer hits behind the cover, not none.
 - The boss walks through platforms and cover, which will look odd (a job for the visual pass, M5d).
 - A body can hang over a ledge edge with up to 47 of its 48 units off the surface.
+- The wall (100 high) does not stop the bite (110 tall): a player behind it is bitten, and a player on top of it is bitten too. Only the rush and the pounce's shockwave are stopped by it.
 - The `platform` evasion also counts the tops of covers (any raised surface).
 - The real fix is to block the boss with cover (it would walk around or be stopped by it). That is in the backlog.
 
