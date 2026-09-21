@@ -43,6 +43,9 @@ export function armRect(pose: Pose, facing: 1 | -1, shoulderX: number, shoulderY
       return { x: facing === 1 ? shoulderX : shoulderX - l, y: shoulderY - t / 2, w: l, h: t };
     case 'back':
       return { x: facing === 1 ? shoulderX - l : shoulderX, y: shoulderY - t / 2, w: l, h: t };
+    case 'crouch':
+      // Placeholder until the crouch art exists: the arm hangs straight down beside the body.
+      return { x: shoulderX - t / 2, y: shoulderY, w: t, h: l };
   }
 }
 

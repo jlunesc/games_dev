@@ -4,6 +4,8 @@ import type {
   BossDef,
   CounterDef,
   HitWindow,
+  LeapDef,
+  LeapTarget,
   PhaseDef,
   Pose,
 } from './schema';
@@ -53,7 +55,9 @@ function num(value: unknown, path: string, rule: NumberRule = {}): number {
   return value;
 }
 
-const POSES: readonly Pose[] = ['raised', 'sideways', 'back', 'down'];
+const POSES: readonly Pose[] = ['raised', 'sideways', 'back', 'down', 'crouch'];
+
+const LEAP_TARGETS: readonly LeapTarget[] = ['player', 'forward', 'back'];
 
 function hitWindow(value: unknown, path: string): HitWindow {
   const o = object(value, path);
@@ -91,7 +95,6 @@ function attack(value: unknown, path: string): AttackDef {
   if (range.max <= range.min) fail(`${path}.range`, '"max" must be greater than "min"');
 
   const hits = list(o.hits, `${path}.hits`).map((entry, i) => hitWindow(entry, `${path}.hits[${i}]`));
-  if (hits.length === 0) fail(`${path}.hits`, 'needs at least one hit window');
   hits.forEach((hit, i) => {
     if (hit.from < windup || hit.to > windup + active) {
       fail(`${path}.hits[${i}]`, 'must lie inside the active updates');
@@ -106,9 +109,41 @@ function attack(value: unknown, path: string): AttackDef {
       to: num(m.to, `${path}.move.to`, { min: 1, integer: true }),
       speed: num(m.speed, `${path}.move.speed`, { min: 1 }),
     };
+    if (m.dir !== undefined) {
+      if (m.dir !== 'forward' && m.dir !== 'back') {
+        fail(`${path}.move.dir`, 'must be "forward" or "back"');
+      }
+      move.dir = m.dir;
+    }
     if (move.to <= move.from || move.from < windup || move.to > windup + active) {
       fail(`${path}.move`, 'must lie inside the active updates');
     }
+  }
+
+  let leap: LeapDef | undefined;
+  if (o.leap !== undefined) {
+    const l = object(o.leap, `${path}.leap`);
+    const from = num(l.from, `${path}.leap.from`, { min: 0, integer: true });
+    const to = num(l.to, `${path}.leap.to`, { min: 1, integer: true });
+    const height = num(l.height, `${path}.leap.height`, { min: 1 });
+    const target = text(l.target, `${path}.leap.target`);
+    if (!LEAP_TARGETS.includes(target as LeapTarget)) {
+      fail(`${path}.leap.target`, `must be one of ${LEAP_TARGETS.join(', ')}`);
+    }
+    leap = { from, to, height, target: target as LeapTarget };
+    if (target !== 'player') {
+      leap.distance = num(l.distance, `${path}.leap.distance`, { min: 1 });
+    }
+    if (to <= from || from < windup || to > windup + active) {
+      fail(`${path}.leap`, 'must lie inside the active updates');
+    }
+    if (move !== undefined && from < move.to && move.from < to) {
+      fail(`${path}.leap`, 'must not overlap the move');
+    }
+  }
+
+  if (hits.length === 0 && move === undefined && leap === undefined) {
+    fail(`${path}.hits`, 'needs at least one hit window, a move or a leap');
   }
 
   const def: AttackDef = {
@@ -124,7 +159,11 @@ function attack(value: unknown, path: string): AttackDef {
     range,
     hits,
   };
-  return move === undefined ? def : { ...def, move };
+  return {
+    ...def,
+    ...(move === undefined ? {} : { move }),
+    ...(leap === undefined ? {} : { leap }),
+  };
 }
 
 function phase(value: unknown, path: string, attackIds: ReadonlySet<string>): PhaseDef {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EMBER_DUELIST } from '../src/bosses';
 import raw from '../src/bosses/ember-duelist.json';
 import { BossFormatError, parseBoss } from '../src/bosses/parse';
-import type { BossDef } from '../src/bosses/schema';
+import type { BossDef, LeapDef } from '../src/bosses/schema';
 
 /** A deep copy of the real boss for a test to break on purpose. */
 const copy = (): BossDef => structuredClone(EMBER_DUELIST);
@@ -184,5 +184,154 @@ describe('attack damage', () => {
       b.attacks[0]!.damage = bad;
       rejects(b, 'boss.attacks[0].damage');
     }
+  });
+});
+
+/** The Duelist's slam (windup 30, active 6 unless `active` is given) with the given leap and move. */
+const withLeap = (
+  leap: unknown,
+  move?: { from: number; to: number; speed: number },
+  active?: number,
+): BossDef => {
+  const b = copy();
+  const slam = b.attacks[0]!;
+  if (active !== undefined) slam.active = active;
+  (slam as unknown as { leap: unknown }).leap = leap;
+  if (move !== undefined) slam.move = move;
+  return b;
+};
+
+describe('attack leap', () => {
+  const at = (slam: BossDef['attacks'][number]) => ({ from: slam.windup, to: slam.windup + 6 });
+
+  it('accepts a leap aimed at each kind of target and keeps it exactly', () => {
+    const slam = copy().attacks[0]!;
+    const { from, to } = at(slam);
+    const player: LeapDef = { from, to, height: 120, target: 'player' };
+    const forward: LeapDef = { from, to, height: 120, target: 'forward', distance: 200 };
+    const back: LeapDef = { from, to, height: 60, target: 'back', distance: 150 };
+    for (const leap of [player, forward, back]) {
+      expect(parseBoss(withLeap(leap)).attacks[0]!.leap).toEqual(leap);
+    }
+  });
+
+  it('drops a distance written on a player-targeted leap', () => {
+    const { from, to } = at(copy().attacks[0]!);
+    const parsed = parseBoss(withLeap({ from, to, height: 100, target: 'player', distance: 99 }));
+    expect(parsed.attacks[0]!.leap).toEqual({ from, to, height: 100, target: 'player' });
+    expect(Object.keys(parsed.attacks[0]!.leap!).sort()).toEqual(['from', 'height', 'target', 'to']);
+  });
+
+  it('requires a distance of at least 1 for forward and back leaps', () => {
+    const { from, to } = at(copy().attacks[0]!);
+    for (const target of ['forward', 'back']) {
+      rejects(withLeap({ from, to, height: 100, target }), 'boss.attacks[0].leap.distance');
+      rejects(
+        withLeap({ from, to, height: 100, target, distance: 0.5 }),
+        'boss.attacks[0].leap.distance',
+      );
+    }
+  });
+
+  it('rejects a leap that starts before the active updates', () => {
+    const slam = copy().attacks[0]!;
+    rejects(
+      withLeap({ from: slam.windup - 1, to: slam.windup + 4, height: 100, target: 'player' }),
+      'boss.attacks[0].leap',
+    );
+    expect(() =>
+      parseBoss(withLeap({ from: slam.windup - 1, to: slam.windup + 4, height: 100, target: 'player' })),
+    ).toThrow('must lie inside the active updates');
+  });
+
+  it('rejects a leap that ends after the active updates', () => {
+    const slam = copy().attacks[0]!;
+    const leap = { from: slam.windup, to: slam.windup + slam.active + 1, height: 100, target: 'player' };
+    rejects(withLeap(leap), 'boss.attacks[0].leap');
+    expect(() => parseBoss(withLeap(leap))).toThrow('must lie inside the active updates');
+  });
+
+  it('rejects a leap whose end is not after its start', () => {
+    const { from } = at(copy().attacks[0]!);
+    rejects(withLeap({ from, to: from, height: 100, target: 'player' }), 'boss.attacks[0].leap');
+    rejects(withLeap({ from, to: from - 1, height: 100, target: 'player' }), 'boss.attacks[0].leap');
+  });
+
+  it('rejects fractional times, a height below 1 and an unknown target', () => {
+    const { from, to } = at(copy().attacks[0]!);
+    rejects(withLeap({ from: from + 0.5, to, height: 100, target: 'player' }), 'boss.attacks[0].leap.from');
+    rejects(withLeap({ from, to: to + 0.5, height: 100, target: 'player' }), 'boss.attacks[0].leap.to');
+    rejects(withLeap({ from, to, height: 0, target: 'player' }), 'boss.attacks[0].leap.height');
+    rejects(withLeap({ from, to, height: 100, target: 'up' }), 'boss.attacks[0].leap.target');
+    rejects(withLeap({ from, to, height: 100 }), 'boss.attacks[0].leap.target');
+  });
+
+  it('allows a move and a leap that do not overlap, in either order', () => {
+    const slam = copy().attacks[0]!;
+    const a = slam.windup;
+    const leap = { from: a + 4, to: a + 8, height: 100, target: 'player' };
+    expect(parseBoss(withLeap(leap, { from: a, to: a + 4, speed: 300 }, 20)).attacks[0]!.move).toBeDefined();
+    expect(parseBoss(withLeap(leap, { from: a + 8, to: a + 10, speed: 300 }, 20)).attacks[0]!.leap).toBeDefined();
+  });
+
+  it('rejects a move and a leap that overlap', () => {
+    const a = copy().attacks[0]!.windup;
+    const leap = { from: a + 4, to: a + 8, height: 100, target: 'player' };
+    const bad = withLeap(leap, { from: a, to: a + 5, speed: 300 }, 20);
+    rejects(bad, 'boss.attacks[0].leap');
+    expect(() => parseBoss(bad)).toThrow('must not overlap the move');
+    rejects(withLeap(leap, { from: a + 7, to: a + 10, speed: 300 }, 20), 'boss.attacks[0].leap');
+  });
+});
+
+describe('attack move direction', () => {
+  it('accepts forward and back and keeps them', () => {
+    for (const dir of ['forward', 'back'] as const) {
+      const b = copy();
+      const lunge = b.attacks[2]!;
+      lunge.move = { ...lunge.move!, dir };
+      expect(parseBoss(b).attacks[2]!.move!.dir).toBe(dir);
+    }
+  });
+
+  it('leaves an absent direction absent', () => {
+    const parsed = parseBoss(copy());
+    expect('dir' in parsed.attacks[2]!.move!).toBe(false);
+  });
+
+  it('rejects an unknown direction', () => {
+    const b = copy();
+    const lunge = b.attacks[2]!;
+    (lunge.move as unknown as { dir: string }).dir = 'sideways';
+    rejects(b, 'boss.attacks[2].move.dir');
+  });
+});
+
+describe('attacks with no hit window', () => {
+  it('is accepted with a move', () => {
+    const b = copy();
+    b.attacks[2]!.hits = [];
+    expect(parseBoss(b).attacks[2]!.hits).toEqual([]);
+  });
+
+  it('is accepted with a leap', () => {
+    const b = withLeap({ from: 30, to: 36, height: 100, target: 'player' });
+    b.attacks[0]!.hits = [];
+    expect(parseBoss(b).attacks[0]!.hits).toEqual([]);
+  });
+
+  it('is rejected with neither, with the new wording', () => {
+    const b = copy();
+    b.attacks[0]!.hits = [];
+    rejects(b, 'boss.attacks[0].hits');
+    expect(() => parseBoss(b)).toThrow('needs at least one hit window, a move or a leap');
+  });
+});
+
+describe('the crouch pose', () => {
+  it('is accepted', () => {
+    const b = copy();
+    b.attacks[0]!.pose = 'crouch';
+    expect(parseBoss(b).attacks[0]!.pose).toBe('crouch');
   });
 });

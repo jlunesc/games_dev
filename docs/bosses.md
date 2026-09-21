@@ -62,15 +62,16 @@ A counter happens when the player's attack swing **starts** (the first update of
 |---|---|---|
 | `id` | Name used by the phases' lists. | non-empty text, unique |
 | `name` | Name for people. | non-empty text |
-| `pose` | Arm pose during the wind-up, the player's cue: `raised`, `sideways`, `back` or `down`. | one of those four |
+| `pose` | Arm pose during the wind-up, the player's cue: `raised`, `sideways`, `back`, `down` or `crouch`. | one of those five |
 | `class` | `counterable` (gold glow, can be countered) or `mustDodge` (red glow). | one of those two |
 | `damage` | How many of the player's hits this attack costs when it lands. Optional, 1 when absent. | whole number, at least 1 |
 | `windup` | Warning updates before anything hurts. | whole number, at least 1 |
 | `active` | Updates during which the attack is live. | whole number, at least 1 |
 | `recovery` | Updates after the active part before the boss does anything else. | whole number, at least 0 |
 | `range` | `{ min, max }`: the distance from the player (centre to centre) at which it can start this attack. If it is outside, it walks (or backs off) until inside. | numbers, `min` at least 0, `max` greater than `min` |
-| `move` (optional) | `{ from, to, speed }`: the boss moves forward (the way it faces) at `speed` units per second while `from <= t < to`. Stops at the arena wall. | `from`, `to` whole numbers; the range must lie inside the active updates; `speed` at least 1 |
-| `hits` | The hurt boxes (next section). | at least one |
+| `move` (optional) | `{ from, to, speed, dir }`: the boss moves at `speed` units per second while `from <= t < to`. `dir` is `forward` (the way it faces) or `back` (away from the way it faces, still facing forward); when absent it is `forward`. Stops at the arena wall. | `from`, `to` whole numbers; the range must lie inside the active updates; `speed` at least 1; `dir`, when present, `forward` or `back` |
+| `leap` (optional) | `{ from, to, height, target, distance }`: the boss leaps in an arc while `from <= t < to`, peaking `height` units above the floor. The landing x is fixed at take-off (update `from`) and does not follow the player afterwards. `target` says where it lands: `player` (the player's x at update `from`), `forward` or `back` (`distance` units in front of or behind the boss's x at update `from`). `distance` is required for `forward` and `back`, and ignored (dropped) for `player`. | `from` whole number at least 0, `to` whole number at least 1 and after `from`, both inside the active updates; `height` at least 1; `target` one of `player`, `forward`, `back`; `distance` at least 1 for `forward`/`back`. An attack may have both a `move` and a `leap`, but their update ranges must not overlap (both change the boss's x). |
+| `hits` | The hurt boxes (next section). May be empty only when the attack has a `move` or a `leap` (an attack that only repositions the boss). | at least one, unless there is a `move` or a `leap` |
 
 The whole attack lasts `windup + active + recovery` updates. The boss does not turn during an attack: it faces the way it faced when the attack started.
 
