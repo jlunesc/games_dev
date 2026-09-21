@@ -1,6 +1,6 @@
 # Boss files
 
-How a boss is described, and how to add or tune one. Everything here matches `src/bosses/schema.ts` (the types and their doc comments), `src/bosses/parse.ts` (the checks), `src/game/boss.ts` (the boss's movement, leaps and choices), `src/game/step.ts` (the counter, damage and phase change), `src/game/difficulty.ts` (the difficulty dials, section 5) and `src/ui/render.ts` (how a leap, its landing bar and the crouch are drawn). If you change any of those, update this file and `tests/boss-parse.test.ts`.
+How a boss is described, and how to add or tune one. Everything here matches `src/bosses/schema.ts` (the types and their doc comments), `src/bosses/parse.ts` (the checks), `src/game/boss.ts` (the boss's movement, leaps and choices), `src/game/step.ts` (the player's movement on the arena, the counter, damage and phase change), `src/game/geometry.ts` (the arena's surfaces and the hit windows cut by cover), `src/game/difficulty.ts` (the difficulty dials, section 5) and `src/ui/render.ts` (how a leap, its landing bar and the crouch are drawn). If you change any of those, update this file and `tests/boss-parse.test.ts`.
 
 Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second), distances are in world units (the arena is 1280 wide, the floor is at y = 640; the player is 48 wide and 96 tall), speeds are units per second.
 
@@ -16,7 +16,7 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 
   Reading it: the second attack (`attacks` counts from 0), its first hit window. A broken file makes the game fail at start (the page stays blank and the message appears in the browser's developer console); the tests also fail with the same message.
 - **The checker ignores fields it does not know.** A misspelled optional field (`opening`, `move`) is silently dropped, not reported. After adding an optional field, check that it has an effect.
-- **Things the checker does not judge:** whether the boss is fair or fun, whether a hit window can be jumped, whether an attack's `range` is reachable from the `spacing` the boss keeps, whether `startX` is inside the arena, whether a leap's shockwave window starts at or after the landing (it should, see "Movement skills"), whether the player has enough time to react to an attack. Those are for you to check (section 4).
+- **Things the checker does not judge:** whether the boss is fair or fun, whether a hit window can be jumped, whether an attack's `range` is reachable from the `spacing` the boss keeps, whether `startX` is inside the arena, whether a leap's shockwave window starts at or after the landing (it should, see "Movement skills"), whether the player has enough time to react to an attack, whether a player standing on a platform can still be hurt (a platform taller than every hit window's top makes a place where nothing can reach the player, and the fight can then never end, see "The Ashen Hound's arena"). Those are for you to check (section 4).
 
 ### Adding a boss
 1. Create `src/bosses/<id>.json` with every field below (copy `ember-duelist.json` as a starting point, or `ashen-hound.json` for a boss that moves or leaps).
@@ -46,7 +46,7 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 | `arena` | Platforms and cover standing in the arena. Optional; absent means a bare arena (the Duelist has none). See "Arena" below. | an object, see below |
 
 ### Arena
-The optional `arena` object describes scenery for the fight. It has two optional lists, `platforms` and `covers` (absent means empty; once parsed, both lists are always present). This section covers the file format only; how platforms and cover behave in the fight is documented with the simulation.
+The optional `arena` object describes scenery for the fight. It has two optional lists, `platforms` and `covers` (absent means empty; once parsed, both lists are always present). This section covers the file format; how platforms and cover behave in the fight is in "The arena in the fight" below.
 
 Each piece in either list has:
 
@@ -61,6 +61,31 @@ Rules across pieces:
 - Pieces of the same kind must not overlap horizontally. Touching is allowed: a piece ending exactly where the next begins is fine.
 - A platform and a cover must not overlap horizontally at all (the error names the platform). Touching is allowed here too.
 - No cover may contain the player's start (x = 320): `left <= 320 < right` is rejected, so the player never begins the fight inside a wall. A platform over the start is fine.
+
+### The arena in the fight
+Everything below is checked against `src/game/step.ts` (`updatePlayer`, `tryCounter`), `src/game/geometry.ts` (`arenaSurfaces`, `activeHitBoxes`) and `src/ui/render.ts` (`arenaRects`, `drawArena`). A piece's `height` is measured up from the floor, so its top is at world y = 640 minus `height`. With no `arena`, or with both lists empty, the only surface is the floor and everything behaves exactly as before the arena existed (the Duelist's golden test pins that, see section 4).
+
+**Standing and landing.** The surfaces a player can stand on are the floor, the top of every platform and the top of every cover. Each update, a player who is falling or standing (not rising) lands on a surface when all of these hold: any part of the 48-wide body is over the surface's span (even one unit), the feet were at or above the surface's top before the move (`prevY <= top`) and are at or below it after the move. If several surfaces qualify, the highest one wins. The floor always lands the player, whatever the speed. Standing on a surface means `onGround` is true and the feet are exactly at its top; it is the same state as standing on the floor, so the player can run, jump, swing and dash from it. Walking so far that the body no longer overlaps the surface at all starts a fall, so a body can hang over an edge with up to 47 of its 48 units off the surface.
+
+**Platforms are one-way.** A player who is rising never lands, so jumping up from below goes through a platform and the player lands on top when coming down (a hop that ends just short of a top does not snap onto it either: the feet must have been at or above the top). A platform never blocks the player sideways or from below. It does not block anything the boss does.
+
+**Cover is a wall below its top.** While the player's feet were below a cover's top before the move, the cover is solid from the side: if the body was entirely on one side of it before the move and would overlap it after, the player is put back against the face on the side they came from. It uses the previous position, so a dash (about 24 units per update) cannot tunnel through even a narrow cover, and a dash against a cover simply stops at its face (the dash still uses up its 11 updates and its untouchable time). A player whose feet were at or above the cover's top (jumping over, or standing on it) is not pushed. So a cover can be climbed (jump so that the feet come down on the top; the top of a cover is a surface like a platform's, but a low one) or jumped over: a jump peaks at about 155 units above the floor (900 speed, 2600 gravity), so a cover up to about 150 is jumpable and a taller one is a real wall.
+
+**Cover cuts the boss's hit windows.** `activeHitBoxes` gives the boxes that hurt the player. For each live hit window and each cover:
+- the cover only counts if it is **at least as tall as the window's `top`** (`cover.height >= top`). A low wall stops a low shockwave but a taller attack passes over it;
+- the cover must be in front of the boss: on the side the boss faces, with its near edge beyond the boss's centre. A cover the boss stands inside (its centre is within the cover), or that lies behind it, blocks nothing;
+- the window is cut at the cover's **near edge**: the part beyond it is removed and the box's height is never changed. If the cover starts before the window does (a window with `x0` above 0 that lies entirely behind the cover), nothing is left and the window is dropped. A cover beyond the window's far end changes nothing. With several covers the nearest one decides;
+- without covers every window keeps the width written in the file, so a flat arena gives exactly the old boxes.
+
+The player's own swing is not affected by cover.
+
+**The boss ignores the arena.** The boss walks, dashes and leaps straight through covers and platforms (a first simplification, see "Known consequences" below). Its body is a box on the floor (lifted only while it leaps).
+
+**The counter needs reach when there is an arena.** For a boss whose arena has at least one platform or cover, a counter also needs the player's swing to reach the boss's body vertically (the swing covers about 8 to 88 above the player's feet; only the y ranges are compared, x stays governed by `counter.range`). A player on a 90-high ledge cannot counter a boss on the floor. A bare arena keeps the old rule (distance only). That is deliberate: the recorded Duelist fights, and the counter of a leaping boss from the floor, rely on it. The Hound has no counterable attack, so this does not show in its fight.
+
+**What is drawn.** Covers are dark solid blocks with a lighter top edge; platforms are thin lighter slabs (14 thick) with a glowing top edge. The active hit boxes drawn during an attack are the cut ones, so the picture shows what really hurts. The red landing bar of a leap is drawn from the hit windows as written, so it is not shortened by a cover. Drawing is separate from the fight rules and plain in this version.
+
+**The dials do nothing to the arena.** None of the seven dials (section 5) changes a piece: `applyDials` keeps `arena` exactly as written (`tests/difficulty.test.ts` checks it at every extreme).
 
 ### `counter`
 The counter is one setting for the whole boss and only works against attacks whose `class` is `counterable`.
@@ -187,7 +212,29 @@ The boss is always in one of five modes (`BossState.mode` in `src/game/state.ts`
 | Slip | back | 18 updates of wind-up, then it runs forward at 1400 for 10 updates (about 233 units), with **no hit window**: it never hurts, and often ends up behind the player. Starts from 40 to 240 away. | Not reacting to everything. It has the same pose as the rush and a shorter wind-up, so it is a look-alike; the player is expected to tell it apart from the rush by the distance and the timing, or to dash needlessly. It also repositions the boss. |
 | Pounce | crouch | 30 updates of crouch, then a leap to where the player stood at take-off (22 updates in the air, up to 220 high), then a shockwave box along the floor for 6 updates: 200 long on the side the boss faces, 60 high. Starts from 200 to 420 away. | Reading a landing spot (the red bar) and either jumping the low shockwave or stepping out of the bar. |
 
-The mix is `bite` 3, `rush` 2, `slip` 2, `pounce` 3; a chain of two follows an attack with chance 0.35; the gap is 45 updates; `predictability` is 0.2. `tests/ashen-hound.test.ts` pins the file's shape and shows, with scripted players, that a player who knows the right answer to each attack can beat it without being hit.
+**The Hound's arena** (M5c, first guess, to be tuned from the owner's play test). Two platforms and one cover:
+
+| Piece | x (centre) | width | height |
+|---|---|---|---|
+| Platform (left) | 330 | 200 | 90 |
+| Platform (right) | 950 | 200 | 90 |
+| Cover | 640 | 60 | 120 |
+
+The platforms span x 230 to 430 and 850 to 1050; the cover spans 610 to 670, so it does not contain the player's start (x 320, which is over the left platform; that is allowed). The Hound starts at x 960, over the right platform (the boss walks through it).
+
+- **Why the platforms are 90 high.** The tops of the Hound's hit windows are: bite 110, rush 100, pounce shockwave 60. A player standing on a platform has the feet at 90, so the bite and the rush still reach them (their boxes go up to 110 and 100) and only the pounce's low shockwave passes below. A first guess of 130 was a place above every window, where a player who stayed could never be hurt and the fight could never end. `tests/ashen-hound.test.ts` has a bot that jumps onto the left platform and stays: it must take hits and the fight must end.
+- **Why the cover is 120 high.** It is at least as tall as every Hound window (110, 100, 60), so it cuts the bite, the rush and the shockwave, while a jump (about 155) still clears it or lands on top of it.
+- **What the arena is for.** A platform is a place to avoid the pounce's shockwave (and to be out of reach of your own swing: from a platform you cannot hit a boss on the floor). The cover is a place to hide from attacks coming from its far side.
+
+**Known consequences of the first version** (recorded in `docs/superpowers/specs/2026-09-21-m5c-arena-design.md`; the fixes are in `docs/backlog.md`):
+- **The boss walks through cover.** A rush from the Hound's normal start (x 960) ends around x 640, inside the cover, where the cover blocks nothing (the boss stands inside it), so the rush's window is then uncut and can still hit a player standing just behind the cover.
+- **The pounce lands where the player took off.** Cover only helps if the player moves behind it after the take-off. A probe with a player who hides behind the cover showed about 13% fewer hits, not none.
+- **It looks odd.** The boss passes through platforms and cover on screen (a job for the visual pass, M5d).
+- **A body can hang over a ledge edge**, with up to 47 of its 48 units off the surface (the landing test is any overlap, not the feet).
+- **The top of the Hound's cover is out of reach of everything it has.** The cover is 120 high and the tallest Hound window is 110, so a player standing on top of it cannot be hurt (nor hit the boss from there). The play test will say whether that matters.
+- **The `platform` evasion counts any raised surface**, including the top of the cover (`docs/stats.md`, section 7.2).
+
+The mix is `bite` 3, `rush` 2, `slip` 2, `pounce` 3; a chain of two follows an attack with chance 0.35; the gap is 45 updates; `predictability` is 0.2. `tests/ashen-hound.test.ts` pins the file's shape and shows, with scripted players, that a player who knows the right answer to each attack can beat it without being hit, and that a player who camps on a platform is still hit and the fight still ends.
 
 ## 4. What can be tuned safely, and what to check afterwards
 
@@ -213,6 +260,8 @@ All times are in updates (60 = 1 second); speeds are units per second.
 | Longer flight (`leap.to - leap.from`) | More time in the air, and more time to react to the landing bar. | The landing bar shows the whole flight, so a long flight gives a long warning; keep the shockwave window starting at or after `to`, and the leap inside the active updates. |
 | `leap.target` and `leap.distance` | `player` lands where the player stood at take-off; `forward` and `back` land a fixed distance away. | A distance that would land outside the arena is clamped to the wall. |
 | Shockwave `x1` or `top` | Longer or taller shockwave. | The bar drawn on the floor follows `x0` and `x1`, but not `top`: a tall shockwave that cannot be jumped looks the same as a low one. The bar is the union over every hit window of the attack (the smallest `x0` to the largest `x1`), so a boss with a hit window during the flight would draw a bar that does not match its landing. Author leap hit windows at or after `leap.to`. |
+| An arena piece's `height` | A platform is a place to stand; a cover blocks windows whose `top` is at or below its height. | For a platform: a height above every window's `top` makes a safe place to camp, so keep it below the tallest window that should still reach a player standing there (the Hound's are 90 against tops of 110 and 100). A cover: at least the `top` of the windows it should stop. A jump peaks near 155, so a piece taller than that cannot be jumped onto or over. |
+| An arena piece's `x` and `width` | Where it stands and how much room it takes. | The whole span must be inside 0 to 1280, pieces of a kind must not overlap, a platform and a cover must not overlap, and no cover may contain x 320 (the player's start). The Hound's rush ends about 320 in front of where it started, so think about where its windows end up relative to a cover (see "Known consequences"). |
 | Higher `predictability` | Attack order more repeatable. | 1 makes the whole fight a fixed cycle. |
 | More weight on an attack | It is picked more often. | The "no third in a row" rule still applies. |
 | Shorter `gap` | Less rest between attacks. | Also raises the pressure of chaining, which skips the gap altogether. |
@@ -223,7 +272,7 @@ All times are in updates (60 = 1 second); speeds are units per second.
 
 A boss file must still make sense at the extremes of the difficulty dials (section 5): `tests/difficulty.test.ts` applies every dial at both ends of its range, all of them low, all of them high, and many random mixes, and each result must still pass `parseBoss`. A boss that only works at its written values fails there, so read that failure when adding or changing a boss.
 
-**The reference boss is pinned.** The Ember Duelist is the fixed boss that statistics are compared against, so its simulation must not change by accident. `tests/duelist-golden.test.ts` plays four scripted fights against it (two ordinary fights at Normal and Hard dials, one with a player who cannot die so the fight runs through the phase change and to a victory, and one that counters so the stagger runs) and compares a hash of every update with recorded numbers. If a change to the engine or a shared rule moves any of them, the Duelist plays differently: either fix the change, or, if the difference is meant, re-record the numbers and bump `GAME_VERSION`. A change to the Duelist's own file will also move them, on purpose.
+**The reference boss is pinned.** The Ember Duelist is the fixed boss that statistics are compared against, so its simulation must not change by accident. `tests/duelist-golden.test.ts` plays four scripted fights against it (two ordinary fights at Normal and Hard dials, one with a player who cannot die so the fight runs through the phase change and to a victory, and one that counters so the stagger runs) and compares a hash of every update with recorded numbers. If a change to the engine or a shared rule moves any of them, the Duelist plays differently: either fix the change, or, if the difference is meant, re-record the numbers and bump `GAME_VERSION`. A change to the Duelist's own file will also move them, on purpose. The Duelist has no arena, so the same test pins the flat arena: the player's landing and the hit boxes must stay exactly as they were before platforms and cover existed (M5c left the recorded numbers unchanged).
 
 After any change: run `npm test` (the checker and the behavior tests read the real file, so many mistakes show up there), then play the fight on the PC and the phone and use the list in `docs/phone-testing.md`.
 
@@ -243,13 +292,13 @@ There are seven dials. Each is a multiplier on numbers in the boss file (damage 
 | `range` | 0.8 to 1.2 | Each attack's `range.min` and `range.max`, and each hit window's `x0` and `x1` (so a shockwave reaches farther, and the landing bar with it), are multiplied: attacks reach farther and start from farther away. A leap's `distance` (only `forward` and `back` leaps have one) is multiplied too, but never falls below 1. `spacing`, `counter.range`, `top`/`bottom` and the leap's `height` are not changed. |
 | `variety` | 0.5 to 1 | Each phase keeps only that fraction of its `attacks` (rounded, at least 1): the ones with the highest `weight` (ties keep list order), in their original order. An `opening` attack is not filtered. |
 
-The ranges, the steps the Tweak screen moves in, and the values of the three presets are all in `src/game/difficulty.ts` (`DIALS` and `PRESETS`); change them there. The leap's flight length (`to - from`) and `height` are not scaled by any dial: stretching the flight would move the landing, and its shockwave, in time. Adding a dial means a new entry in `DIALS`, its effect in `applyDials` and a test. Player and environment dials are not built yet (`docs/backlog.md`).
+The ranges, the steps the Tweak screen moves in, and the values of the three presets are all in `src/game/difficulty.ts` (`DIALS` and `PRESETS`); change them there. The leap's flight length (`to - from`) and `height` are not scaled by any dial: stretching the flight would move the landing, and its shockwave, in time. Adding a dial means a new entry in `DIALS`, its effect in `applyDials` and a test. The dials never touch the arena (see "The arena in the fight"). Player and environment dials are not built yet (`docs/backlog.md`).
 
 ## 6. Ideas not built yet
 
 Recorded in `docs/backlog.md`, not part of the format today:
 - **Ranges instead of single numbers** (for example a `gap` that varies a little on each fight), using the seeded random generator so a fight stays replayable.
-- **An arena section** for hazards with their own timing (falling objects, moving hazards).
+- **More arena pieces**: hazards with their own timing (falling objects, moving hazards), moving or destroyable pieces, platforms the boss uses, and a boss that cover blocks. Platforms and cover themselves are built (M5c, "Arena" in section 2).
 - Playable character types.
 
 More bosses are not in the backlog: they are a later milestone in `docs/SPEC.md`.

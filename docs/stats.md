@@ -1,6 +1,6 @@
 # Stats format
 
-What the game records about every fight, how it is stored and exported, and what each field means. Everything here matches `src/stats/record.ts` (the record and the versions), `src/stats/input-log.ts` (the input encoding), `src/stats/analyze.ts` (every measurement), `src/stats/store.ts` (storage) and `src/stats/export.ts` (the export file). If you change any of those, update this file and the tests. The design behind it is in `docs/superpowers/specs/2026-09-20-m3b-design.md`; the study phase (schema version 2) is in `docs/superpowers/specs/2026-09-21-m5b-study-phase-design.md`.
+What the game records about every fight, how it is stored and exported, and what each field means. Everything here matches `src/stats/record.ts` (the record and the versions), `src/stats/input-log.ts` (the input encoding), `src/stats/analyze.ts` (every measurement), `src/stats/store.ts` (storage) and `src/stats/export.ts` (the export file). If you change any of those, update this file and the tests. The design behind it is in `docs/superpowers/specs/2026-09-20-m3b-design.md`; the study phase (schema version 2) is in `docs/superpowers/specs/2026-09-21-m5b-study-phase-design.md`; the arena measurements (schema version 3) are in `docs/superpowers/specs/2026-09-21-m5c-arena-design.md`.
 
 ## 1. Purpose and privacy
 
@@ -30,18 +30,18 @@ A single JSON document (written without indentation), named `boss-trainer-YYYY-M
 | Field | Type | Meaning |
 |---|---|---|
 | `format` | string | Always `"boss-trainer-stats"`. |
-| `schemaVersion` | number | Version of this format (see section 9). Currently 2. |
+| `schemaVersion` | number | Version of this format (see section 9). Currently 3. |
 | `exportedAt` | string | ISO 8601 date-time (UTC) when the file was built. |
 | `gameVersion` | string | `GAME_VERSION` of the game that built the file (see section 9). Each fight also carries its own. |
 | `fights` | array | Every saved fight, oldest first (by `playedAt`, then `id`). Each is a fight record (section 5). |
 
 ## 5. A fight record
 
-One entry of `fights`. Every field is always present in a record written by the current game (a record of schema version 1 lacks `study`, see section 9).
+One entry of `fights`. Every field is always present in a record written by the current game (a record of schema version 1 lacks `study`, and the analysis stored in a record of version 1 or 2 lacks `behavior.updatesOnPlatform`, see section 9).
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schemaVersion` | number | The format version this record was written with (2 for records written by the current game; 1 for older ones, see section 9). |
+| `schemaVersion` | number | The format version this record was written with (3 for records written by the current game; 1 and 2 for older ones, see section 9). |
 | `gameVersion` | string | The game version it was played on. A replay is only valid with the same version (section 8). |
 | `id` | string | `<playedAt>#<seed in hexadecimal>`. Unique key of the record. |
 | `playedAt` | string | ISO 8601 date-time (UTC) when the fight began. |
@@ -117,7 +117,7 @@ One boss attack, from the moment its warning began. Entries are in the order the
 | `distance` | number | Distance to the player when the warning began, in world units, rounded to 0.1. |
 | `playerActionAtStart` | string | What the player was doing then (see below). |
 | `outcome` | string | `"hit"`, `"countered"`, `"dodged"` or `"interrupted"` (see below). For a demonstration in the study, `"hit"` means it reached the player (a `studyHit`); it took no health. |
-| `evasion` | string or null | How a dodged attack was avoided: `"dash"`, `"jump"` or `"distance"`. `null` unless `outcome` is `"dodged"`. Exact rule: `"dash"` means the dash carried the player through a dangerous box; `"jump"` means the player was in the air above a box that would have hit them on the ground; everything else is `"distance"`. That includes a dash or jump that got the player clear before the boxes went live, so an early evasive dash has no `marginTicks` and counts as `"distance"`. |
+| `evasion` | string or null | How a dodged attack was avoided: `"dash"`, `"jump"`, `"platform"`, `"cover"` or `"distance"`. `null` unless `outcome` is `"dodged"`. The exact rules and their priority are under "Evasion" below. `"platform"` and `"cover"` only happen against a boss with an arena. A dash or jump that got the player clear before the boxes went live is not a `"dash"` or `"jump"`: an early evasive dash has no `marginTicks` and counts as `"distance"`. |
 | `reactionTicks`, `reactionMs` | number or null | See below. |
 | `marginTicks`, `marginMs` | number or null | See below. |
 | `damageTaken` | number | Health this attack actually took from the player; 0 when it did not hit. Always 0 for a demonstration in the study. |
@@ -132,11 +132,14 @@ One boss attack, from the moment its warning began. Entries are in the order the
 3. `"dodged"`: it lived to its last dangerous update without hurting the player and without being countered. This holds even if the fight ended during the attack's recovery.
 4. `"interrupted"`: it was cut short before its last dangerous update, without a hit or a counter: the fight ended or was left, or a phase change cancelled it. It says nothing about the player's skill.
 
-**Evasion** (only for `"dodged"`), judged against the hit boxes that were really dangerous on each update of the attack:
-- `"dash"`: only when the dash carried the player through a dangerous box (the player was dashing while their real box overlapped a dangerous box; the dash made them invulnerable).
-- `"jump"`: only when the player was in the air, not dashing, and not touching a dangerous box, while the same box would have hit them had they been standing on the floor at the same x.
-- `"distance"`: everything else (the player was simply out of reach, or moved out of it on the ground).
-A dash takes priority over a jump when both happened.
+**Evasion** (only for `"dodged"`; schema version 3 added `"platform"` and `"cover"`). It is judged on every update the attack was live (at least one hit window active) and remembered for the whole attack. Two lists of boxes are compared: the **cut** boxes (the hit windows that were really dangerous, after any cover cut them) and the **bare** boxes (what the same windows would cover with no cover at all; for a boss with no arena the two lists are the same). Each is asked about two versions of the player: the player **where they are**, and a copy of the player standing **on the floor at the same x**. "Reaches" means the box overlaps that player's body. For each update:
+- `"dash"`: the player is dashing and a cut box reaches them where they are (the dash made them invulnerable: the i-frames were really needed, so this uses the boxes that existed).
+- `"jump"`: no cut and no bare box reaches the player where they are, a bare box would have reached the floor copy, and the player is in the air (not standing on anything) and not dashing. Height saved them.
+- `"platform"`: the same test as `"jump"` (no cut and no bare box reaches the player, a bare box would have reached the floor copy), but the player is **standing on a raised surface**: on the ground (`onGround`) with their feet more than 1 unit above the floor. **Any raised surface counts**: a platform or the top of a cover.
+- `"cover"`: no cut box reaches the player where they are, no cut box reaches the floor copy either, and a bare box would have reached one of them. The cover cut the attack away from where the player is or where they stood.
+- `"distance"`: none of the above. The player was simply out of reach, or moved out of it on the ground.
+
+**Priority** when more than one of these was true at some point during the attack: `"dash"`, then `"jump"`, then `"platform"`, then `"cover"`, then `"distance"`. The rules are symmetric on purpose: a player who is both high up and behind a cover is judged by the height first, and is never called `"distance"` when something in the arena did the work. For a boss with no arena (the Ember Duelist) the cut and bare lists are the same, so `"platform"` and `"cover"` cannot happen and the result is exactly what schema version 2 gave: re-analysing an old Duelist record gives the same evasions.
 
 **Dodge action.** A dash or a jump the player started during the attack, at attack time up to and including the end of the last dangerous update. The first one is what `reactionTicks` and `marginTicks` measure. A dash or jump started before the warning began does not count.
 
@@ -157,6 +160,7 @@ A dash takes priority over a jump when both happened.
 | `positionEvery` | number | 6: the player's x is sampled once every 6 updates (10 per second). |
 | `positions` | number[] | The player's x, rounded, on ticks 6, 12, 18 and so on (`positions[i]` is the tick `6 * (i + 1)`), over the **whole session**. |
 | `punish` | object | Punish windows (below). |
+| `updatesOnPlatform` | number | Updates, over the **whole session** (study included), on which the player stood on a raised surface: on the ground (`onGround`) with the feet more than 1 unit above the floor. It counts platforms and the tops of covers, the same test as the `"platform"` evasion. 0 for a boss with no arena. Added in schema version 3; an analysis stored in an older record does not have it. |
 
 **Punish windows.** When an attack was not countered, its recovery is a chance to hit the boss. Attacks of the study (`study` true) never open a window: the boss cannot be hurt in the study. The window opens when the attack reaches its recovery (windup plus active updates).
 - `opened`: windows that opened. Always `taken + missed`.
@@ -210,9 +214,10 @@ After `ticks` steps the state is the one the fight ended in (or the state the st
 ## 9. Versioning
 
 - `schemaVersion` (`STATS_SCHEMA_VERSION` in `src/stats/record.ts`) is bumped **whenever the shape changes**: a field added, removed, renamed or given a new meaning, in the export, the record or `analysis`. Bump it and update this document and the tests in the same commit.
-- `gameVersion` (`GAME_VERSION` in `src/stats/record.ts`, a string such as `"0.3.0"`) is bumped **when a change to the game numbers or to a boss file changes how a recorded fight replays**. Old records keep their old `gameVersion`, so it is clear which ones cannot be replayed by the current game.
+- `gameVersion` (`GAME_VERSION` in `src/stats/record.ts`, a string such as `"0.4.0"`) is bumped **when a change to the game numbers or to a boss file changes how a recorded fight replays**. Old records keep their old `gameVersion`, so it is clear which ones cannot be replayed by the current game.
 - Adding a new measurement to the analyzer changes the shape, so it also bumps `schemaVersion`.
-- **Version 1** was the format of M3b and M5a. **Version 2** (M5b, the study phase) added the record's `study`, the analysis's `study` object, `fightSeconds` and `behavior.studyUpdatesClose/Mid/Far`, and the `study` flag on each attack occurrence. Version-1 records and files remain valid: `study` missing means 0, and replaying or re-analysing one with `record.study ?? 0` gives the same fight as before (with the new fields filled in as for a fight without a study: `study.rounds` 0, `study.ticks` 0, `fightSeconds` equal to `seconds`, every `study` flag false, the study distance bands all 0). An analysis stored inside an old record was computed then and is not rewritten, so it has no `study` block and no `fightSeconds`. The schema version is 2 in the export document and in every record the current game writes.
+- **Version 1** was the format of M3b and M5a. **Version 2** (M5b, the study phase) added the record's `study`, the analysis's `study` object, `fightSeconds` and `behavior.studyUpdatesClose/Mid/Far`, and the `study` flag on each attack occurrence. Version-1 records and files remain valid: `study` missing means 0, and replaying or re-analysing one with `record.study ?? 0` gives the same fight as before (with the new fields filled in as for a fight without a study: `study.rounds` 0, `study.ticks` 0, `fightSeconds` equal to `seconds`, every `study` flag false, the study distance bands all 0). An analysis stored inside an old record was computed then and is not rewritten, so it has no `study` block and no `fightSeconds`. **Version 3** (M5c, the arena) added the evasion values `"platform"` and `"cover"` (a change of meaning: an attack that used to be `"distance"` or `"jump"` can now be one of them, see 7.2) and `behavior.updatesOnPlatform`. Version-1 and version-2 records and files remain valid and readable: the record itself has the same fields as in version 2, and an analysis stored inside an old record was computed then and is not rewritten (it has no `updatesOnPlatform`). The schema version is 3 in the export document and in every record the current game writes.
+- **Game version 0.4.0** goes with schema 3. Giving the Ashen Hound an arena (ledges to stand on, cover that cuts its hit windows) changes how Hound fights play out, so **Hound records made by 0.3.0 (or earlier) no longer replay exactly** with the current game. Their stored `analysis` was computed at the time and stays valid as data, but replaying or re-analysing them now gives a different fight. **Ember Duelist records still replay exactly** (it has no arena, and `tests/duelist-golden.test.ts` is unchanged). So for an old Hound file, trust its stored `analysis`, not a fresh replay (section 8 says a replay is only valid with the same game version).
 
 ## 10. Derived later, not stored
 

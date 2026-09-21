@@ -1,6 +1,6 @@
 # Backlog: ideas for later
 
-Ideas from the owner, not decided and not scheduled. Nothing here is in `docs/SPEC.md` yet, except the study phase, which is built (M5b) and recorded in the spec; when one is picked up, it goes through the normal design conversation and then into the spec with a status tag.
+Ideas from the owner, not decided and not scheduled. Nothing here is in `docs/SPEC.md` yet, except the study phase (M5b) and the arena (M5c), which are built and recorded in the spec; when one is picked up, it goes through the normal design conversation and then into the spec with a status tag.
 
 ## Playable character types (raised 2026-09-20)
 Choose a character type by its moves, in the style of games such as Hollow Knight or Blasphemous, so the trainer matches the game being practiced for. Different types would change the player's moves and feel (for example a faster, lighter fighter versus a slower, heavier one with longer reach).
@@ -10,7 +10,14 @@ Notes for the design: the player's numbers already live in one data file (`src/g
 ## Environmental complexity (raised 2026-09-20)
 Things happening in the background of the arena that can hurt the player, on top of the boss's own attacks: falling objects, moving hazards, and so on. The spec already lists related mechanics as candidates (arena as a mechanic, lingering hazards, shrinking safe area).
 
-Notes for the design: the M2 boss data format should leave room for an arena section (hazards with their own timing) even though M2 does not build it.
+**Partly built in M5c** (awaiting the owner's play test): platforms and cover are done (`docs/SPEC.md` section 11, format and rules in `docs/bosses.md`). Ideas that are **not built**, only listed:
+- **Platforms the boss uses**: the boss stands on, jumps to or fights from platforms (today it ignores the arena and walks through it).
+- **Hazards**: falling objects and moving hazards with their own timing.
+- **Moving or destroyable pieces**: platforms that move, cover that breaks.
+- **A boss blocked by cover**: the real fix for the weak wall (the Hound walks through it, so a rush can end inside the cover and still hit a player behind it). The boss would be stopped by cover or walk around it.
+- **A narrower foot test for ledges**: today any overlap of the 48-wide body lands the player on a ledge, so a body can hang over an edge with up to 47 units off it. A test on the feet only (or the body's centre) would fix that.
+- **The top of the Hound's wall is a place nothing can reach.** It is 120 high and every Hound window tops out at 110, 100 or 60, so a player standing on it cannot be hurt (nor hit the boss). The play test will say whether that matters; a lower wall or a taller attack would change it. (The platforms were lowered to 90 for the same reason.)
+- **Arena pieces chosen at random** (the generator, M5e).
 
 ## Random variation of enemies (raised 2026-09-20)
 Randomly tweak an enemy's properties within set ranges, so a fight does not feel exactly the same every time (for example attack speed or the gap between attacks varies a little on each attempt).
@@ -38,10 +45,10 @@ Ideas that are **not built**, only listed:
 - **Split the behaviour stats by study**: the swings, dashes, jumps, distance bands and positions cover the whole session, with the study part given only for the distance bands (`study.ticks`, `behavior.studyUpdatesClose/Mid/Far`); a full split (swings, dashes and jumps per part, a separate positions timeline) could be added with a schema bump if the analysis needs it.
 - **Hittable boss in the study**: let the player practise punishes in the study (asked in the play-test questions).
 
-Order of the next steps after M5a, **OPEN** (Claude's suggestion, not yet decided by the owner): the study phase (built), then the arena features and a visual pass together, then the generator.
+Order of the next steps (owner, 2026-09-21): the study phase (M5b, built), the arena (M5c, built), the visual pass (M5d), then the generator (M5e).
 
 ## Nicer visuals within the geometric style (raised 2026-09-21)
-The owner wants nicer visuals, **within the locked geometric style** (`docs/SPEC.md` section 8): not necessarily new assets, but a better-looking result from shapes, color, glow and motion. Planned together with the arena features, after the study phase (order OPEN, see above; the study is built).
+The owner wants nicer visuals, **within the locked geometric style** (`docs/SPEC.md` section 8): not necessarily new assets, but a better-looking result from shapes, color, glow and motion. Planned as **M5d**, after the arena (M5c, built) and before the generator (M5e). The owner's choices for it (2026-09-21): a **layered background**, **impact effects and particles**, and **better boss and player shapes**. The arena's platforms and cover are drawn plainly today (rectangles with a lighter top edge); the pass can make them nicer too.
 
 Notes for the design:
 - Art is kept separate from fight logic (SPEC section 8) and everything drawn lives in `src/ui/render.ts`, so a visual pass should not change how a fight plays; the Ember Duelist golden test (`tests/duelist-golden.test.ts`) would show it if it did.

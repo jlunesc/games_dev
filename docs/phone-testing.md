@@ -127,6 +127,47 @@ A soft shadow on the floor shows where the Hound is while it is in the air.
 - Is the Hound too easy or too hard on Normal?
 - Did anything look wrong while it was in the air (the jump, the shadow, the bar, the body)?
 
+## The arena (M5c)
+The Ashen Hound's fight now has a **scenery**: two **ledges** (raised platforms) and one **wall** (a low pillar) standing in the arena. The Ember Duelist's arena is still completely flat and plays exactly as before. Everything in the arena is a first guess, and this test is to find out how it feels.
+
+### What is in the arena
+- **Two ledges**, one on the left and one on the right, each about one sixth of the screen wide and **90 high** (a bit less than the height of you, which is 96). They are lighter slabs with a glowing top edge.
+- **One wall** in the middle of the arena, narrow and **120 high**, a dark solid block with a lighter top edge.
+
+### How to use them
+- **Getting up on a ledge.** Jump from below: you pass **through** the ledge on the way up, and when you come down you **land on top** of it. Hold the jump button, because a quick tap only hops a little and does not reach 90. On top you can stand, run, jump, swing and dash like on the floor, and you drop off by walking off the edge. You do not have to be fully over the ledge to stay up: even a small part of your body over it holds you.
+- **From a ledge your swing cannot reach the Hound while it is on the floor**, so you cannot hit it from up there (and the counter, which the Hound does not even have, would not work from there either). Come down to hit it.
+- **The wall stops you sideways.** You cannot run through it, and a **dash stops** when it hits the wall. You can jump **onto** it (it is 120 high and a jump goes up to about 155) and stand on top, or jump **over** it.
+- **The Hound walks straight through the wall and the ledges** (a first simplification; it will look odd, and it is on the list to fix). The wall does not stop the Hound. What the wall does is stop the Hound's **attacks**, when the Hound is on the other side.
+
+### What is safe where
+- **On a ledge** (90 high): you are safe from the pounce's low shockwave (it is only 60 high, so it passes under your feet). You are **not** safe from the bite (110 high) or the rush (100 high): both still reach you up there.
+- **Behind the wall** (the wall between you and the Hound): the wall stops the bite, the rush and the pounce's shockwave that come from the Hound's side, because it is taller than all of them. This only holds **while the Hound is on the other side of the wall**: once the Hound is standing inside the wall or has walked past it, the wall no longer blocks anything. So a rush that ends inside the wall can still hit you just behind it. And the pounce lands where **you were standing when it took off**, so hiding only works if you step behind the wall after it takes off.
+- **On top of the wall** (120 high): by the numbers you are above every attack the Hound has (110, 100 and 60), so nothing should be able to hurt you there, and you cannot hit it from there either. Please check this by feel and tell me if it works as a place to hide forever (see the questions).
+
+### Checklist
+- [ ] Choose the Hound. You can see two ledges and one wall in the arena, and the wall looks different from the floor (a dark solid block) and from the ledges (light slabs).
+- [ ] You can jump up from below through a ledge and land on top of it. A short tap of jump does not get you up.
+- [ ] On a ledge you can stand still, run along it, jump from it and walk off the edge and fall.
+- [ ] The wall stops you when you run into it, from both sides.
+- [ ] A dash into the wall stops at the wall.
+- [ ] You can jump onto the wall and stand on it, and you can jump over it.
+- [ ] Standing on a ledge, you are not hurt by the pounce's low shockwave. Note what the bite and the rush do to you up there (by the numbers they should still hit you).
+- [ ] Standing on a ledge, your swing does not hurt the Hound while it is on the floor.
+- [ ] Behind the wall, the bite, the rush and the pounce's shockwave coming from the Hound's side are stopped, as long as the Hound is on the far side. Note any time you were hurt while behind the wall, and where the Hound was then.
+- [ ] The Hound walks through the wall and the ledges without being stopped (expected for now).
+- [ ] The Duelist's arena is flat, and the Duelist plays exactly as before.
+- [ ] Stats still save (the summary's last line counts them) and Export works. In the exported file, the `evasion` of an attack you avoided by standing on a ledge or the wall can say `platform`, and behind the wall it can say `cover` (see `docs/stats.md`).
+
+### Questions about the arena
+- Are the ledges too high or too low? Is 90 a good height to jump up to?
+- Is the wall in a good place? Is it too far from where you usually stand?
+- Does hiding behind the wall feel too safe, or too useless (the Hound walks through it and the pounce lands where you were)?
+- Can you tell what a ledge and the wall do at a glance, without trying them?
+- Does the wall look clearly different from the floor and from the ledges?
+- Did you find a place where you could not be hurt at all (for example on top of the wall)? Did that spoil the fight?
+- Did anything feel wrong with the ledges, for example landing on them, or hanging half over the edge?
+
 ## The study phase (M5b)
 A new step before the real fight: a **study**, in which the boss shows you its attacks and nothing can hurt you. The idea is to learn to read each attack first, then fight for real. The boss and the fight itself are unchanged.
 
