@@ -1,6 +1,6 @@
 # Backlog: ideas for later
 
-Ideas from the owner, not decided and not scheduled. Nothing here is in `docs/SPEC.md` yet, except the study phase (M5b) and the arena (M5c), which are built and recorded in the spec; when one is picked up, it goes through the normal design conversation and then into the spec with a status tag.
+Ideas from the owner, not decided and not scheduled. Nothing here is in `docs/SPEC.md` yet, except the study phase (M5b), the arena (M5c) and the looks (M5d), which are built and recorded in the spec; when one is picked up, it goes through the normal design conversation and then into the spec with a status tag.
 
 ## Playable character types (raised 2026-09-20)
 Choose a character type by its moves, in the style of games such as Hollow Knight or Blasphemous, so the trainer matches the game being practiced for. Different types would change the player's moves and feel (for example a faster, lighter fighter versus a slower, heavier one with longer reach).
@@ -44,11 +44,22 @@ Ideas that are **not built**, only listed:
 - **Split the behaviour stats by study**: the swings, dashes, jumps, distance bands and positions cover the whole session, with the study part given only for the distance bands (`study.ticks`, `behavior.studyUpdatesClose/Mid/Far`); a full split (swings, dashes and jumps per part, a separate positions timeline) could be added with a schema bump if the analysis needs it.
 - **Hittable boss in the study**: let the player practise punishes in the study (asked in the play-test questions).
 
-Order of the next steps (owner, 2026-09-21): the study phase (M5b, built), the arena (M5c, built), the visual pass (M5d), then the generator (M5e).
+Order of the next steps (owner, 2026-09-21): the study phase (M5b, built), the arena (M5c, built), the visual pass (M5d, built), then the generator (M5e, next).
 
-## Nicer visuals within the geometric style (raised 2026-09-21)
-The owner wants nicer visuals, **within the locked geometric style** (`docs/SPEC.md` section 8): not necessarily new assets, but a better-looking result from shapes, color, glow and motion. Planned as **M5d**, after the arena (M5c, built) and before the generator (M5e). The owner's choices for it (2026-09-21): a **layered background**, **impact effects and particles**, and **better boss and player shapes**. The arena's platforms and cover are drawn plainly today (rectangles with a lighter top edge); the pass can make them nicer too.
+## Nicer visuals within the geometric style (raised 2026-09-21, built as M5d)
+**Built in M5d** (awaiting the owner's look on the phone; `docs/SPEC.md` section 11, checklist and tweak guide in `docs/phone-testing.md`): a layered background with a mood per boss, impact effects and particles, animated figures for the player, the Ember Duelist and the Ashen Hound (and a generic one for any other boss), and the Effects switch in Settings. All numbers are in `src/ui/look/tuning.ts`.
+
+Look ideas that are **not built**, only listed:
+- **Clearer attack warnings**: a stronger, earlier or more distinct sign that an attack is coming (a ring pulse or a flash when a warning starts, a brighter ground marker, a sound cue), so the pose and glow are not the only telegraph. Not chosen by the owner for M5d. Related: the Hound has no arm any more, so its bite and rush look alike during the warning apart from the length; a distinct sign for each would help.
+- **A HUD redesign**: the hearts and the boss health bar are still the plain rectangles from M1. Not chosen by the owner for M5d.
+- **Effects specific to each boss's attacks**: for example embers thrown by the Duelist's slam, a dust line along the floor for the Hound's rush, a trail behind the Duelist's lunge. M5d has only the general effects (sparks, rings, dust, dash trail, bursts).
+- **Sprite art later**: replacing the geometric shapes with pixel-art sprites (a possible upgrade kept open by the locked style, `docs/SPEC.md` section 8). Art is separate from fight logic, so this can be done without touching how a fight plays.
+- **Lean and animation refinements**: the figures only lean into the windup and swing; ideas are a follow-through after an attack, squash and stretch on landing, an anticipation pose for the player's dash, turning animations, and different body colours for each boss (both bosses are the same burnt orange today).
+- **Nicer arena pieces**: textures or patterns on the ledges and the wall beyond the outline and the edge glow.
+
+### Original note
+The owner wants nicer visuals, **within the locked geometric style** (`docs/SPEC.md` section 8): not necessarily new assets, but a better-looking result from shapes, color, glow and motion. Planned as **M5d** (now built), after the arena (M5c, built) and before the generator (M5e). The owner's choices for it (2026-09-21): a **layered background**, **impact effects and particles**, and **better boss and player shapes**. The arena's platforms and cover are drawn plainly today (rectangles with a lighter top edge); the pass can make them nicer too.
 
 Notes for the design:
-- Art is kept separate from fight logic (SPEC section 8) and everything drawn lives in `src/ui/render.ts`, so a visual pass should not change how a fight plays; the Ember Duelist golden test (`tests/duelist-golden.test.ts`) would show it if it did.
+- Art is kept separate from fight logic (SPEC section 8) and everything drawn lives in `src/ui/render.ts` and `src/ui/look/`, so a visual pass should not change how a fight plays; the Ember Duelist golden test (`tests/duelist-golden.test.ts`) would show it if it did.
 - The readability of telegraphs (pose, glow, the landing bar of a leap) comes first; anything decorative must not hide them. The owner's play test of the Ashen Hound will say whether the red landing bar is readable enough.

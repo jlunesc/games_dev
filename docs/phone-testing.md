@@ -46,7 +46,7 @@ The menu remembers your last choices (boss, difficulty, study and any tweaks), e
 
 The last row, **Reset to preset**, puts every value back to the preset (Easy, Normal or Hard) you started from. It reacts to the bottom button. Choosing a different preset in the Difficulty row also starts again from that preset's values.
 
-**Settings** switches four things on or off: **Hit freeze** (a tiny pause when a hit lands), **Screen shake**, **Flashes** (white and red flashes when something is hit) and **Sound**. They only change how a fight looks and sounds, and the fight rules stay the same. One honest catch: switching Hit freeze off does not change the rules, but you get slightly less time to react after a hit, so timing can feel different. Left, right or the bottom button switch one; the top button goes back.
+**Settings** switches five things on or off: **Hit freeze** (a tiny pause when a hit lands), **Screen shake**, **Flashes** (white and red flashes when something is hit), **Effects** (sparks, dust and other particles, the drifting embers and the moving background, see "The looks (M5d)" below) and **Sound**. They only change how a fight looks and sounds, and the fight rules stay the same. One honest catch: switching Hit freeze off does not change the rules, but you get slightly less time to react after a hit, so timing can feel different. Left, right or the bottom button switch one; the top button goes back.
 
 **The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time (the real fight only; if you played a study first, a "Study time" line shows how long it took), the phase reached, the hits you took, the boss's health left, and the attack that hurt you most (if nothing hit you, it says "You were never hit."). The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident. Under the lines, a last line says whether the fight was saved on the phone (see "Stats and export" below).
 
@@ -78,7 +78,7 @@ The menu and the summary (M3a):
 - [ ] The menu opens with Fight highlighted; up and down move the highlight and it wraps around.
 - [ ] Left and right on Difficulty switch between Easy, Normal and Hard. Easy feels clearly easier (longer warnings, slower and less frequent attacks, less boss health) and Hard clearly harder.
 - [ ] In Tweak, each value changes with left and right, the menu then shows "Custom (from ...)", "Reset to preset" puts it back, and your choice is still there after closing and reopening the app.
-- [ ] In Settings, switching off Hit freeze, Screen shake, Flashes or Sound removes exactly that effect in a fight, and the fight itself plays the same.
+- [ ] In Settings, switching off Hit freeze, Screen shake, Flashes, Effects or Sound removes exactly that effect in a fight, and the fight itself plays the same.
 - [ ] After a win, a loss, and after leaving with the top button, the summary appears with time, phase reached, hits taken, boss health left, and the attack that hurt you most (or "You were never hit." if nothing hit you); the bottom button returns to the menu.
 - [ ] The menu rows show only their names, with no "top button" or "bottom button" text inside them.
 - [ ] Tapping Fight with no controller connected does nothing except show a message ("Connect a controller and press a button first.").
@@ -215,6 +215,82 @@ The summary's **Time** counts the real fight only; a **Study time** line under i
 - Can you read the study note, and "The fight begins!", in the short time they show? Do they get in the way?
 - Is the soft low sound audible? Is it annoying?
 - Is the red flash enough to tell you an attack would have hit you?
+
+## The looks (M5d)
+The fight has a new look. Nothing about how a fight **plays** has changed: the hit boxes, the timings, the attacks and the stats are exactly the same, and a fight recorded now replays exactly as before. Only what is drawn is new. I have to be honest about one thing: **none of this could be checked on a screen while it was being built.** It was written and tested by reading the code and by automatic tests of the numbers, but nobody has looked at it yet. You are the first to see it, so expect that the first look needs a round of small changes (a colour too bright, a spark too big, a background too busy). That is normal and is exactly what this test is for.
+
+### What you should see
+- **The background.** Behind the fight there is a dark sky that fades from a darker top to a lighter bottom, and two or three layers of dark shapes in front of it (tall pillars, a ridge of peaks, thin spires). The farther layers are lighter and nearly still, the nearer ones darker and a little faster; they all drift slowly **to the left**, so you feel some depth. The nearest layer takes about a minute to cross the screen, and the farthest one moves so little that you may only notice it by watching a shape for a while. On top of that a few small glowing **embers** (26) rise slowly from the floor, sway a little from side to side and fade in and out. The floor has a bright edge line, a soft glow just above it and faint tile lines.
+- **Each boss has its own mood.** The **Ember Duelist** is warm: a dark red-brown sky, orange embers, a brown floor with an orange edge. The **Ashen Hound** is cold: a blue-black sky, pale blue-grey embers, a slate floor with a grey-blue edge. (Any other boss, for example one made later by the generator, gets a plain dark blue-grey mood.) The ledges and the wall in the Hound's arena now are drawn with more contrast: the wall has a lighter outline, the ledges a dark underside and a soft glow, and both have a bright top edge in the boss's accent colour (pale blue for the Hound), so they should stand out clearly from the backdrop.
+- **The figures.**
+  - **You** are a small fighter: a round head with a light-blue visor, a body, two legs and a light-blue **cape** that trails behind you. The legs step while you run and tuck in the air; you lean forward when you dash or swing; the cape gets longer the faster you go and sways a little; standing still you breathe slowly. While you dash you turn light blue all over, after a hit you flash red (Flashes on) and then blink faint for about a second.
+  - **The Ember Duelist** stands on two legs, with a head that has a glowing eye slit and a weapon arm with a **blade** on the end. Its arm still shows the attack: raised, sideways, pulled back or pointing down, as before. Its arm turns gold or red while the warning and the attack run (gold: can be countered, red: dodge it), and the blade takes the same colour. When nothing glows the blade is steel white. It walks with a small bob and breathes when it waits, and leans towards you as an attack winds up.
+  - **The Ashen Hound** is a long, low beast on four legs with a snout, a pointed ear and a wagging tail. **It has no arm any more.** So its warning is: the **red pulsing outline** around its body (unchanged), it leans forward and dips its head as the attack winds up, it lunges its head forward on the bite, and for the pounce it **crouches** (the whole body gets lower) and then jumps. The soft shadow and the red landing bar on the floor are unchanged. Because there is no arm, the bite and the rush now look alike during their warning, apart from the length of the warning (the bite is much shorter). Tell me if that is a problem, see the questions.
+  - **Both bosses are the same burnt orange**, so they are told apart by their shape (a two-legged fighter with a blade against a four-legged beast with a tail) and by the mood of the backdrop. They turn white for a moment when you hit them (Flashes on) and light blue when staggered, as before.
+  - **Any other boss** gets a plain block body, a head and an arm, so a boss that has no special figure always draws something.
+  - Every figure stays within the space its hit box already occupies, plus the head, tail, snout, blade or cape. The **glow outline and the red hit areas are drawn exactly as before**, so what you see is what can hurt you.
+- **The effects** (drawn over the fight, under the health bars). All of them last well under a second:
+  - **Sparks** (small squares thrown out in all directions, pale yellow): 8 where your swing lands on the boss, with a small pale ring; on a **counter**, 14 gold and pale sparks on the boss and a larger gold ring. When **you** are hit, 10 red sparks and a small red ring on you. In the study, when an attack would have hit you, 4 red sparks (no ring).
+  - **Dust** (small grey-beige puffs): where you land after a jump or a fall, where you start a dash on the ground, and where the Hound lands after its pounce (more dust there).
+  - **The pounce ring**: when the Hound lands, an orange ring grows out from the floor under it. It is decoration. The real danger is still only the red bar and the red shockwave; the ring can look wider than the real shockwave.
+  - **The dash trail**: light-blue puffs left behind you along the path of a dash, fading quickly.
+  - **The burst**: when the boss is defeated, 40 gold and orange particles and a big gold ring; when you are defeated, the same particles on you (no ring).
+  - **The phase ring**: a white ring on the boss when it powers up between phases (the Duelist).
+  - At most 160 particles and 12 rings exist at the same moment, so a busy moment cannot pile up without limit.
+- **Order of drawing**, back to front: sky, background layers, embers, floor, ledges and wall, boss, you, then the effects, then the health bars and text. The effects can therefore cover the boss or you for a moment, but never the health bars.
+
+### The Effects switch
+In **Settings**, the **Effects** row is the fourth of five (Hit freeze, Screen shake, Flashes, **Effects**, Sound) and it starts **On**. Switching it **off** gives a calm picture: the sky and the background shapes are still, there are **no embers** and there are **no** sparks, dust, trails, rings or bursts. It does **not** switch off the new figures (the cape, the legs and the breathing still move), the boss's glow outline, the white and red flashes (that is the Flashes switch) or the screen shake (that is the Screen shake switch). It changes nothing about how a fight plays, and the recording of a fight does not depend on it.
+
+Two small things you might notice with Effects on: when a hit freezes the game for a moment, the background and the embers also pause for that moment (so the freeze looks like a real stop), while the sparks and rings that are already flying keep fading. And when the game is paused (controller off) everything is still.
+
+### Where to ask for changes
+Every size, number and strength is in one file, **`src/ui/look/tuning.ts`** (times are in 60ths of a second, lengths in the game's own units where the whole screen is 1280 wide and 720 high). A request like "sparks smaller" is one line to change, and it does not touch how a fight plays. The colours of each boss's backdrop (sky, layers, embers, floor) are in **`src/ui/look/moods.ts`**, one block per boss. Ask for it in plain words; these are the most likely requests and where they live:
+- **Sparks bigger or smaller**: `sparkSize` (5). **More or fewer**: `sparksOnBossHit` (8), `sparksOnPlayerHit` (10), `sparksOnCounter` (14). **Fly farther or less far**: `sparkSpeedMin` and `sparkSpeedMax`. **Last longer or shorter**: `particleLifeTicks` (`spark` 22, which is a bit over a third of a second).
+- **Rings bigger, thicker or longer-lasting**: `ringGrowthPerTick`, `ringWidth`, `ringLifeTicks` (counter and phase rings); `smallRing...` (the hit rings); `bigRing...` (the defeat ring); `shockwaveGrowthPerTick` and `shockwaveLifeTicks` (the Hound's landing ring).
+- **Dust**: `dustSize`, `dustOnLand`, `dustOnDash`, and its life in `particleLifeTicks` (`dust`).
+- **Dash trail**: `trailOnDash` (how many puffs), `trailSize`, `trailAlpha` (how see-through), `dashTrailSpacing` (how far apart) and `particleLifeTicks` (`trail`).
+- **Defeat burst**: `burstOnDefeat`, `burstSize`, `burstSpeedMin` and `burstSpeedMax`.
+- **Effect colours**: `spark`, `counterRing`, `hurtSpark`, `dust`, `trail`, `shockwave`, `phaseRing`, `burst`, `burstAlt`.
+- **Fewer embers or none**: `emberCount` (26; 0 for none). **Smaller or bigger, fainter or brighter**: `emberSizeMin`, `emberSizeMax`, `emberAlphaMin`, `emberAlphaMax`. **Faster or slower rise**: `emberRiseSpeed`. Their colour is `ember` in `moods.ts`.
+- **Background moves faster or slower**: `layerSpeeds` (three numbers: the far, middle and near layer, in units per second; 0 stops a layer). **Background fainter so the fight stands out more**: `layerAlpha` (1 is full, lower is fainter). The shapes' colours and how tall they are: `moods.ts`.
+- **Cape longer or shorter, sways more or less**: `capeLength` (34), `capeSway`. **Bigger head**: `headRadius`. **Bigger strides**: `legSwing`. **Faster stepping**: `legCycleTicks` (smaller is faster). **More or less bounce**: `bobAmplitude`, `breatheAmplitude`. **Leaning less or more**: `leanDash`, `leanSwing`. **Visor and cape colour**: `playerAccent`; while dashing `playerDashAccent`.
+- **Boss shapes**: `bossHeadRadius`, `bossTailLength`, `bossSnoutLength`, `bossBladeLength`, `bossLegSwing`, `bossBobAmplitude`, `bossBreatheAmplitude`, `bossLeanWindup` (how far it leans before an attack).
+- **Floor, ledges and wall**: `floorTileAlpha`, `floorTileSpacing`, `platformBody`, `coverBody`, `coverEdge` (the wall's outline). The bright top edge of the ledges and the wall follows the boss's `accent` colour in `moods.ts`.
+- **Not in that file, so a small change in the code (just ask):** the body colours of you and of the bosses (the bosses are both burnt orange for now), and the exact shape of any figure. Three numbers in `tuning.ts` (`leanWindup`, `playerBody`, `bossCrouchDrop`) are not connected to anything yet; changing them does nothing.
+
+### What to look for on the S21 (smoothness)
+Nothing should stutter. Watch these moments in particular, because they draw the most at once: a **counter** (14 sparks and a ring), a **hit on you with screen shake on**, a **dash** (six trail puffs), the **defeat burst** (40 particles and a big ring), and the **start of a fight** (the background is drawn once into a hidden picture when a fight begins, so a very short pause right at the start is the one place to look). If the picture ever stutters, or the game feels slower than before, note **when** it happened, then switch **Effects off** and play the same moment again: if it is smooth then, the effects are too heavy for the phone and I will lower the numbers (`maxParticles`, `emberCount`, the spark counts, `layerScale`).
+
+### Checklist
+- [ ] Both bosses: the background is visible behind the fight, moves slowly and does not pull your eye away from the fight. (If it does, tell me which layer or the embers.)
+- [ ] The Duelist's backdrop feels warm (red-brown, orange embers) and the Hound's cold (blue-grey, pale embers). The two arenas look clearly different at a glance.
+- [ ] The Hound's ledges and wall stand out from the background: you can see where they are without looking twice.
+- [ ] The floor is easy to see, and its bright edge line shows exactly where you stand.
+- [ ] You can still tell the Duelist's attack from its arm and its glow, as before: raised, sideways, pulled back, pointing down; gold and red glows as before.
+- [ ] You can still tell the Hound's warning from its red outline, its lean and dip, and the crouch before the pounce. Note whether you can tell the bite from the rush without the arm. The red landing bar is still easy to see.
+- [ ] The sparks when you hit the boss are visible and do not hide what is happening. The gold ring on a counter is clearly bigger than an ordinary hit, so a counter feels like a counter.
+- [ ] The red sparks when you are hit are easy to notice, and do not hide the boss.
+- [ ] The dust on landing and on the start of a dash helps you see where you are, and the dash trail helps you see where you dashed. Neither is distracting.
+- [ ] The Hound's landing ring shows up when it lands. It does not fool you into thinking the danger area is wider than the red bar.
+- [ ] The defeat burst looks good when you win and when you lose, and the Victory or Defeated text is still readable after it.
+- [ ] Nothing stutters on the S21 (see above). Note anything that does, and when.
+- [ ] You look right facing left and facing right, and while running, jumping, dashing and swinging: no leg or cape that points the wrong way or stretches oddly.
+- [ ] The Duelist and the Hound look right facing both ways, while walking, attacking, staggered (light blue) and, for the Hound, crouching and jumping. No part looks detached or oddly stretched.
+- [ ] The Duelist and the Hound are easy to tell apart at a glance, on their shape and on the backdrop (they are the same orange).
+- [ ] In Settings, the Effects row is the fourth of five. Switch it off and start a fight: the sky and shapes are still, there are no embers and no sparks, dust, trails, rings or bursts, and the figures still move. Switch it back on: all of it returns.
+- [ ] With **Flashes** off, the boss and you no longer flash white and red. With **Screen shake** off, the screen no longer shakes. Each of them still works on its own, whether Effects is on or off.
+- [ ] A fight plays exactly as before: the same feel, and about the same numbers on the summary for a similar fight. The stats still save and Export works.
+
+### Questions about the looks
+- Too busy or too plain? Which layer or effect would you remove, and what would you add?
+- Which effects are too big and which too small (sparks, rings, dust, trail, burst, embers)?
+- Are the colours right? Are the Duelist's warm colours and the Hound's cold colours what you wanted? Is anything too bright, too dark, or too close to the colour of something that matters (the boss's glow, the red bar, the ledges)?
+- Does any figure look wrong: the cape, the legs, the head, the blade, the Hound's tail or snout? In which situation (running, dashing, jumping, attacking, facing which way)?
+- Would you like the Hound to have its arm back, or another clear sign to tell its bite from its rush?
+- Should the two bosses have different body colours, so they are easier to tell apart?
+- Is the phone smooth? Where did it stutter, if at all, and did switching Effects off fix it?
+- Did the background or anything else ever hide an attack's warning?
 
 ## Stats and export (M3b)
 ### What is recorded

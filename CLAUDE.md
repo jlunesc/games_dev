@@ -19,6 +19,7 @@ A public-repo web game (TypeScript, PWA) that trains boss-fight skills for metro
 - The stats schema is versioned and documented. Do not change it without updating the docs.
 - Fights are recorded as seed, dials and the exact input of each update (`src/stats/`); measurements are computed by replaying through the real game (`analyzeFight`). The export format is in `docs/stats.md`; change the shape only with a `schemaVersion` bump and a doc update. Bump `GAME_VERSION` in `src/stats/record.ts` when a change to game numbers or a boss file changes how recorded fights replay.
 - Bosses are JSON files in `src/bosses/`, checked by `parseBoss`. The format is documented in `docs/bosses.md`; when the format changes, update that file and the tests.
+- The looks (background, effects, figures) live in `src/ui/look/` and never change how a fight plays; every tunable colour, size and strength is in `src/ui/look/tuning.ts` (the backdrop colours per boss in `moods.ts`).
 - The CSP blocks inline scripts and `style="..."` attributes. Style through CSS classes or `el.style.setProperty(...)`, and write DOM with `textContent`, never `innerHTML`.
 
 ## Working style
