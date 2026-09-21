@@ -29,7 +29,7 @@ If the controller shows nothing, note which mode it was in and whether the page 
 ### The menu
 Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Tweak difficulty**, **Stats**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
 
-How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty). On the Boss row they do nothing for now, because there is only one boss. The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
+How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty). On the Boss row they switch between the two bosses, the Ember Duelist and the Ashen Hound (from the last one it goes round to the first). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
 
 The menu remembers your last choices (boss, difficulty and any tweaks), even after you close the app. It opens with Fight highlighted, so pressing the bottom button once starts the same fight as last time. After a fight the summary comes first, so it takes two presses: one to leave the summary, one for Fight.
 
@@ -87,6 +87,45 @@ The menu and the summary (M3a):
 All of the Duelist's attacks are meant to be dodged from their warning (the arm pose and the glow), not reacted to after they start: jump or dash during the warning. If you feel you "could not dodge in time", tell me, that is useful to know and the timing can be tuned.
 
 Send me your impressions in plain words: what feels too fast, too slow, too hard, too easy, unfair or boring. Every number is tunable, so "the slam is too quick" is enough.
+
+## Boss movement (M5a): the Ashen Hound
+A second boss, the **Ashen Hound**, is new. It is a low, fast beast that dashes and jumps, and it is here to train reading a movement and stepping out of the way of where something will land. The Ember Duelist is unchanged and should play exactly as before.
+
+### How to pick it
+In the menu, go to the **Boss** row and press left or right. The row shows the name (Ember Duelist or Ashen Hound). The menu remembers your choice, even after you close the app. Then choose Fight as usual. The Easy, Normal and Hard presets and the Tweak screen work for the Hound too. Everything else (controls, summary, stats) is the same.
+
+### What to expect
+The Hound has four attacks. It has no gold attack, so there is no counter against it: every attack is dodged or avoided. It attacks from a shorter distance than the Duelist, and now and then it does two attacks in a row.
+- **Bite** (arm out to the side, red glow): a short snap in front of it. The warning is short (a bit over a third of a second), and it is the tight one: a dash has to be started inside a window of only about a tenth of a second, and a jump gives about twice that. Jumping over it or stepping back out of reach also works.
+- **Rush** (arm pulled back, red glow): it runs straight at you very fast, from farther away, and hurts along the whole run. You cannot outrun it. Dash through it.
+- **Slip** (arm pulled back too, red glow): it looks like the rush, but it starts from closer and its warning is shorter. It runs at you and past you, and **it never hurts by itself**. Nothing to dodge; it only puts the Hound behind you, so turn around. (Dashing for no reason is just a waste of your dash.)
+- **Pounce** (it crouches: the body goes lower, the arm hangs low in front, red glow): after the crouch it jumps in a high arc and lands where **you were standing when it took off**. At the moment it leaves the floor, a **red bar** appears on the floor. The bar shows where the landing shockwave will be and on which side: it starts at the landing spot and runs away from where the Hound jumped from (on the side it is facing). The bar does not move once the Hound is in the air, so if you leave the bar's area you are safe. When the Hound lands, the bar is replaced by a low red shockwave along the floor for a moment. It hurts if you are **on the ground** inside the bar. It does not hurt if you jump over it or stand outside it.
+  While it is high in the air your swing cannot reach it, so do not attack then. After it lands it can be hit again, and its recovery after the pounce is a good moment to hit it.
+
+A soft shadow on the floor shows where the Hound is while it is in the air.
+
+### Checklist
+- [ ] The Boss row switches between the Ember Duelist and the Ashen Hound with left and right, and the menu remembers the choice after closing and reopening the app.
+- [ ] The Duelist still plays exactly as before: the same feel, and about the same numbers on the summary for a similar fight.
+- [ ] Before a pounce the Hound crouches (it gets lower), and you can see it coming.
+- [ ] When the Hound leaves the floor, a red bar appears on the floor where it will land, on one side of the landing spot (the side the Hound faces).
+- [ ] The red bar does not move while the Hound is in the air (even if you run around).
+- [ ] The landing shockwave hurts you if you are on the ground inside the bar, and does not hurt if you jump over it or stand outside it.
+- [ ] Your swing does not hurt the Hound while it is high in the air, but it does after it lands.
+- [ ] The slip never hurts by itself, however you stand.
+- [ ] The rush hurts if you stand in its way and is dodged with a dash.
+- [ ] The bite gives very little time to dash (about a tenth of a second) and a jump gives about twice that. Note which answer you use and how often it works.
+- [ ] Stats for Hound fights save (the summary's last line counts them), export and show up in the Stats screen like the Duelist's. When you send the exported file I replay every fight from it, to check that the Hound fights replay exactly.
+- [ ] After a few tries, you know what to do against each of the four attacks.
+
+### Questions about the Hound
+- Is the bite too tight? Could you dash it, or only guess?
+- Is the red bar readable enough? Can you tell where it will land and which side is dangerous?
+- Is the pounce fair: is there enough time to react between the bar appearing and the landing (about a third of a second)?
+- Can you tell a rush from a slip? Do you find yourself dashing at slips?
+- Do you know what to do against each attack after two or three tries?
+- Is the Hound too easy or too hard on Normal?
+- Did anything look wrong while it was in the air (the jump, the shadow, the bar, the body)?
 
 ## Stats and export (M3b)
 ### What is recorded

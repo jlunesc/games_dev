@@ -1,6 +1,6 @@
 # Backlog: ideas for later
 
-Ideas from the owner, not decided and not scheduled. Nothing here is in `docs/SPEC.md` yet; when one is picked up, it goes through the normal design conversation and then into the spec with a status tag.
+Ideas from the owner, not decided and not scheduled. Nothing here is in `docs/SPEC.md` yet, except the study phase, which the spec mentions as a planned step (M5b); when one is picked up, it goes through the normal design conversation and then into the spec with a status tag.
 
 ## Playable character types (raised 2026-09-20)
 Choose a character type by its moves, in the style of games such as Hollow Knight or Blasphemous, so the trainer matches the game being practiced for. Different types would change the player's moves and feel (for example a faster, lighter fighter versus a slower, heavier one with longer reach).
@@ -27,3 +27,21 @@ Export reads every saved fight at once; fine for hundreds, would matter for thou
 Written down only; nothing changed yet.
 - **"Custom (from Normal)" shows in the Difficulty row when the menu first opens.** The owner expected plain "Normal" at the start. Possible cause, not yet checked: the phone still holds tweaked values saved during earlier testing (choices are remembered on the device), or a stored value is slightly off the preset. To investigate: does a fresh install show "Normal"?
 - **The menu screens have no Back button on screen.** Tweak difficulty, Settings, Stats (and the summary) can only be left with the controller's top button, so touch-only use cannot go back. A "Back" row or button on each of those screens would fix it (the Stats screen already has a Back row; check the others).
+
+## Study phase, then the real fight (raised 2026-09-21, planned as M5b)
+The owner's idea, recorded as direction (details **DELEGATED**). Before the real fight there can be a **learning phase without damage**, so the player first sees what the boss can do and then fights it for real. It fits the purpose of the trainer (transferable skills, `docs/SPEC.md` section 1): the player learns to read each skill of the boss, not one fixed pattern.
+
+Design options discussed, none decided:
+- The boss **demonstrates each of its skills once, in random order, with damage off** (the random order comes from the seeded generator, so a fight stays replayable).
+- Then a clear **"the fight begins" moment**, so the player knows the damage is on.
+- The **length is a setting**: none, short or long.
+- The stats can **compare the study phase and the real fight** (for example reaction times in the study phase against the real fight). This would need a stats design pass: the study phase would have to be marked in each fight's record, which probably means a new stats schema version (`docs/stats.md`).
+
+Order of the next steps after M5a, **OPEN** (Claude's suggestion, not yet decided by the owner): the study phase, then the arena features and a visual pass together, then the generator.
+
+## Nicer visuals within the geometric style (raised 2026-09-21)
+The owner wants nicer visuals, **within the locked geometric style** (`docs/SPEC.md` section 8): not necessarily new assets, but a better-looking result from shapes, color, glow and motion. Planned together with the arena features, after the study phase (order OPEN, see above).
+
+Notes for the design:
+- Art is kept separate from fight logic (SPEC section 8) and everything drawn lives in `src/ui/render.ts`, so a visual pass should not change how a fight plays; the Ember Duelist golden test (`tests/duelist-golden.test.ts`) would show it if it did.
+- The readability of telegraphs (pose, glow, the landing bar of a leap) comes first; anything decorative must not hide them. The owner's play test of the Ashen Hound will say whether the red landing bar is readable enough.

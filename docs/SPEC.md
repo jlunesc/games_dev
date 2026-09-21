@@ -14,6 +14,7 @@ Working title. Source of truth for the project. Written from a design conversati
 
 A repository of simple 2D games that help the owner improve at boss fights in games such as Hollow Knight and Grime (metroidvanias). The skills to train are learning attack patterns, reading telegraphs, dodging, spacing and punishing at the right moment.
 
+- **LOCKED** (owner, 2026-09-21): **the purpose is transferable skills.** The point of the trainer is to build skills that carry over to *other* games (reading telegraphs, spacing, dodge timing, punishing), not to learn this game's own patterns. This is why the bosses are random, fair and built from skills (M5), and why stats should be read **per attack type and skill** rather than per named boss. **DELEGATED**: the details of how the analysis groups attacks by skill are left to Claude and are still to be designed.
 - The game must be **fun to play as a real game**, not feel like a lab tool.
 - The owner plays on a **Samsung Galaxy S21** with a **Bluetooth 8BitDo controller**.
 - Development and testing happen on a **PC first**, then the game is used on the phone.
@@ -71,7 +72,7 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 
 **Design principle**: bosses are designed the way bosses work in real games, taking inspiration from Hollow Knight, Metroid, Ori and Grime. **Inspiration only, never copying**: original names, art and attack patterns. The battery of bosses grows over time. Each boss has one flat list of tunable parameters.
 
-**Tunable parameters** (grows as we test): attack speed, attack frequency, wind-up duration, recovery time, gap between attacks, combo length, predictability (fixed vs random order), boss HP ("tankiness"), number of phases and their HP thresholds.
+**Tunable parameters** (grows as we test): attack speed, attack frequency, wind-up duration, recovery time, gap between attacks, combo length, predictability (fixed vs random order), boss HP ("tankiness"), number of phases and their HP thresholds, and (from M5a) the movement skills: dash speed and direction, leap height, flight length and where it lands.
 
 **Archetypes to draw from**: melee duelist, heavy bruiser, zoner, summoner, trickster.
 
@@ -104,6 +105,10 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 3. **Moulter**: trains adapting.
    - Three forms, each needing a different response: counter it, dash through it, then keep moving through bomb patterns.
    - Knobs: HP per form, speed, pattern density.
+4. **Ashen Hound**: a low, fast beast that dashes and leaps; trains reading a movement and stepping out of the way of a landing. **Built in M5a as a sample to try the new movement skills on (DEFAULT: proposed by Claude, the owner has not approved it yet; awaiting the owner's play test).** Original design. Design in `docs/superpowers/specs/2026-09-21-m5a-boss-movement-design.md`, format in `docs/bosses.md`, file `src/bosses/ashen-hound.json`.
+   - About 24 health, one phase, no counter window (all four attacks are red must-dodge).
+   - **Bite**: a short snap with a short warning (the tight one: about a tenth of a second to dash, twice that to jump). **Rush**: a fast run straight at the player, dashed through. **Slip**: the same pose as the rush, a run through and past the player that never hurts (a look-alike that trains not overreacting, and repositions the boss). **Pounce**: it crouches, leaps to where the player stood at take-off and lands with a low one-sided shockwave; a red bar on the floor shows where and on which side while it is in the air, and its body is out of reach of the player's swing while it is high.
+   - Every number is a first guess, to be tuned from the play test. It is not the reference boss: the Ember Duelist stays the fixed reference for statistics (its behavior is pinned by `tests/duelist-golden.test.ts`).
 
 ## 8. Feel (v1)
 
@@ -149,7 +154,9 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 - **M2**: boss data format, Ember Duelist (replaces the M1 training dummy), counter mechanic, phase 2, and victory and restart (the summary screen comes in M3). Design in `docs/superpowers/specs/2026-09-20-m2-design.md`; ideas for later are in `docs/backlog.md`.
 - **M3**: menu (boss and difficulty, remembers last choice), summary screen, stats log and export, and the settings screen. Built in two steps: **M3a** the menu, difficulty dials and Tweak screen, summary screen and settings; **M3b** the stats recording, storage and export. Design in `docs/superpowers/specs/2026-09-20-m3-design.md`. M3b is built (recording, storage in IndexedDB and export as JSON; design in `docs/superpowers/specs/2026-09-20-m3b-design.md`, format in `docs/stats.md`); it still needs the play test on the phone (`docs/phone-testing.md`).
 - **M4** (reshaped by the owner, 2026-09-21): the owner plays a couple of fights on the phone and sends the exported report; Claude checks that it is consistent with what was expected (replays match, numbers add up). **No game tuning in M4.**
-- **M5** (new direction, owner 2026-09-21, details **DELEGATED**), in this order: (1) **boss skills**: movement skills for bosses (jumping, dashing and similar) and, after them, **arena features** (places to stand, and cover that protects from attacks); (2) **generated bosses**: instead of only hand-named bosses, bosses built at random from a set of skills by a seeded generator, each checked for fairness by simulated players before it is offered; the Ember Duelist stays as the fixed reference boss so statistics have something stable to compare with; (3) the security test. The APK decision is dropped (section 3).
+- **M5** (new direction, owner 2026-09-21, details **DELEGATED**), in this order: (1) **boss skills**: movement skills for bosses (jumping, dashing and similar) and, after them, **arena features** (places to stand, and cover that protects from attacks). **M5a** (the owner chose leap and dash as the first two movement skills; teleport later) is **built and awaiting the owner's play test** on the phone: the boss format can describe leaps, dashes in either direction and attacks that only reposition, and the Ashen Hound (section 7) is the sample that uses them (design in `docs/superpowers/specs/2026-09-21-m5a-boss-movement-design.md`, checklist in `docs/phone-testing.md`); (2) **generated bosses**: instead of only hand-named bosses, bosses built at random from a set of skills by a seeded generator, each checked for fairness by simulated players before it is offered; the Ember Duelist stays as the fixed reference boss so statistics have something stable to compare with; (3) the security test. The APK decision is dropped (section 3).
+  - **M5b study phase** (planned; the owner's idea of 2026-09-21, details **DELEGATED**): before the real fight there can be a **learning phase without damage**, so the player sees what the boss can do. The design options discussed: the boss demonstrates each of its skills once, in random order, with damage off, then a clear "the fight begins" moment; the length of the study phase as a setting (none, short, long); the stats can then compare the study phase and the real fight. Not built; recorded in `docs/backlog.md`.
+  - **Order of what comes after M5a: OPEN.** Suggested by Claude, not yet decided by the owner: the study phase (M5b), then the arena features and a **visual pass** together (the owner wants nicer visuals within the locked geometric style, section 8, not necessarily new assets), then the generator.
 
 ## 12. Open points
 
