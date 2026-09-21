@@ -86,7 +86,10 @@ export function bossLook(b: BossState, boss: BossDef): BossLook {
 export interface LandingRing {
   /** The landing x. */
   x: number;
-  /** The nearest and farthest reach of the shockwave from the landing x, towards the way the boss faces. */
+  /**
+   * The nearest and farthest reach of the shockwave from the landing x, towards the way the boss faces. For a
+   * harmless landing they are `-width / 2` and `width / 2`: a marker centred on the landing spot.
+   */
   x0: number;
   x1: number;
   facing: 1 | -1;
@@ -104,7 +107,8 @@ export function landingRing(b: BossState, boss: BossDef): LandingRing | null {
   if (b.leapToX === null) return null;
   const attack = b.attackId === null ? undefined : boss.attacks.find((a) => a.id === b.attackId);
   if (attack === undefined || attack.hits.length === 0) {
-    return { x: b.leapToX, x0: 0, x1: boss.width / 2, facing: b.facing, harmless: true };
+    // Harmless: a marker centred on the landing spot and as wide as the boss.
+    return { x: b.leapToX, x0: -boss.width / 2, x1: boss.width / 2, facing: b.facing, harmless: true };
   }
   return {
     x: b.leapToX,
@@ -115,8 +119,12 @@ export function landingRing(b: BossState, boss: BossDef): LandingRing | null {
   };
 }
 
-/** The floor span `[left, right]` a landing ring covers: one-sided, towards the way the boss faces. */
+/**
+ * The floor span `[left, right]` a landing ring covers: one-sided, towards the way the boss faces, for a dangerous
+ * landing; centred on the landing spot for a harmless one.
+ */
 export function landingSpan(ring: LandingRing): { left: number; right: number } {
+  if (ring.harmless) return { left: ring.x + ring.x0, right: ring.x + ring.x1 };
   return ring.facing === 1
     ? { left: ring.x + ring.x0, right: ring.x + ring.x1 }
     : { left: ring.x - ring.x1, right: ring.x - ring.x0 };
@@ -136,6 +144,19 @@ const COLORS = {
   hud: '#e8e8f0',
   hudBack: '#3a3a4a',
 };
+
+/**
+ * The boss body's vertical extent. A boss crouching to spring (a crouch-pose attack still winding up on the floor)
+ * is 25% shorter; otherwise it is drawn `lift` units above the floor.
+ */
+export function bossDrawBox(b: BossState, boss: BossDef): { top: number; height: number; crouching: boolean } {
+  const attack =
+    b.mode === 'attack' && b.attackId !== null ? boss.attacks.find((a) => a.id === b.attackId) : undefined;
+  const crouching =
+    attack !== undefined && attack.pose === 'crouch' && b.lift === 0 && b.attackTick < attack.windup;
+  const height = crouching ? boss.height * 0.75 : boss.height;
+  return { top: WORLD.floorY - height - b.lift, height, crouching };
+}
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
@@ -180,12 +201,8 @@ function drawBoss(
     ctx.globalAlpha = 1;
   }
 
-  // Crouching to spring: 25% shorter while winding up on the floor. Otherwise the boss is drawn `lift` units above it.
-  const crouching =
-    attack !== undefined && attack.pose === 'crouch' && b.lift === 0 && b.attackTick < attack.windup;
-  const height = crouching ? boss.height * 0.75 : boss.height;
+  const { top, height } = bossDrawBox(b, boss);
   const left = b.x - boss.width / 2;
-  const top = WORLD.floorY - height - b.lift;
 
   ctx.fillStyle = feedback.bossFlashTicks > 0 ? COLORS.flash : look.body;
   ctx.fillRect(left, top, boss.width, height);
@@ -299,6 +316,12 @@ export function drawFrame(
     view.offsetX + shake * view.scale,
     view.offsetY + shake * 0.5 * view.scale,
   );
+  // Everything in the arena is clipped to the world (8 units past each edge, what the shake draws), so nothing
+  // paints over the black bars on a wide screen.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-8, -8, WORLD.width + 16, WORLD.height + 16);
+  ctx.clip();
   ctx.fillStyle = COLORS.arena;
   // Drawn 8 units past every edge so the shake never shows the black bars.
   ctx.fillRect(-8, -8, WORLD.width + 16, WORLD.height + 16);
@@ -318,4 +341,5 @@ export function drawFrame(
     ctx.textBaseline = 'middle';
     ctx.fillText(state.phase === 'victory' ? 'Victory' : 'Defeated', WORLD.width / 2, WORLD.height / 2);
   }
+  ctx.restore();
 }

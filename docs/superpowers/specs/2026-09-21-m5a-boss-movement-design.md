@@ -3,7 +3,7 @@
 First step of M5 (direction set by the owner on 2026-09-21, see `docs/SPEC.md` section 11): boss **skills**, then arena features, then generated bosses. The owner chose **Leap and Dash** as the first movement skills (Teleport later). Everything below is **DELEGATED** detail, except the new test boss, which needs the owner's approval (it is not in the spec).
 
 ## What the player sees
-- **Leap:** the boss crouches (the warning), then jumps in an arc and lands with a low shockwave. A bar on the floor marks where it will land from the moment it takes off, so the player can read it: it shows the side and reach of the shockwave, one-sided like the real hit (a landing that hurts nobody gets only a small dim marker). The player avoids it by getting out from under it, or by jumping over the shockwave. While the boss is high in the air the player's swing cannot reach it.
+- **Leap:** the boss crouches (the warning), then jumps in an arc and lands with a low shockwave. A bar on the floor marks where it will land from the moment it takes off, so the player can read it: it shows the side and reach of the shockwave, one-sided like the real hit (a landing that hurts nobody gets only a small dim marker, centred on the landing spot). The player avoids it by getting out from under it, or by jumping over the shockwave. While the boss is high in the air the player's swing cannot reach it.
 - **Dash:** a fast slide across the floor after a warning. Two uses: a damaging dash (the Duelist's lunge already is one) and a **reposition dash** that hurts nobody: the boss slides toward, away from, or past the player to change the distance, and can chain into an attack.
 
 ## Data format (`docs/bosses.md` and `src/bosses/schema.ts` change)
