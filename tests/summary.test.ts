@@ -132,6 +132,7 @@ describe('a fight with a study', () => {
     expect(summary.ticks).toBe(s.tick);
     expect(summary.studySeconds).toBe(endTick / 60);
     expect(summary.seconds).toBe((s.tick - endTick) / 60);
+    expect(summary.studyActive).toBe(false);
   });
 
   it('does not count a study hit as a hit taken', () => {
@@ -161,11 +162,27 @@ describe('a fight with a study', () => {
     const summary = summarize(tracker, s, DUELIST, 'left');
     expect(summary.seconds).toBe(0);
     expect(summary.studySeconds).toBe(1.5);
+    expect(summary.studyActive).toBe(true);
+  });
+
+  it('is no longer active on the very update the study ends', () => {
+    let s = study();
+    let tracker = createTracker();
+    while (!s.events.includes('studyEnd')) {
+      const next = step(s, NO_INPUT, DUELIST);
+      tracker = trackUpdate(tracker, next, s);
+      s = next;
+    }
+    const summary = summarize(tracker, s, DUELIST, 'left');
+    expect(summary.studyActive).toBe(false);
+    expect(summary.seconds).toBe(0);
+    expect(summary.studySeconds).toBe(s.tick / 60);
   });
 
   it('with no study, the study time is zero and the time is all the fight', () => {
     const summary = summarize(createTracker(), createInitialState(DUELIST), DUELIST, 'left');
     expect(summary.studySeconds).toBe(0);
+    expect(summary.studyActive).toBe(false);
     expect(summary.seconds).toBe(0);
     const later = { ...createInitialState(DUELIST), tick: 120 };
     expect(summarize(createTracker(), later, DUELIST, 'left')).toMatchObject({ seconds: 2, studySeconds: 0 });

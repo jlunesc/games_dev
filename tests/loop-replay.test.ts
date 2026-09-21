@@ -81,6 +81,8 @@ interface Played {
   framesWithoutUpdate: number;
   mostUpdatesInAFrame: number;
   updatesSkippedByHitStop: number;
+  /** What the emulated loop saw of the study on the recorded updates, counted from the live states. */
+  live: { studyHits: number; studyEnds: number; studyUpdates: number; studyAttackStarts: number };
 }
 
 function playLikeTheApp(options: PlayOptions): Played {
@@ -102,6 +104,7 @@ function playLikeTheApp(options: PlayOptions): Played {
   let updatesSkippedByHitStop = 0;
   let frames = 0;
   let shown = false;
+  const live = { studyHits: 0, studyEnds: 0, studyUpdates: 0, studyAttackStarts: 0 };
 
   const maxFrames = options.maxFrames ?? 6000;
   for (let f = 1; f <= maxFrames && !shown; f++) {
@@ -125,6 +128,15 @@ function playLikeTheApp(options: PlayOptions): Played {
       const frameInput = applyPresses(input, pending);
       state = step(state, frameInput, boss);
       pending = NO_PRESSES;
+      // Only the recorded updates count: the ones up to and including the ending update, not the end pause.
+      if (flow.ended === null) {
+        if (before.study.active) live.studyUpdates += 1;
+        live.studyHits += state.events.filter((e) => e === 'studyHit').length;
+        live.studyEnds += state.events.filter((e) => e === 'studyEnd').length;
+        if (state.study.active && state.events.some((e) => e === 'bossWindupGold' || e === 'bossWindupRed')) {
+          live.studyAttackStarts += 1;
+        }
+      }
       const advanced = advanceFlow(flow, before, state, boss, frameInput);
       flow = advanced.flow;
       if (advanced.finished !== null) {
@@ -164,6 +176,7 @@ function playLikeTheApp(options: PlayOptions): Played {
     framesWithoutUpdate,
     mostUpdatesInAFrame,
     updatesSkippedByHitStop,
+    live,
   };
 }
 
@@ -182,10 +195,18 @@ function expectFaithful(played: Played): void {
   expect(analysis.phaseReached).toBe(summary.phaseReached);
   expect(analysis.attacks.filter((a) => !a.study && a.outcome === 'hit').length).toBe(summary.hitsTaken);
   expect(summary.result).toBe(record.result);
-  // The study block is always there, and agrees with the record.
-  expect(analysis.study.rounds).toBe(record.study);
-  expect(analysis.attacks.filter((a) => a.study).length).toBe(analysis.study.attacks);
-  expect(analysis.hitsTaken).toBe(summary.hitsTaken);
+  // The study block against what the loop itself saw on the live states.
+  const { live } = played;
+  expect(analysis.study.hits).toBe(live.studyHits);
+  expect(analysis.study.ticks).toBe(live.studyUpdates);
+  expect(analysis.study.attacks).toBe(live.studyAttackStarts);
+  expect(analysis.attacks.filter((a) => a.study).length).toBe(live.studyAttackStarts);
+  expect(live.studyEnds).toBe(record.study > 0 && !finalState.study.active ? 1 : 0);
+  // The fight time leaves the study out, like the summary's.
+  expect(analysis.fightSeconds).toBe(summary.seconds);
+  expect(analysis.behavior.studyUpdatesClose + analysis.behavior.studyUpdatesMid + analysis.behavior.studyUpdatesFar).toBe(
+    live.studyUpdates,
+  );
 }
 
 const CASES: Array<{ name: string; presetId: PresetId; dials: Dials }> = [

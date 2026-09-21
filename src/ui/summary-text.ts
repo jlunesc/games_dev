@@ -18,7 +18,7 @@ const TITLES = {
 export function summaryLines(summary: FightSummary): { title: string; lines: string[] } {
   const worst = summary.mostDangerousAttack;
   // The fight was left while the boss was still demonstrating: no fight time has passed yet.
-  const leftInStudy = summary.result === 'left' && summary.seconds === 0 && summary.studySeconds > 0;
+  const leftInStudy = summary.result === 'left' && summary.studyActive;
   return {
     title: TITLES[summary.result],
     lines: [

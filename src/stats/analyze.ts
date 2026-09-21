@@ -67,13 +67,16 @@ export interface StudyAnalysis {
   ticks: number;
   /** Demonstrations shown (occurrences flagged `study`). */
   attacks: number;
-  /** Demonstrations that reached the player (`studyHit` events); they take no health. */
+  /** `studyHit` events (a demonstration that reached the player; it takes no health). One demonstration normally produces at most one. */
   hits: number;
 }
 
 export interface Analysis {
   ticks: number;
+  /** The whole session, the study included. */
   seconds: number;
+  /** The fight itself without the study, the same rule as `FightSummary.seconds`: `(ticks - study ticks) / 60`. */
+  fightSeconds: number;
   phaseReached: number;
   phaseCount: number;
   bossHpLeft: number;
@@ -97,6 +100,10 @@ export interface Analysis {
     updatesClose: number;
     updatesMid: number;
     updatesFar: number;
+    /** How many of the updates above happened while the study was on (they add up to `study.ticks`); subtract for the real fight. */
+    studyUpdatesClose: number;
+    studyUpdatesMid: number;
+    studyUpdatesFar: number;
     positionEvery: number;
     /** The player's x every `positionEvery` updates, rounded. */
     positions: number[];
@@ -206,6 +213,9 @@ export function analyzeRun(
   let close = 0;
   let mid = 0;
   let far = 0;
+  let studyClose = 0;
+  let studyMid = 0;
+  let studyFar = 0;
   let maxPhase = state.boss.phase;
   let open: OpenAttack | null = null;
 
@@ -292,9 +302,18 @@ export function analyzeRun(
     if (after.study.active) studyUpdates += 1;
     maxPhase = Math.max(maxPhase, after.boss.phase);
     const distance = Math.abs(after.player.x - after.boss.x);
-    if (distance < CLOSE_BELOW) close += 1;
-    else if (distance <= MID_UP_TO) mid += 1;
-    else far += 1;
+    // An update belongs to the study when it ran while the study was on (the study's last update included).
+    const inStudy = before.study.active;
+    if (distance < CLOSE_BELOW) {
+      close += 1;
+      if (inStudy) studyClose += 1;
+    } else if (distance <= MID_UP_TO) {
+      mid += 1;
+      if (inStudy) studyMid += 1;
+    } else {
+      far += 1;
+      if (inStudy) studyFar += 1;
+    }
     if (tick % POSITION_EVERY === 0) positions.push(Math.round(after.player.x));
 
     if (open !== null) observe(open, before, after, frame);
@@ -342,9 +361,11 @@ export function analyzeRun(
   }
   if (open !== null) finish(open, true);
 
+  const studyTicks = state.study.active ? studyUpdates : state.study.endTick;
   return {
     ticks: state.tick,
     seconds: state.tick / TICK_RATE,
+    fightSeconds: (state.tick - studyTicks) / TICK_RATE,
     phaseReached: maxPhase + 1,
     phaseCount: boss.phases.length,
     bossHpLeft: state.boss.hp,
@@ -363,7 +384,7 @@ export function analyzeRun(
     attacks,
     study: {
       rounds: studyRounds,
-      ticks: state.study.active ? studyUpdates : state.study.endTick,
+      ticks: studyTicks,
       attacks: attacks.filter((x) => x.study).length,
       hits: studyHits,
     },
@@ -371,6 +392,9 @@ export function analyzeRun(
       updatesClose: close,
       updatesMid: mid,
       updatesFar: far,
+      studyUpdatesClose: studyClose,
+      studyUpdatesMid: studyMid,
+      studyUpdatesFar: studyFar,
       positionEvery: POSITION_EVERY,
       positions,
       punish,

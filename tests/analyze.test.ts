@@ -614,6 +614,10 @@ describe('the study', () => {
     expect(a.playerHitTicks.length).toBe(a.hitsTaken);
     expect(a.playerHitTicks.every((t) => t > endTick)).toBe(true);
     expect(a.damageTaken).toBe(real.reduce((sum, x) => sum + x.damageTaken, 0));
+    // The time of the fight itself leaves the study out, like the summary; `seconds` is the whole session.
+    expect(a.fightSeconds).toBe(summary.seconds);
+    expect(a.fightSeconds).toBe((a.ticks - endTick) / 60);
+    expect(a.seconds).toBe(a.ticks / 60);
     expect(a.attacks.filter((x) => x.outcome === 'hit').length).toBe(a.hitsTaken + studyOnes.filter((x) => x.outcome === 'hit').length);
   });
 
@@ -689,6 +693,47 @@ describe('the study', () => {
     expect(a.swings).toBeGreaterThanOrEqual(Math.floor(endTick / 20));
     expect(a.dashes).toBeGreaterThanOrEqual(Math.floor(endTick / 50));
     expect(a.study.hits).toBe(studyEvents(states, 'studyHit'));
+  });
+
+  it('splits the distance bands: study bands plus real bands add up to the whole session', () => {
+    const inputFor = (n: number): InputFrame => withInput({ moveX: n % 300 < 150 ? 1 : -1 });
+    const { initial, inputs } = play(3, 1, inputFor, 900);
+    const a = analyzeRun(boss, initial, inputs, 1);
+    const b = a.behavior;
+    // The study updates are exactly the study's length, and each band's study share is part of its whole-session count.
+    expect(b.studyUpdatesClose + b.studyUpdatesMid + b.studyUpdatesFar).toBe(a.study.ticks);
+    expect(b.studyUpdatesClose).toBeLessThanOrEqual(b.updatesClose);
+    expect(b.studyUpdatesMid).toBeLessThanOrEqual(b.updatesMid);
+    expect(b.studyUpdatesFar).toBeLessThanOrEqual(b.updatesFar);
+    const realClose = b.updatesClose - b.studyUpdatesClose;
+    const realMid = b.updatesMid - b.studyUpdatesMid;
+    const realFar = b.updatesFar - b.studyUpdatesFar;
+    expect(realClose + realMid + realFar).toBe(a.ticks - a.study.ticks);
+    // The whole-session bands are unchanged and still add up to the ticks.
+    expect(b.updatesClose + b.updatesMid + b.updatesFar).toBe(a.ticks);
+    // The moving player really used more than one band during the study.
+    expect([b.studyUpdatesClose, b.studyUpdatesMid, b.studyUpdatesFar].filter((n) => n > 0).length).toBeGreaterThan(1);
+  });
+
+  it('a study 0 fight has zero study bands and the fight time is the whole session', () => {
+    const { initial, inputs, summary } = play(3, 0, standing, 600);
+    const a = analyzeRun(boss, initial, inputs);
+    expect(a.behavior.studyUpdatesClose).toBe(0);
+    expect(a.behavior.studyUpdatesMid).toBe(0);
+    expect(a.behavior.studyUpdatesFar).toBe(0);
+    expect(a.fightSeconds).toBe(a.seconds);
+    expect(a.fightSeconds).toBe(summary.seconds);
+  });
+
+  it('a run that ends during the study has no fight time and all bands in the study', () => {
+    const { initial, inputs, summary } = play(3, 2, standing, 100);
+    const a = analyzeRun(boss, initial, inputs, 2);
+    expect(a.fightSeconds).toBe(0);
+    expect(a.fightSeconds).toBe(summary.seconds);
+    const b = a.behavior;
+    expect(b.studyUpdatesClose).toBe(b.updatesClose);
+    expect(b.studyUpdatesMid).toBe(b.updatesMid);
+    expect(b.studyUpdatesFar).toBe(b.updatesFar);
   });
 
   it('analyzeFight uses the recorded study, and a record without it (version 1) analyses as study 0', () => {

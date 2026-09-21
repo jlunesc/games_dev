@@ -48,6 +48,8 @@ export interface FightSummary {
   seconds: number;
   /** Time the study took (the time played so far if it is still on); 0 when there was none. */
   studySeconds: number;
+  /** True when the study was still on at this state (a fight left during the study). */
+  studyActive: boolean;
   phaseReached: number;
   phaseCount: number;
   hitsTaken: number;
@@ -75,6 +77,7 @@ export function summarize(
     ticks: state.tick,
     seconds: (state.tick - studyTicks) / TICK_RATE,
     studySeconds: studyTicks / TICK_RATE,
+    studyActive: state.study.active,
     phaseReached: tracker.phaseReached,
     phaseCount: boss.phases.length,
     hitsTaken: tracker.hitsTaken,

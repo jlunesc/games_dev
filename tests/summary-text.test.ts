@@ -7,6 +7,7 @@ const base: FightSummary = {
   ticks: 4344,
   seconds: 72.4,
   studySeconds: 0,
+  studyActive: false,
   phaseReached: 2,
   phaseCount: 2,
   hitsTaken: 3,
@@ -68,6 +69,7 @@ describe('summaryLines', () => {
       result: 'left',
       seconds: 0,
       studySeconds: 12.5,
+      studyActive: true,
       phaseReached: 1,
       hitsTaken: 0,
       bossHpLeft: 30,
@@ -88,6 +90,10 @@ describe('summaryLines', () => {
 
   it('does not say it for a fight left after the study, or for a fight that ended', () => {
     expect(summaryLines({ ...base, result: 'left', seconds: 40, studySeconds: 12 }).lines[0]).toBe('Time: 0:40');
+    // Leaving on the very update the study ended: no fight time yet, but the study is over.
+    const onEnd = summaryLines({ ...base, result: 'left', seconds: 0, studySeconds: 12, studyActive: false });
+    expect(onEnd.lines).not.toContain('You left during the study.');
+    expect(onEnd.lines[0]).toBe('Time: 0:00');
     expect(summaryLines({ ...base, studySeconds: 12 }).lines).not.toContain('You left during the study.');
   });
 });
