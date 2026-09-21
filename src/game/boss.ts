@@ -41,6 +41,15 @@ function enterGap(b: BossState): void {
   b.chainLeft = 0;
 }
 
+/** The study is over: the fight proper starts clean, with no leftover untouchability from a demonstration. */
+function endStudy(s: GameState): void {
+  s.study.active = false;
+  s.study.queue = [];
+  s.study.endTick = s.tick;
+  s.player.invulnerableTicks = 0;
+  s.events.push('studyEnd');
+}
+
 function faceTarget(b: BossState, targetX: number): void {
   b.facing = targetX < b.x ? -1 : 1;
 }
@@ -120,7 +129,14 @@ function updateGap(s: GameState, boss: BossDef, phase: PhaseDef): void {
   }
   if (b.modeTick >= phase.gap) {
     // During the study the attacks come from the planned queue: no random draws, no chains.
-    const id = s.study.active ? (s.study.queue.shift() ?? null) : chooseAttack(s, boss, phase);
+    let id: string | null;
+    if (s.study.active) {
+      id = s.study.queue.shift() ?? null;
+      // Nothing left to show (cannot happen): end the study and let the fight go on as a normal one.
+      if (id === null) endStudy(s);
+    } else {
+      id = chooseAttack(s, boss, phase);
+    }
     if (id !== null) {
       b.pendingAttackId = id;
       b.chainLeft = s.study.active ? 0 : planChain(s, phase);
@@ -161,12 +177,7 @@ function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   // Defensive: a leap that did not reach its `to` before the attack ended must not leave the boss floating.
   landBoss(b);
   if (s.study.active) {
-    b.chainLeft = 0;
-    if (s.study.queue.length === 0) {
-      s.study.active = false;
-      s.study.endTick = s.tick;
-      s.events.push('studyEnd');
-    }
+    if (s.study.queue.length === 0) endStudy(s);
     enterGap(b);
     return;
   }

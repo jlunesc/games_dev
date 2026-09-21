@@ -123,9 +123,7 @@ function planStudy(boss: BossDef, rng: number, rounds: number): { queue: string[
       const next = nextRandom(state);
       state = next.state;
       const j = Math.floor(next.value * (i + 1));
-      const kept = order[i] as string;
-      order[i] = order[j] as string;
-      order[j] = kept;
+      [order[i], order[j]] = [order[j]!, order[i]!];
     }
     queue.push(...order);
   }
@@ -134,7 +132,8 @@ function planStudy(boss: BossDef, rng: number, rounds: number): { queue: string[
 
 export function createInitialState(boss: BossDef, seed = 1, studyRounds = 0): GameState {
   const start = seed >>> 0;
-  const study = studyRounds > 0 ? planStudy(boss, start, studyRounds) : { queue: [], rng: start };
+  const rounds = Math.floor(Math.max(0, studyRounds));
+  const study = rounds > 0 ? planStudy(boss, start, rounds) : { queue: [], rng: start };
   return {
     tick: 0,
     phase: 'fight',

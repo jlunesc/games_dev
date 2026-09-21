@@ -121,9 +121,9 @@ export function hurtPlayer(s: GameState, amount: number): void {
  * A swing that starts inside the counter window of a counterable attack, close enough, staggers the boss
  * and cancels the attack. It runs before the hits are resolved, so the cancelled attack cannot hurt.
  */
-function tryCounter(s: GameState, boss: BossDef): void {
+function tryCounter(s: GameState, boss: BossDef, studying: boolean): void {
   const { player: p, boss: b } = s;
-  if (s.study.active) return;
+  if (studying) return;
   if (b.mode !== 'attack' || b.attackId === null || p.attackTick !== 0) return;
   const attack = attackById(boss, b.attackId);
   if (attack.class !== 'counterable') return;
@@ -140,9 +140,9 @@ function tryCounter(s: GameState, boss: BossDef): void {
 }
 
 /** The player's swing hurts the boss once per swing. It ends the fight at 0 health and can start the next phase. */
-function resolvePlayerAttack(s: GameState, boss: BossDef): void {
+function resolvePlayerAttack(s: GameState, boss: BossDef, studying: boolean): void {
   const { player: p, boss: b } = s;
-  if (s.study.active || b.mode === 'transition') return;
+  if (studying || b.mode === 'transition') return;
   if (!attackActive(p) || p.attackConnected || !overlaps(attackBox(p), bossBox(b, boss))) return;
   p.attackConnected = true;
   const damage = b.mode === 'stagger' ? boss.counter.damageMultiplier : 1;
@@ -159,12 +159,12 @@ function resolvePlayerAttack(s: GameState, boss: BossDef): void {
 }
 
 /** The boss's active hit boxes hurt a player who is not untouchable, for the damage of the attack that is landing. */
-function resolveBossHits(s: GameState, boss: BossDef): void {
+function resolveBossHits(s: GameState, boss: BossDef, studying: boolean): void {
   const p = s.player;
   if (isInvulnerable(p)) return;
   const box = playerBox(p);
   if (!activeHitBoxes(s.boss, boss).some((hit) => overlaps(hit, box))) return;
-  if (s.study.active) {
+  if (studying) {
     // A demonstration: it reaches the player but hurts nobody. The short untouchability makes it count once.
     p.invulnerableTicks = PLAYER.hitInvulnerability;
     s.events.push('studyHit');
@@ -186,14 +186,18 @@ export function step(prev: GameState, input: InputFrame, boss: BossDef): GameSta
     s.player.prevX = s.player.x;
     s.player.prevY = s.player.y;
     // The next fight gets a new seed derived from this one, so it plays out differently but stays reproducible.
+    // The restarted fight deliberately has no study (it is only offered before the first fight).
     return s.endTicks <= 0 ? createInitialState(boss, nextRandom(s.rng).state) : s;
   }
 
+  // Whether this update is part of the study is fixed now: the update on which the last demonstration finishes
+  // still counts as study (nothing hurts anyone on it), and the real fight starts on the next one.
+  const studying = s.study.active;
   updatePlayer(s.player, input, s.events);
   updateBoss(s, boss);
-  tryCounter(s, boss);
-  resolvePlayerAttack(s, boss);
-  if (s.phase === 'fight') resolveBossHits(s, boss);
+  tryCounter(s, boss, studying);
+  resolvePlayerAttack(s, boss, studying);
+  if (s.phase === 'fight') resolveBossHits(s, boss, studying);
   // The fight is over: a boss that was mid-leap must not hang in the air for the whole end countdown.
   if (s.phase !== 'fight') landBoss(s.boss);
   return s;

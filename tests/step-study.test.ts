@@ -3,11 +3,16 @@ import { ASHEN_HOUND } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { attackById, attackLength } from '../src/game/boss';
+import { applyDials, presetDials } from '../src/game/difficulty';
 import { PLAYER, WORLD } from '../src/game/params';
 import { step } from '../src/game/step';
 import { createInitialState, type GameState } from '../src/game/state';
 import { attackIds, solo, updatesWith, windupUpdates } from './boss-helpers';
 import { DUELIST, withInput } from './helpers';
+
+const isFiniteState = (s: GameState): boolean =>
+  Object.values(s.boss).every((v) => typeof v !== 'number' || Number.isFinite(v)) &&
+  Object.values(s.player).every((v) => typeof v !== 'number' || Number.isFinite(v));
 
 const FIRST_PHASE = ['slam', 'sweep', 'lunge'];
 
@@ -208,7 +213,7 @@ describe('a whole study against a standing player', () => {
   });
 
   it('gives the boss back its normal behaviour afterwards: random attacks that really hurt', () => {
-    let s = end;
+    let s = structuredClone(end);
     s.player.health = 1000;
     const after: GameState[] = [];
     for (let n = 0; n < 600; n++) {
@@ -331,5 +336,117 @@ describe('determinism', () => {
     const direct = continueFrom(mid);
     expect(continueFrom(JSON.parse(JSON.stringify(mid)) as GameState)).toEqual(direct);
     expect(continueFrom(structuredClone(mid))).toEqual(direct);
+  });
+});
+
+describe('the update the study ends on', () => {
+  const boss = solo('slam');
+  const slam = attackById(DUELIST, 'slam');
+  const { startup } = PLAYER.attack;
+  const study = runStudy(studyAt(boss, 120), boss);
+  const E = study.length;
+  const swingAt = (at: number): GameState[] =>
+    runFor(studyAt(boss, 120), E + 20, boss, (n) => withInput({ attackPressed: n === at }));
+
+  it('lets a swing that is active on that very update do nothing', () => {
+    expect(E).toBe(windupUpdates(study)[0]! + attackLength(slam));
+    const states = swingAt(E - startup);
+    const ending = states[E - 1]!;
+    expect(ending.events).toContain('studyEnd');
+    expect(ending.player.attackTick).toBe(startup);
+    expect(ending.events).not.toContain('bossHit');
+    expect(ending.boss.hp).toBe(DUELIST.maxHp);
+    expect(ending.player.attackConnected).toBe(false);
+  });
+
+  it('hurts the boss again from the next update on', () => {
+    const states = swingAt(E + 1 - startup);
+    expect(updatesWith(states, 'bossHit')[0]).toBe(E + 1);
+    expect(states[E]!.boss.hp).toBe(DUELIST.maxHp - 1);
+  });
+
+  it('opens the real fight with a clean slate: the study hits leave no untouchability', () => {
+    // The slam's demonstration reached the player, whose untouchability would otherwise still run at the end.
+    expect(updatesWith(study, 'studyHit')).toHaveLength(1);
+    expect(study[E - 2]!.player.invulnerableTicks).toBeGreaterThan(0);
+    expect(study[E - 1]!.player.invulnerableTicks).toBe(0);
+  });
+});
+
+describe('a whole study of the Ashen Hound', () => {
+  it('ends once, with the boss on the floor and nothing broken, and then fights normally', () => {
+    const start = createInitialState(ASHEN_HOUND, 3, 2);
+    const queue = [...start.study.queue];
+    const states = runStudy(start, ASHEN_HOUND);
+    const end = states[states.length - 1]!;
+    expect(attackIds(states)).toEqual(queue);
+    expect(updatesWith(states, 'studyEnd')).toEqual([states.length]);
+    expect(states.every(isFiniteState)).toBe(true);
+    expect(states.every((s) => s.player.health === PLAYER.maxHealth)).toBe(true);
+    expect(end.boss.lift).toBe(0);
+    expect(end.boss.leapFromX).toBeNull();
+    const after = runFor(end, 600, ASHEN_HOUND);
+    expect(after.every(isFiniteState)).toBe(true);
+    expect(updatesWith(after, 'studyEnd')).toEqual([]);
+    expect(windupUpdates(after).length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('a study with the difficulty dials applied', () => {
+  it('uses the attacks the dialled boss has (Easy Duelist: slam and sweep)', () => {
+    const easy = applyDials(DUELIST, presetDials('easy'));
+    const start = createInitialState(easy, 2, 1);
+    expect(isPermutation(start.study.queue, ['slam', 'sweep'])).toBe(true);
+    const states = runStudy(start, easy);
+    expect(attackIds(states)).toEqual(start.study.queue);
+  });
+});
+
+describe('the random generator during the study', () => {
+  it('is not drawn from at all after the queue is planned', () => {
+    const start = createInitialState(DUELIST, 6, 2);
+    const states = runStudy(start, DUELIST);
+    expect(states.every((s) => s.rng === start.rng)).toBe(true);
+  });
+});
+
+describe('an impossible study with nothing left to show', () => {
+  it('ends the same way and the fight goes on as a normal one', () => {
+    const start = createInitialState(DUELIST, 1, 0);
+    start.study.active = true; // an empty queue, which nothing can produce
+    const states = runFor(start, 400, DUELIST);
+    const ending = updatesWith(states, 'studyEnd');
+    expect(ending).toHaveLength(1);
+    const at = states[ending[0]! - 1]!;
+    expect(at.study.active).toBe(false);
+    expect(at.study.endTick).toBe(at.tick);
+    expect(states[states.length - 1]!.study.active).toBe(false);
+    // Normal choice takes over: the boss does start attacks.
+    expect(windupUpdates(states).length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('the number of study rounds', () => {
+  it('is rounded down', () => {
+    expect(createInitialState(DUELIST, 1, 1.5).study.queue).toHaveLength(3);
+  });
+
+  it('is never negative: no study and no random draw', () => {
+    const s = createInitialState(DUELIST, 8, -1);
+    expect(s.study).toEqual({ active: false, queue: [], endTick: 0 });
+    expect(s.rng).toBe(8);
+  });
+});
+
+describe('a new fight after the end of a real one', () => {
+  it('starts without a study', () => {
+    const start = createInitialState(DUELIST, 4, 1);
+    let s = runStudy(start, DUELIST).at(-1)!;
+    s = structuredClone(s);
+    s.phase = 'defeated';
+    s.endTicks = 1;
+    const fresh = step(s, NO_INPUT, DUELIST);
+    expect(fresh.tick).toBe(0);
+    expect(fresh.study).toEqual({ active: false, queue: [], endTick: 0 });
   });
 });
