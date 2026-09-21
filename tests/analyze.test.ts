@@ -930,12 +930,65 @@ describe('evasion by platform and cover', () => {
     expect(a.dashes).toBe(1);
   });
 
-  it('a flat arena never produces platform or cover', () => {
-    const { a } = scenario(sweepBoss, 200, 0);
-    expect(a.attacks[0]!.evasion).toBe(null);
+  it('a player on a platform higher than the sweep AND behind a shorter cover: the evasion is the platform, not distance', () => {
+    // Platform x 690 to 790 (130 high), cover x 810 to 850 (120 high): the cut sweep only reaches x 850 to 960.
+    const both: BossDef = {
+      ...sweepBoss,
+      arena: { platforms: [{ x: 740, width: 100, height: 130 }], covers: [{ x: 830, width: 40, height: 120 }] },
+    };
+    const { a } = scenario(both, 190, 130);
+    expect(a.attacks[0]).toMatchObject({ attackId: 'sweep', outcome: 'dodged', evasion: 'platform', damageTaken: 0 });
+  });
+
+  it('a player standing on a cover top higher than the sweep: the evasion is the platform', () => {
+    const { a } = scenario(coverBoss(130), 130, 130);
+    expect(a.behavior.updatesOnPlatform).toBeGreaterThan(0);
+    expect(a.attacks[0]).toMatchObject({ attackId: 'sweep', outcome: 'dodged', evasion: 'platform', damageTaken: 0 });
+  });
+
+  it('a player who jumps over the sweep while behind a cover is credited with the jump (the bare attack would have reached the floor)', () => {
+    const jumpAt = (first: number): Record<number, Partial<InputFrame>> => {
+      const at: Record<number, Partial<InputFrame>> = { [first + 8]: { jumpPressed: true, jumpHeld: true } };
+      for (let n = first + 9; n <= first + 40; n++) at[n] = { jumpHeld: true };
+      return at;
+    };
+    const behind = scenario(coverBoss(120), 190, 0, jumpAt);
+    expect(behind.a.jumps).toBe(1);
+    expect(behind.a.attacks[0]).toMatchObject({ outcome: 'dodged', evasion: 'jump' });
+    // A shorter sweep (x 810 to 960) does not reach the player even in a bare arena: the same jump saved nothing.
+    const base = coverBoss(120);
+    const short: BossDef = {
+      ...base,
+      attacks: base.attacks.map((atk) =>
+        atk.id === 'sweep' ? { ...atk, hits: atk.hits.map((h) => ({ ...h, x1: 150 })) } : atk,
+      ),
+    };
+    const far = scenario(short, 190, 0, jumpAt);
+    expect(far.a.jumps).toBe(1);
+    expect(far.a.attacks[0]).toMatchObject({ outcome: 'dodged', evasion: 'distance' });
+  });
+
+  it('a jump that is over before the sweep is dangerous does not hide the cover', () => {
+    const early = scenario(coverBoss(120), 190, 0, (first) => ({ [first + 1]: { jumpPressed: true, jumpHeld: true } }));
+    expect(early.a.jumps).toBe(1);
+    expect(early.a.attacks[0]).toMatchObject({ outcome: 'dodged', evasion: 'cover' });
+  });
+
+  it('a flat arena never produces platform or cover, over a whole fight with dodged attacks', () => {
+    const boss = DUELIST;
+    let dodgedTotal = 0;
+    for (const seed of [1, 2, 3]) {
+      const start = createInitialState(boss, seed);
+      const a = analyzeRun(boss, start, Array.from({ length: 3000 }, (_, i) => scripted(i + 1)));
+      const dodged = a.attacks.filter((x) => x.outcome === 'dodged');
+      dodgedTotal += dodged.length;
+      expect(a.attacks.length).toBeGreaterThan(5);
+      for (const x of a.attacks) expect(['platform', 'cover']).not.toContain(x.evasion);
+      expect(a.behavior.updatesOnPlatform).toBe(0);
+    }
+    expect(dodgedTotal).toBeGreaterThan(4);
     const far = analyzeRun(sweepBoss, standAt(sweepBoss, 120), frames(sweepFirst + 60, { [sweepFirst + 22]: { dashPressed: true } }));
     expect(far.attacks[0]).toMatchObject({ evasion: 'dash' });
-    expect(far.behavior.updatesOnPlatform).toBe(0);
   });
 
   it('updatesOnPlatform counts the updates the player stood on a raised surface (checked against the live states)', () => {

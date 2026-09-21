@@ -23,8 +23,9 @@ export type PlayerAction = 'idle' | 'running' | 'airborne' | 'dashing' | 'attack
  */
 export type AttackOutcome = 'hit' | 'countered' | 'dodged' | 'interrupted';
 /**
- * How a dodged attack was avoided, by priority: `dash`, `jump`, `platform` (standing on a raised surface the attack
- * passes under), `cover` (behind a cover that blocked the attack), else `distance` (out of its reach).
+ * How a dodged attack was avoided, by priority: `dash`, `jump`, `platform` (standing on any raised surface, a
+ * platform or the top of a cover, that the attack passes under), `cover` (behind a cover that blocked the attack),
+ * else `distance` (out of its reach).
  */
 export type Evasion = 'dash' | 'jump' | 'platform' | 'cover' | 'distance';
 
@@ -144,7 +145,7 @@ interface OpenAttack {
   dodgeStart: number | null;
   dashedInDanger: boolean;
   airborneInDanger: boolean;
-  /** Standing on a raised surface that put the player under a window that would have reached the floor. */
+  /** Standing on a raised surface (a platform or a cover top) that put the player under a window that would have reached the floor. */
   platformInDanger: boolean;
   /** Behind a cover that cut a window which would have reached the player. */
   coveredInDanger: boolean;
@@ -271,26 +272,28 @@ export function analyzeRun(
     if (dodgeStarted && attack.dodgeStart === null && t <= attack.dangerTo) attack.dodgeStart = tick;
 
     // What saved the player is judged against the boxes that were really dangerous on this update (`boxes`, cut
-    // by cover) and, for cover, against what the attack would have covered in a bare arena (`bare`).
+    // by cover) and against what the attack would have covered in a bare arena (`bare`, the same list when the
+    // boss has no arena). Each is asked about the player where they are (`real`) and where they would stand on the
+    // floor at the same x (`grounded`).
     const boxes = activeHitBoxes(after.boss, boss);
     const real = playerBox(after.player);
-    if (boxes.length > 0) {
-      const touched = boxes.some((b) => overlaps(b, real));
-      if (touched && after.player.dashTick >= 0) attack.dashedInDanger = true;
-      if (!touched && !after.player.onGround && after.player.dashTick < 0) {
-        const grounded = playerBox({ ...after.player, y: WORLD.floorY });
-        if (boxes.some((b) => overlaps(b, grounded))) attack.airborneInDanger = true;
+    const bare = boss.arena === undefined ? boxes : activeHitBoxes(after.boss, boss, { ignoreCover: true });
+    if (bare.length > 0) {
+      const grounded = playerBox({ ...after.player, y: WORLD.floorY });
+      const cutReal = boxes.some((b) => overlaps(b, real));
+      const cutFloor = boxes.some((b) => overlaps(b, grounded));
+      const rawReal = bare.some((b) => overlaps(b, real));
+      const rawFloor = bare.some((b) => overlaps(b, grounded));
+      // The dash asks whether the i-frames were really needed, so it uses the boxes that existed.
+      if (cutReal && after.player.dashTick >= 0) attack.dashedInDanger = true;
+      // Height saved the player: up there the bare attack misses, on the floor it would not have.
+      if (!cutReal && !rawReal && rawFloor && !after.player.onGround && after.player.dashTick < 0) {
+        attack.airborneInDanger = true;
       }
-      if (!touched && onRaisedSurface(after.player)) {
-        const grounded = playerBox({ ...after.player, y: WORLD.floorY });
-        if (boxes.some((b) => overlaps(b, grounded))) attack.platformInDanger = true;
-      }
-    }
-    if (boss.arena !== undefined) {
-      const bare = activeHitBoxes(after.boss, boss, { ignoreCover: true });
-      if (bare.some((b) => overlaps(b, real)) && !boxes.some((b) => overlaps(b, real))) {
-        attack.coveredInDanger = true;
-      }
+      if (!cutReal && !rawReal && rawFloor && onRaisedSurface(after.player)) attack.platformInDanger = true;
+      // Cover saved the player: the bare attack would have reached them (standing or where they stood), the cut
+      // one reaches neither.
+      if (!cutReal && !cutFloor && (rawReal || rawFloor)) attack.coveredInDanger = true;
     }
     // A demonstration that reaches the player counts as a hit for this attack (it just takes no health).
     if (events.includes('playerHit') || events.includes('studyHit')) {
