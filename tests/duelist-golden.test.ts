@@ -81,6 +81,26 @@ function brawler(n: number, s: GameState): InputFrame {
   });
 }
 
+/**
+ * A reactive brawler that cannot die and tries to counter: when the previous state shows the boss
+ * winding up a slam, facing the player and within counter range, it swings so that the swing lands
+ * inside the counter window (the last 12 of the slam's 30 windup updates). Otherwise it stays within
+ * about 150 units and swings every 20 updates.
+ */
+function counterBrawler(n: number, prev: GameState): InputFrame {
+  const dx = prev.boss.x - prev.player.x;
+  const facingPlayer = prev.boss.facing === (dx < 0 ? 1 : -1);
+  const slamming = prev.boss.mode === 'attack' && prev.boss.attackId === 'slam' && facingPlayer;
+  const inWindow = slamming && Math.abs(dx) <= 200 && prev.boss.attackTick >= 17 && prev.boss.attackTick <= 28;
+  return withInput({
+    moveX: Math.abs(dx) < 150 ? 0 : dx > 0 ? 1 : -1,
+    attackPressed: inWindow || (!slamming && n % 20 === 0),
+    dashPressed: n % 97 === 0,
+    jumpPressed: n % 150 === 0,
+    jumpHeld: n % 150 < 8,
+  });
+}
+
 /** Plays up to `max` updates (stopping once the fight is over) and hashes every update's fingerprint. */
 function play(
   dials: Dials,
@@ -88,19 +108,23 @@ function play(
   max: number,
   inputFor: (n: number, s: GameState) => InputFrame = scripted,
   immortal = false,
-): { hash: number; updates: number; state: GameState } {
+): { hash: number; updates: number; state: GameState; counters: number; staggerUpdates: number } {
   const boss = applyDials(DUELIST, dials);
   let state = createInitialState(boss, seed);
   if (immortal) state = { ...state, player: { ...state.player, health: 1_000_000 } };
   let hash = 0x811c9dc5;
   let updates = 0;
+  let counters = 0;
+  let staggerUpdates = 0;
   for (let n = 1; n <= max; n++) {
     state = step(state, inputFor(n, state), boss);
     updates++;
+    if (state.events.includes('counter')) counters++;
+    if (state.boss.mode === 'stagger') staggerUpdates++;
     hash = fnv1a(hash, fingerprint(state) + '\n');
     if (state.phase !== 'fight') break;
   }
-  return { hash, updates, state };
+  return { hash, updates, state, counters, staggerUpdates };
 }
 
 /** The hash and update count are the pin; the rest are readable facts that make a failure easier to understand. */
@@ -111,6 +135,8 @@ const summary = (r: ReturnType<typeof play>) => ({
   bossPhase: r.state.boss.phase,
   bossHp: r.state.boss.hp,
   playerHealth: r.state.player.health,
+  counters: r.counters,
+  staggerUpdates: r.staggerUpdates,
 });
 
 describe('Ember Duelist golden fights', () => {
@@ -123,6 +149,8 @@ describe('Ember Duelist golden fights', () => {
       bossPhase: 0,
       bossHp: 29,
       playerHealth: 0,
+      counters: 2,
+      staggerUpdates: 180,
     });
   });
 
@@ -134,6 +162,8 @@ describe('Ember Duelist golden fights', () => {
       bossPhase: 0,
       bossHp: 42,
       playerHealth: 0,
+      counters: 0,
+      staggerUpdates: 0,
     });
   });
 
@@ -147,6 +177,23 @@ describe('Ember Duelist golden fights', () => {
       bossPhase: 1,
       bossHp: 0,
       playerHealth: 999996,
+      counters: 0,
+      staggerUpdates: 0,
+    });
+  });
+
+  // Counters and staggers really happen here, so a change to the counter code shows up.
+  it('Normal dials, seed 3131, immortal counter brawler (counters and staggers)', () => {
+    const r = play(NORMAL_DIALS, 3131, 4000, counterBrawler, true);
+    expect(summary(r)).toEqual({
+      hash: 2586793840,
+      updates: 1723,
+      phase: 'victory',
+      bossPhase: 1,
+      bossHp: 0,
+      playerHealth: 999994,
+      counters: 4,
+      staggerUpdates: 293,
     });
   });
 });
