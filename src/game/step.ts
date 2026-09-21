@@ -186,7 +186,8 @@ export function step(prev: GameState, input: InputFrame, boss: BossDef): GameSta
   updateBoss(s, boss);
   tryCounter(s, boss);
   resolvePlayerAttack(s, boss);
-  if (s.phase !== 'fight') return s;
-  resolveBossHits(s, boss);
+  if (s.phase === 'fight') resolveBossHits(s, boss);
+  // The fight is over: a boss that was mid-leap must not hang in the air for the whole end countdown.
+  if (s.phase !== 'fight') landBoss(s.boss);
   return s;
 }

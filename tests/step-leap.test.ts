@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AttackDef, BossDef } from '../src/bosses/schema';
 import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { DT } from '../src/engine/time';
-import { PLAYER, WORLD } from '../src/game/params';
+import { GAME, PLAYER, WORLD } from '../src/game/params';
 import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 import { standAt, updatesWith, windupUpdates } from './boss-helpers';
@@ -90,6 +90,21 @@ describe('the leap arc', () => {
     expect(peak).toBeLessThanOrEqual(200);
   });
 
+  it('advances x by a constant step per flight update and has the exact lift on the first one', () => {
+    const n = 52 - 30;
+    const takeOff = at(states, first, 30).boss;
+    const step1 = (takeOff.leapToX! - takeOff.leapFromX!) / (n + 1);
+    expect(Math.abs(step1)).toBeGreaterThan(1);
+    // The boss stands still before take-off, so update 30 already moves it by one step.
+    for (let t = 30; t < 52; t++) {
+      const x = at(states, first, t).boss.x;
+      expect(x).toBeCloseTo(takeOff.leapFromX! + step1 * (t - 30 + 1), 6);
+      const before = at(states, first, t - 1).boss.x;
+      expect(x - before).toBeCloseTo(step1, 6);
+    }
+    expect(takeOff.lift).toBeCloseTo(4 * 200 * (1 / (n + 1)) * (n / (n + 1)), 9);
+  });
+
   it('keeps the take-off and landing points only during the flight', () => {
     for (let t = 0; t < 90; t++) {
       const b = at(states, first, t).boss;
@@ -171,14 +186,16 @@ describe('where a leap lands', () => {
     s1.boss.x = 200;
     s1.player.x = 80;
     s1.player.prevX = 80;
-    expect(at(run(s1, first + 60, () => NO_INPUT, fwd), first, 52).boss.x).toBe(HALF);
+    const f1 = firstOf(fwd, s1);
+    expect(at(run(s1, f1 + 60, () => NO_INPUT, fwd), f1, 52).boss.x).toBe(HALF);
 
     const back = withAttack(backPounce);
     const s2 = standAt(back, 120);
     s2.boss.x = 1100;
     s2.player.x = 980;
     s2.player.prevX = 980;
-    expect(at(run(s2, first + 60, () => NO_INPUT, back), first, 52).boss.x).toBe(WORLD.width - HALF);
+    const f2 = firstOf(back, s2);
+    expect(at(run(s2, f2 + 60, () => NO_INPUT, back), f2, 52).boss.x).toBe(WORLD.width - HALF);
   });
 });
 
@@ -207,19 +224,42 @@ describe('the shockwave on landing', () => {
 
   it('does not hurt a player who is far from the landing spot', () => {
     const b = withAttack(forwardPounce);
+    const f = firstOf(b);
     // The boss lands at x 660 with its wave reaching 200 to the left; the player is 400 units from the landing.
-    const states = run(standAt(b, 700), total, () => NO_INPUT, b);
-    expect(at(states, first, 52).boss.x).toBeCloseTo(660, 6);
-    expect(updatesWith(states.slice(0, total), 'playerHit')).toEqual([]);
+    const states = run(standAt(b, 700), f + 85, () => NO_INPUT, b);
+    expect(at(states, f, 52).boss.x).toBeCloseTo(660, 6);
+    expect(updatesWith(states, 'playerHit')).toEqual([]);
+  });
+
+  it('is one-sided: a forward pounce of 600 hits a player at the landing x, first at attack time 52, and never one left at take-off', () => {
+    const b = withAttack({ ...pounce, id: 'far', leap: { from: 30, to: 52, height: 200, target: 'forward', distance: 600 } });
+    const f = firstOf(b);
+    const start = createInitialState(b);
+    const landing = start.boss.x + start.boss.facing * 600;
+    expect(landing).toBeGreaterThan(HALF);
+
+    const there = standAt(b, 120);
+    there.player.x = landing;
+    there.player.prevX = landing;
+    const hit = run(there, f + 85, () => NO_INPUT, b);
+    expect(at(hit, f, 52).boss.x).toBeCloseTo(landing, 6);
+    expect(updatesWith(hit, 'playerHit')).toEqual([f + 52]);
+
+    // A player who stays where the boss took off (just to its facing side) is never touched.
+    const stay = standAt(b, 10);
+    const missed = run(stay, f + 85, () => NO_INPUT, b);
+    expect(at(missed, f, 52).boss.x).toBeCloseTo(landing, 6);
+    expect(updatesWith(missed, 'playerHit')).toEqual([]);
   });
 
   it('is not caused by the boss body: a grounded player under the flight path is not hurt before landing', () => {
     // Forward leap: the boss flies over the player (120 away) and lands 180 units past him.
     const b = withAttack(forwardPounce);
-    const states = run(standAt(b, 120), total, () => NO_INPUT, b);
-    const under = states.slice(0, first + 51).some((s) => Math.abs(s.boss.x - s.player.x) < 60 && s.boss.lift > 0);
+    const f = firstOf(b);
+    const states = run(standAt(b, 120), f + 85, () => NO_INPUT, b);
+    const under = states.slice(0, f + 51).some((s) => Math.abs(s.boss.x - s.player.x) < 60 && s.boss.lift > 0);
     expect(under).toBe(true);
-    expect(updatesWith(states.slice(0, total), 'playerHit')).toEqual([]);
+    expect(updatesWith(states, 'playerHit')).toEqual([]);
     // And the same for the grounded player at the landing spot of the player-targeted leap, before the landing.
     const own = run(standAt(boss, 120), first + 51, () => NO_INPUT, boss);
     expect(updatesWith(own, 'playerHit')).toEqual([]);
@@ -301,6 +341,47 @@ describe('cancelling a leap', () => {
     expect(b.lift).toBe(0);
     expect(b.leapFromX).toBeNull();
     expect(b.leapToX).toBeNull();
+  });
+});
+
+describe('a fight that ends in mid-air', () => {
+  /** After the ending update the boss must be on the floor with no leap points, and stay so all through the countdown. */
+  const expectLanded = (states: GameState[], endUpdate: number, phase: GameState['phase']) => {
+    for (const s of states.slice(endUpdate - 1, endUpdate - 1 + GAME.defeatRestartTicks - 1)) {
+      expect(s.phase).toBe(phase);
+      expect(s.boss.lift).toBe(0);
+      expect(s.boss.leapFromX).toBeNull();
+      expect(s.boss.leapToX).toBeNull();
+    }
+  };
+
+  it('lands the boss when the player defeats it during the flight', () => {
+    const boss = withAttack(pounce);
+    const first = firstOf(boss);
+    const swingAt = first + 51 - PLAYER.attack.startup;
+    let s = standAt(boss, 120);
+    const states: GameState[] = [];
+    for (let n = 1; n <= first + 80; n++) {
+      if (n === swingAt) s.boss.hp = 1;
+      s = step(s, withInput({ attackPressed: n === swingAt }), boss);
+      states.push(s);
+    }
+    // The swing connects while the boss is still in the air (attack time 51 is the last update of the flight).
+    expect(updatesWith(states, 'bossDefeated')).toEqual([first + 51]);
+    expect(at(states, first, 50).boss.lift).toBeGreaterThan(0);
+    expectLanded(states, first + 51, 'victory');
+  });
+
+  it('lands the boss when it defeats the player during the flight', () => {
+    // A leap whose shockwave window opens before landing, so it can hurt while the boss is in the air.
+    const boss = withAttack({ ...pounce, id: 'airHit', hits: [{ from: 40, to: 45, x0: 0, x1: 200, bottom: 0, top: 60 }] });
+    const first = firstOf(boss);
+    const s0 = standAt(boss, 120);
+    s0.player.health = 1;
+    const states = run(s0, first + 80, () => NO_INPUT, boss);
+    expect(updatesWith(states, 'playerDefeated')).toEqual([first + 40]);
+    expect(at(states, first, 39).boss.lift).toBeGreaterThan(0);
+    expectLanded(states, first + 40, 'defeated');
   });
 });
 

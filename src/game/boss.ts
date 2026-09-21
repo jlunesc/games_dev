@@ -186,8 +186,8 @@ function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   const move = attack.move;
   if (move !== undefined && b.attackTick >= move.from && b.attackTick < move.to) {
     // 'back' walks away from the way the boss faces.
-    const direction = move.dir === 'back' ? -b.facing : b.facing;
-    moveBoss(b, boss, direction as 1 | -1, move.speed);
+    const direction: 1 | -1 = move.dir === 'back' ? (b.facing === 1 ? -1 : 1) : b.facing;
+    moveBoss(b, boss, direction, move.speed);
   }
   if (attack.leap !== undefined) updateLeap(s, boss, attack.leap);
   if (b.attackTick >= attackLength(attack)) finishAttack(s, boss, phase);
@@ -198,6 +198,7 @@ function leapLanding(s: GameState, boss: BossDef, leap: LeapDef): number {
   const b = s.boss;
   const half = boss.width / 2;
   let x = s.player.x;
+  // The parser guarantees `distance` for 'forward' and 'back' (the 0 only satisfies the type).
   if (leap.target === 'forward') x = b.x + b.facing * (leap.distance ?? 0);
   if (leap.target === 'back') x = b.x - b.facing * (leap.distance ?? 0);
   return Math.min(Math.max(x, half), WORLD.width - half);
@@ -212,6 +213,9 @@ function updateLeap(s: GameState, boss: BossDef, leap: LeapDef): void {
   const b = s.boss;
   const t = b.attackTick;
   if (t >= leap.from && t < leap.to) {
+    // Take-off is captured lazily on the first flight update. This relies on two invariants: the parser forces
+    // `leap.from >= windup >= 1`, so the attack cannot start mid-flight, and every exit from an attack
+    // (finish, counter, phase change, end of the fight) clears the leap points via landBoss.
     if (b.leapFromX === null || b.leapToX === null) {
       b.leapFromX = b.x;
       b.leapToX = leapLanding(s, boss, leap);
