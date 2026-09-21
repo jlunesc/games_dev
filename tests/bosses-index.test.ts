@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { BOSSES, EMBER_DUELIST, bossById } from '../src/bosses';
+import { ASHEN_HOUND, BOSSES, EMBER_DUELIST, bossById } from '../src/bosses';
 
 describe('the boss list', () => {
-  it('lists the Ember Duelist', () => {
-    expect(BOSSES).toContain(EMBER_DUELIST);
-    expect(BOSSES.map((b) => b.id)).toEqual(['ember-duelist']);
+  it('lists the Ember Duelist first and then the Ashen Hound', () => {
+    expect(BOSSES).toEqual([EMBER_DUELIST, ASHEN_HOUND]);
+    expect(BOSSES.map((b) => b.id)).toEqual(['ember-duelist', 'ashen-hound']);
   });
 
-  it('finds a boss by id and falls back to the first boss for an unknown id', () => {
+  it('finds a boss by id and falls back to the Duelist for an unknown id', () => {
     expect(bossById('ember-duelist')).toBe(EMBER_DUELIST);
-    expect(bossById('nobody')).toBe(BOSSES[0]);
+    expect(bossById('ashen-hound')).toBe(ASHEN_HOUND);
+    expect(bossById('nobody')).toBe(EMBER_DUELIST);
   });
 });

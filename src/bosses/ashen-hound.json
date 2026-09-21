@@ -1,0 +1,79 @@
+{
+  "id": "ashen-hound",
+  "name": "Ashen Hound",
+  "width": 90,
+  "height": 90,
+  "startX": 960,
+  "maxHp": 24,
+  "spacing": { "min": 110, "max": 260 },
+  "approachTimeout": 45,
+  "predictability": 0.2,
+  "counter": { "window": 12, "range": 200, "staggerTicks": 90, "damageMultiplier": 2 },
+  "transitionTicks": 60,
+  "attacks": [
+    {
+      "id": "bite",
+      "name": "Bite",
+      "pose": "sideways",
+      "class": "mustDodge",
+      "windup": 22,
+      "active": 6,
+      "recovery": 26,
+      "range": { "min": 60, "max": 140 },
+      "hits": [{ "from": 22, "to": 28, "x0": 0, "x1": 140, "bottom": 0, "top": 110 }]
+    },
+    {
+      "id": "rush",
+      "name": "Rush",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 26,
+      "active": 12,
+      "recovery": 34,
+      "range": { "min": 240, "max": 420 },
+      "move": { "from": 26, "to": 38, "speed": 1600 },
+      "hits": [{ "from": 26, "to": 38, "x0": 0, "x1": 100, "bottom": 0, "top": 100 }]
+    },
+    {
+      "id": "slip",
+      "name": "Slip",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 18,
+      "active": 10,
+      "recovery": 14,
+      "range": { "min": 40, "max": 240 },
+      "move": { "from": 18, "to": 28, "speed": 1400 },
+      "hits": []
+    },
+    {
+      "id": "pounce",
+      "name": "Pounce",
+      "pose": "crouch",
+      "class": "mustDodge",
+      "windup": 30,
+      "active": 30,
+      "recovery": 32,
+      "range": { "min": 200, "max": 420 },
+      "leap": { "from": 30, "to": 52, "height": 220, "target": "player" },
+      "hits": [{ "from": 52, "to": 58, "x0": 0, "x1": 200, "bottom": 0, "top": 60 }]
+    }
+  ],
+  "phases": [
+    {
+      "name": "Hunt",
+      "startsAtHpFraction": 1,
+      "attacks": [
+        { "id": "bite", "weight": 3 },
+        { "id": "rush", "weight": 2 },
+        { "id": "slip", "weight": 2 },
+        { "id": "pounce", "weight": 3 }
+      ],
+      "gap": 45,
+      "maxChain": 2,
+      "chainChance": 0.35,
+      "walkSpeed": 330,
+      "retreatSpeed": 260
+    }
+  ]
+}

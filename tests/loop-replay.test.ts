@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMBER_DUELIST } from '../src/bosses';
+import { ASHEN_HOUND, EMBER_DUELIST } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, NO_PRESSES, addPresses, applyPresses, type InputFrame } from '../src/engine/input-frame';
 import { planUpdates } from '../src/engine/loop';
@@ -59,6 +59,8 @@ interface PlayOptions {
   seed: number;
   deltas: () => number;
   player?: (frame: number) => InputFrame;
+  /** The boss to fight; the Ember Duelist when left out. */
+  bossDef?: BossDef;
   /** Leave the fight (as the hold on the top button does) after this many frames, if it is still going. */
   leaveAfterFrames?: number;
   maxFrames?: number;
@@ -82,7 +84,7 @@ interface Played {
 function playLikeTheApp(options: PlayOptions): Played {
   const { presetId, dials, seed, deltas } = options;
   const player = options.player ?? pad;
-  const boss = applyDials(EMBER_DUELIST, dials);
+  const boss = applyDials(options.bossDef ?? EMBER_DUELIST, dials);
   let state = createInitialState(boss, seed);
   let flow = startFlow({ bossId: boss.id, presetId, dials, seed, playedAt: '2026-09-20T10:00:00.000Z' });
   let pending = NO_PRESSES;
@@ -201,6 +203,41 @@ describe('the update loop of the app, replayed', () => {
     for (const seed of [1, 2, 3]) {
       expectFaithful(playLikeTheApp({ ...c, seed, deltas: messyDeltas(seed * 7), leaveAfterFrames: 1500 }));
     }
+  });
+
+  it('the Ashen Hound at Normal: a long fight through the app loop replays and analyzes faithfully', () => {
+    for (const seed of [21, 22]) {
+      const played = playLikeTheApp({
+        presetId: 'normal',
+        dials: presetDials('normal'),
+        seed,
+        deltas: messyDeltas(seed),
+        bossDef: ASHEN_HOUND,
+        leaveAfterFrames: 2400,
+      });
+      expect(played.boss.id).toBe('ashen-hound');
+      expect(played.record.bossId).toBe('ashen-hound');
+      expect(played.framesWithoutUpdate).toBeGreaterThan(0);
+      expect(played.record.ticks).toBeGreaterThan(300);
+      // The Hound really attacked, and the analysis saw its leaps and dashes.
+      const ids = new Set(analyzeFight(played.record).attacks.map((a) => a.attackId));
+      expect(ids.size).toBeGreaterThan(1);
+      expectFaithful(played);
+    }
+  });
+
+  it('the Ashen Hound: a fight that ends by defeat replays and analyzes faithfully', () => {
+    const played = playLikeTheApp({
+      presetId: 'normal',
+      dials: presetDials('normal'),
+      seed: 4,
+      deltas: messyDeltas(9),
+      bossDef: ASHEN_HOUND,
+      player: passive,
+    });
+    expect(played.result).toBe('defeat');
+    expect(played.summary.hitsTaken).toBeGreaterThan(0);
+    expectFaithful(played);
   });
 
   it('a fight that ends by defeat: the record stops at the ending update', () => {

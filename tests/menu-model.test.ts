@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMBER_DUELIST } from '../src/bosses';
+import { ASHEN_HOUND, EMBER_DUELIST } from '../src/bosses';
 import { PRESETS } from '../src/game/difficulty';
 import {
   MENU_ITEMS,
@@ -89,8 +89,28 @@ describe('choosing in the menu', () => {
     expect(m.prefs.dials).toEqual(selectPreset(DEFAULT_PREFS, 'hard').dials);
   });
 
-  it('with one boss the Boss row keeps that boss', () => {
-    expect(press(at('boss'), 'right').prefs.bossId).toBe(EMBER_DUELIST.id);
+  it('left and right cycle the bosses, Duelist then Hound then Duelist, and wrap', () => {
+    let m = at('boss');
+    expect(m.prefs.bossId).toBe(EMBER_DUELIST.id);
+    m = press(m, 'right');
+    expect(m.prefs.bossId).toBe(ASHEN_HOUND.id);
+    m = press(m, 'right');
+    expect(m.prefs.bossId).toBe(EMBER_DUELIST.id);
+    m = press(m, 'left');
+    expect(m.prefs.bossId).toBe(ASHEN_HOUND.id);
+    m = press(m, 'left');
+    expect(m.prefs.bossId).toBe(EMBER_DUELIST.id);
+  });
+
+  it('the Boss row shows the name of each boss as it is chosen', () => {
+    const valueOf = (m: MenuModel) => menuRows(m).find((r) => r.id === 'boss')!.value;
+    const m = at('boss');
+    expect(valueOf(m)).toBe(EMBER_DUELIST.name);
+    expect(valueOf(press(m, 'right'))).toBe(ASHEN_HOUND.name);
+    expect(valueOf(press(m, 'right', 'right'))).toBe(EMBER_DUELIST.name);
+  });
+
+  it('confirm on the Boss row does nothing (only left and right choose)', () => {
     expect(menuStep(at('boss'), 'confirm').outcome).toEqual({ kind: 'stay' });
   });
 
