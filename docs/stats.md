@@ -64,7 +64,7 @@ One entry of `fights`. Every field is always present.
 
 | Bit(s) | Value | Meaning |
 |---|---|---|
-| 0-1 (`packed & 3`) | 0, 1 or 2 | Move direction plus one: 0 is left, 1 is none, 2 is right. `moveX = (packed & 3) - 1`. |
+| 0-1 (`packed & 3`) | 0, 1 or 2 | Move direction plus one: 0 is left, 1 is none, 2 is right. `moveX = (packed & 3) - 1`. The pattern 3 is invalid (the game never writes it); on replay it is read as right (+1). |
 | 2 (`4`) | 0 or 1 | Jump button held. |
 | 3 (`8`) | 0 or 1 | Jump pressed on this update. |
 | 4 (`16`) | 0 or 1 | Attack pressed on this update. |
@@ -111,10 +111,10 @@ One boss attack, from the moment its warning began. Entries are in the order the
 | `startTick` | number | The tick on which the warning began. This is attack time 0. |
 | `windupTicks` | number | The length of the warning (the attack's windup, after the Warning length dial). |
 | `firstDangerTick` | number | The first tick on which the attack could hurt: `startTick` plus the start of its earliest hit window. |
-| `distance` | number | Distance to the player when the warning began. |
+| `distance` | number | Distance to the player when the warning began, in world units, rounded to 0.1. |
 | `playerActionAtStart` | string | What the player was doing then (see below). |
 | `outcome` | string | `"hit"`, `"countered"`, `"dodged"` or `"interrupted"` (see below). |
-| `evasion` | string or null | How a dodged attack was avoided: `"dash"`, `"jump"` or `"distance"`. `null` unless `outcome` is `"dodged"`. |
+| `evasion` | string or null | How a dodged attack was avoided: `"dash"`, `"jump"` or `"distance"`. `null` unless `outcome` is `"dodged"`. Exact rule: `"dash"` means the dash carried the player through a dangerous box; `"jump"` means the player was in the air above a box that would have hit them on the ground; everything else is `"distance"`. That includes a dash or jump that got the player clear before the boxes went live, so an early evasive dash has no `marginTicks` and counts as `"distance"`. |
 | `reactionTicks`, `reactionMs` | number or null | See below. |
 | `marginTicks`, `marginMs` | number or null | See below. |
 | `damageTaken` | number | Health this attack actually took from the player; 0 when it did not hit. |
@@ -157,6 +157,8 @@ A dash takes priority over a jump when both happened.
 - `missed`: windows that closed without a hit.
 A window is counted only when it closed (the attack ended and the boss moved on) or was hit. If the fight ended or was left while a window was still open and unhit, it is not counted: the player did not get the chance to use it.
 
+Known limitation: a window is also not counted when the player's punishing hit lands on the very first update of the recovery and that hit triggers a phase change (the phase change cancels the attack on that same update, so the window never registers as open). This is rare and the analyzer does not correct for it.
+
 **Not measured yet: "greedy" attacks** (SPEC section 9: the player attacks when they should not). They cannot happen against the Ember Duelist, whose recovery is longer than the player's swing and whose attacks all warn for 24 updates or more. They will be added, with a `schemaVersion` bump, when a boss can make them happen.
 
 ## 8. Replaying a fight
@@ -180,7 +182,11 @@ After `ticks` steps the state is the one the fight ended in. A test (`tests/reco
 
 These are computed afterwards from many fights or many exports, and are not in the file: the learning curve, fatigue over a session, the hit rate of each attack across attempts, and the distribution of death causes and phases.
 
-## 11. Example: one attack occurrence
+## 11. Size and archive
+
+A fight of about 25 seconds is about 9 KB of JSON (input plus analysis); a two-minute fight is about 35 to 40 KB. Export reads every saved fight at once and builds one file, which is fine for hundreds of fights. So export and delete now and then: it keeps the file small and protects you if Android clears the browser data.
+
+## 12. Example: one attack occurrence
 
 A sweep at Normal. The warning began on tick 1284 and lasts 24 updates, so the first dangerous update is 1308. The player dashed on tick 1296, 12 updates (200 ms) after the warning began and 12 updates before the danger, and the dash carried them through the sweep.
 

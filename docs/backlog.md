@@ -19,3 +19,6 @@ Notes for the design:
 - The simulation is deterministic on purpose (same inputs, same result). Randomness would have to come from a seeded random number generator whose seed is recorded with each attempt, so any fight can be replayed exactly and the stats stay meaningful.
 - The spec's tunable boss parameters already include "predictability (fixed vs random order)"; ranges per parameter would extend that.
 - The M2 boss data format should be able to hold a range where it now holds a single value, even though M2 uses single values.
+
+## Export only new fights / pagination of the store (raised in the M3b review)
+Export reads every saved fight at once; fine for hundreds, would matter for thousands.

@@ -96,7 +96,7 @@ Everything stays **on the phone**. Nothing is uploaded anywhere: the file only g
 
 ### The Stats screen
 In the menu, the **Stats** row sits between **Tweak difficulty** and **Settings**. It shows when you last exported ("Last export: never." at first) and a reminder that Android can clear browser data, so export now and then. It has three rows:
-- **Export**: shows how many fights are saved. It packs them into one file (its name ends in `.stats.json`, for example `boss-trainer-2026-09-21.stats.json`) and hands it to the phone.
+- **Export**: shows how many fights are saved. While it works the screen says "Working…". It packs them into one file (its name ends in `.stats.json`, for example `boss-trainer-2026-09-21.stats.json`) and hands it to the phone.
 - **Delete all fights**: asks twice. The first press changes the row to "Really delete all fights? Press again.", the second press deletes. Moving to another row cancels it. Export first.
 - **Back**: return to the menu.
 
@@ -121,6 +121,7 @@ Android can clear a browser's data by itself (for example when the phone is shor
 - [ ] Close the app fully and open it again: the fights are still there (the count on the Stats screen is the same).
 - [ ] The game still plays normally with airplane mode on, and fights are still saved offline.
 - [ ] Nothing pauses or stutters when a fight ends and is saved.
+- [ ] On a long fight (2 minutes or more) note whether the game pauses for a moment when the fight ends; how long?
 
 ## Things I would like to know
 After playing, answer these in plain words:
@@ -130,7 +131,7 @@ After playing, answer these in plain words:
 - Would a sign of when the counter window opens help (for example a flash on the boss)?
 - Which of the seven values matters most for how hard the fight feels?
 - Do the Easy and Hard presets feel right, or should some values change?
-- Does Hard feel like a step up from Normal, or like a wall (several values change at once)? Is 3 damage (two mistakes end the fight) too harsh?
+- Does Hard feel like a step up from Normal, or like a wall (several values change at once)? Hard costs 2 hits per attack, and the Tweak maximum of 3 leaves only two mistakes: is either of those too harsh?
 - Was anything in the menu confusing?
 - Did the phone offer the share sheet when you tapped Export, and did the file reach where you wanted it? What happened when you pressed Export with the controller?
-- Did saving a fight at the end cause any pause, even a small one?
+- Did saving a fight at the end cause any pause, even a small one? Was it longer after a long fight (2 minutes or more)?
