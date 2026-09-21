@@ -44,19 +44,38 @@ export function isInvulnerable(p: PlayerState): boolean {
   return p.invulnerableTicks > 0 || p.dashTick >= 0;
 }
 
-/** The boxes that hurt the player right now: the active hit windows of the attack the boss is performing. */
-export function activeHitBoxes(b: BossState, boss: BossDef): Box[] {
+/**
+ * The boxes that hurt the player right now: the active hit windows of the attack the boss is performing.
+ * Cover in the arena blocks them: a cover in front of the boss, at least as tall as the window's top,
+ * cuts the window at its near edge (the vertical extent never changes) and a window with no width left
+ * is dropped. A cover the boss stands inside, or that lies behind it, blocks nothing. `ignoreCover`
+ * returns the uncut windows (what the attack would cover in a bare arena).
+ */
+export function activeHitBoxes(b: BossState, boss: BossDef, options: { ignoreCover?: boolean } = {}): Box[] {
   if (b.mode !== 'attack' || b.attackId === null) return [];
   const attack = boss.attacks.find((a) => a.id === b.attackId);
   if (attack === undefined) return [];
-  return attack.hits
-    .filter((hit) => b.attackTick >= hit.from && b.attackTick < hit.to)
-    .map((hit) => ({
-      x: b.facing === 1 ? b.x + hit.x0 : b.x - hit.x1,
-      y: WORLD.floorY - hit.top,
-      w: hit.x1 - hit.x0,
-      h: hit.top - hit.bottom,
-    }));
+  const covers = options.ignoreCover === true ? [] : (boss.arena?.covers ?? []);
+  const boxes: Box[] = [];
+  for (const hit of attack.hits) {
+    if (b.attackTick < hit.from || b.attackTick >= hit.to) continue;
+    let x = b.facing === 1 ? b.x + hit.x0 : b.x - hit.x1;
+    // Uncut windows keep the width written in the boss file, so a bare arena gives exactly the old numbers.
+    let w = hit.x1 - hit.x0;
+    for (const cover of covers) {
+      if (cover.height < hit.top) continue;
+      const coverLeft = cover.x - cover.width / 2;
+      const coverRight = cover.x + cover.width / 2;
+      if (b.facing === 1 && coverLeft > b.x && coverLeft < x + w) {
+        w = coverLeft - x;
+      } else if (b.facing === -1 && coverRight < b.x && coverRight > x) {
+        w = x + w - coverRight;
+        x = coverRight;
+      }
+    }
+    if (covers.length === 0 || w > 0) boxes.push({ x, y: WORLD.floorY - hit.top, w, h: hit.top - hit.bottom });
+  }
+  return boxes;
 }
 
 /** A top surface the player can stand on: `y` is the world y of its top (WORLD.floorY - height). */
