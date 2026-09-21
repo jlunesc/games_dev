@@ -21,7 +21,7 @@ export interface Ember {
 export interface BackgroundCache {
   readonly sky: CanvasImageSource;
   readonly layers: readonly CanvasImageSource[];
-  /** Width of every layer picture; the drift wraps at this width. */
+  /** Width in world units that every layer picture covers; the drift wraps at this width. The pixels are `LOOK.layerScale` of it. */
   readonly patternWidth: number;
 }
 
@@ -152,9 +152,13 @@ export function createBackground(mood: Mood): BackgroundCache | null {
   if (typeof document === 'undefined') return null;
   const patternWidth = WORLD.width + 2 * LOOK.layerMargin;
   try {
-    const skyCanvas = makeCanvas(WORLD.width + 2 * SKY_BLEED, WORLD.height + 2 * SKY_BLEED);
+    const k = LOOK.layerScale;
+    const skyW = WORLD.width + 2 * SKY_BLEED;
+    const skyH = WORLD.height + 2 * SKY_BLEED;
+    const skyCanvas = makeCanvas(Math.ceil(skyW * k), Math.ceil(skyH * k));
     const skyCtx = skyCanvas?.getContext('2d');
     if (!skyCanvas || !skyCtx) return null;
+    // A smooth vertical gradient loses nothing when stored small and drawn scaled up.
     const gradient = skyCtx.createLinearGradient(0, 0, 0, skyCanvas.height);
     gradient.addColorStop(0, mood.skyTop);
     gradient.addColorStop(1, mood.skyBottom);
@@ -163,9 +167,11 @@ export function createBackground(mood: Mood): BackgroundCache | null {
 
     const layers: CanvasImageSource[] = [];
     for (const layer of mood.layers) {
-      const canvas = makeCanvas(patternWidth, WORLD.floorY);
+      // Painted in world units on a canvas `layerScale` the size; drawBackground stretches it back up.
+      const canvas = makeCanvas(Math.ceil(patternWidth * k), Math.ceil(WORLD.floorY * k));
       const g = canvas?.getContext('2d');
       if (!canvas || !g) return null;
+      g.scale(canvas.width / patternWidth, canvas.height / WORLD.floorY);
       paintLayer(g, layer, patternWidth);
       layers.push(canvas);
     }
@@ -188,7 +194,7 @@ export function drawBackground(
 ): void {
   ctx.save();
   if (cache) {
-    ctx.drawImage(cache.sky, -SKY_BLEED, -SKY_BLEED);
+    ctx.drawImage(cache.sky, -SKY_BLEED, -SKY_BLEED, WORLD.width + 2 * SKY_BLEED, WORLD.height + 2 * SKY_BLEED);
     ctx.globalAlpha = LOOK.layerAlpha;
     const p = cache.patternWidth;
     mood.layers.forEach((layer, i) => {
@@ -197,8 +203,8 @@ export function drawBackground(
       const offset = motion ? ((tick / 60) * layer.speed) % p : 0;
       // The picture is one pattern wide and wraps, so two copies side by side leave no gap at any drift.
       const left = -LOOK.layerMargin - offset;
-      ctx.drawImage(image, left, 0);
-      ctx.drawImage(image, left + p, 0);
+      ctx.drawImage(image, left, 0, p, WORLD.floorY);
+      ctx.drawImage(image, left + p, 0, p, WORLD.floorY);
     });
   } else {
     const gradient = ctx.createLinearGradient(0, -SKY_BLEED, 0, WORLD.height + SKY_BLEED);

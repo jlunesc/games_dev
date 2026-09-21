@@ -34,6 +34,9 @@ import { advanceFlow, leaveRecording, leaveSummary, startFlow, type FightFlow } 
 import { createMenu, menuRows, menuStep, type MenuAction, type MenuModel } from './menu-model';
 import { NAV_START, advanceNav, type NavState } from './nav';
 import { loadPrefs, savePrefs, type Prefs } from './prefs';
+import { createBackground, type BackgroundCache } from './look/background';
+import { NO_EFFECTS, spawnEffects, stepEffects, type EffectsState } from './look/effects';
+import { moodFor } from './look/moods';
 import { drawFrame } from './render';
 import { renderList, renderSummary } from './screens';
 import { loadSettings, saveSettings, type Settings } from './settings';
@@ -148,6 +151,9 @@ export function mountApp(root: HTMLElement): void {
     playedAt: new Date().toISOString(),
   });
   let feedback: FeedbackState = NO_FEEDBACK;
+  // The looks: particles and the pre-drawn background. Cosmetic only, never read by the simulation.
+  let fx: EffectsState = NO_EFFECTS;
+  let background: BackgroundCache | null = null;
   let leftoverMs = 0;
   let freezeLeft = 0;
   // True from the start of a hit-stop until the next real update: the picture stays on the newest state.
@@ -507,6 +513,9 @@ export function mountApp(root: HTMLElement): void {
     exitHoldMs = 0;
     leaveHint.hidden = true;
     feedback = NO_FEEDBACK;
+    fx = NO_EFFECTS;
+    // Built once per fight for this boss's mood (null when no canvas can be made: the plain gradient is drawn instead).
+    background = createBackground(moodFor(boss.id));
     leftoverMs = 0;
     freezeLeft = 0;
     hitStopView = false;
@@ -532,7 +541,11 @@ export function mountApp(root: HTMLElement): void {
       canvas.width = width;
       canvas.height = height;
     }
-    drawFrame(context, width, height, state, boss, alpha, feedback);
+    drawFrame(context, width, height, state, boss, alpha, feedback, {
+      effects: fx,
+      background,
+      motion: settings.effects,
+    });
   }
 
   function runFight(now: number, selection: ProfileSelection | null, input: InputFrame): void {
@@ -573,6 +586,7 @@ export function mountApp(root: HTMLElement): void {
 
     for (let i = 0; i < plan.updates; i++) {
       feedback = advanceFeedback(feedback);
+      fx = stepEffects(fx);
       if (freezeLeft > 0) {
         freezeLeft -= 1;
         continue;
@@ -594,6 +608,7 @@ export function mountApp(root: HTMLElement): void {
         return;
       }
       feedback = applyEvents(feedback, state.events, settings);
+      fx = spawnEffects(fx, before, state, boss, settings.effects);
       freezeLeft = Math.max(freezeLeft, freezeFor(state.events, settings));
       if (freezeLeft > 0) hitStopView = true;
       sound.play(state.events);

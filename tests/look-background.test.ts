@@ -212,6 +212,7 @@ describe('a cached background (with a stand-in document)', () => {
             fillRect() {},
             beginPath() {},
             rect() {},
+            scale() {},
             moveTo() {},
             lineTo() {},
             closePath() {},
@@ -234,8 +235,10 @@ describe('a cached background (with a stand-in document)', () => {
     expect(cache).not.toBeNull();
     expect(made).toHaveLength(1 + mood.layers.length);
     for (const layer of made.slice(1)) {
-      expect(layer.width).toBe(WIDTH);
-      expect(layer.width).toBeGreaterThanOrEqual(WORLD.width);
+      // Half-size pixels (LOOK.layerScale) that stand for a full pattern width in world units.
+      expect(layer.width).toBe(Math.ceil(WIDTH * LOOK.layerScale));
+      expect(layer.height).toBe(Math.ceil(WORLD.floorY * LOOK.layerScale));
+      expect(layer.width / LOOK.layerScale).toBeGreaterThanOrEqual(WORLD.width);
       expect(layer.fills).toBeGreaterThan(0);
     }
   });
@@ -267,6 +270,22 @@ describe('a cached background (with a stand-in document)', () => {
       expect(a!).toBeLessThanOrEqual(-8);
       expect(b! + WIDTH).toBeGreaterThanOrEqual(WORLD.width + 8);
       expect(b!).toBeLessThanOrEqual(a! + WIDTH + 1e-6);
+    }
+  });
+
+  it('stretches the half-size pictures back to world size when drawing (sky and layers)', () => {
+    stubDocument();
+    const mood = MOODS['ember-duelist']!;
+    const cache = createBackground(mood)!;
+    const f = fakeContext();
+    const sizes: number[][] = [];
+    (f.ctx as unknown as { drawImage: (...a: number[]) => void }).drawImage = (_i, ...a) => sizes.push(a.slice(1));
+    drawBackground(f.ctx, mood, cache, 123, true);
+    expect(sizes[0]).toEqual([-8, WORLD.width + 16, WORLD.height + 16]);
+    for (const [y, w, h] of sizes.slice(1)) {
+      expect(y).toBe(0);
+      expect(w).toBe(WIDTH);
+      expect(h).toBe(WORLD.floorY);
     }
   });
 });

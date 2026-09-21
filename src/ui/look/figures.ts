@@ -10,9 +10,7 @@
 import type { BossDef, Pose } from '../../bosses/schema';
 import { PLAYER, WORLD } from '../../game/params';
 import type { GameState } from '../../game/state';
-// The only things taken from render.ts. Task 5 moves them into `look/pose.ts` (and re-exports them from render.ts),
-// so this one import block is the only line to change then, and render.ts can import this file without a cycle.
-import { armRect, bossDrawBox, type Rect } from '../render';
+import { armRect, bossDrawBox, type Rect } from './pose';
 import { LOOK } from './tuning';
 
 export type Primitive =

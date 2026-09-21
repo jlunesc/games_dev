@@ -82,6 +82,8 @@ export const LOOK = {
   emberAlphaMax: 0.9,
   emberPulseSpeed: 1.6,
   layerAlpha: 1,
+  /** Layers and the sky are pre-rendered at this fraction of their size and drawn scaled up (a quarter of the memory at 0.5). */
+  layerScale: 0.5,
 
   // ---- Figures: the player ----
   headRadius: 13,
@@ -120,4 +122,9 @@ export const LOOK = {
   platformGlow: '#8fa8ff',
   coverBody: '#23232f',
   coverEdge: '#6a6a86',
+  /** Distance between the faint vertical tile lines on the floor, world units. */
+  floorTileSpacing: 80,
+  floorTileAlpha: 0.16,
+  /** How far below the floor's top edge the faint horizontal tile line sits. */
+  floorTileRow: 32,
 } as const;

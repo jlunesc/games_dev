@@ -1,8 +1,27 @@
-import type { BossDef, Pose } from '../bosses/schema';
+import type { BossDef } from '../bosses/schema';
 import { activeHitBoxes, attackActive, attackBox } from '../game/geometry';
 import { PLAYER, WORLD } from '../game/params';
 import type { BossState, GameState } from '../game/state';
 import { shakeOffset, type FeedbackState } from './feedback';
+import { drawBackground, type BackgroundCache } from './look/background';
+import type { EffectsState } from './look/effects';
+import { bossFigure, drawPrimitives, playerFigure } from './look/figures';
+import { moodFor, type Mood } from './look/moods';
+import { BOSS_COLORS, armRect, bossDrawBox, bossLook, type BossLook, type Rect } from './look/pose';
+import { LOOK } from './look/tuning';
+
+// The pure pose helpers live in look/pose.ts (so the figures can use them without an import cycle); they are
+// re-exported here so every existing import keeps working.
+export { BOSS_COLORS, armRect, bossDrawBox, bossLook } from './look/pose';
+export type { BossLook, Rect } from './look/pose';
+
+/** What the game screen passes to `drawFrame` to get the full look. Left out, the plain old drawing is used. */
+export interface FrameLook {
+  effects: EffectsState;
+  background: BackgroundCache | null;
+  /** False draws the layers still and no embers (the Effects switch off). */
+  motion: boolean;
+}
 
 export interface Viewport {
   scale: number;
@@ -18,68 +37,6 @@ export function computeViewport(canvasWidth: number, canvasHeight: number): View
     offsetX: (canvasWidth - WORLD.width * scale) / 2,
     offsetY: (canvasHeight - WORLD.height * scale) / 2,
   };
-}
-
-export interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-const ARM_LENGTH = 90;
-const ARM_THICKNESS = 16;
-
-/** The boss's arm for a pose, as a rectangle hanging from the shoulder point. The pose tells the player which attack is coming. */
-export function armRect(pose: Pose, facing: 1 | -1, shoulderX: number, shoulderY: number): Rect {
-  const t = ARM_THICKNESS;
-  const l = ARM_LENGTH;
-  switch (pose) {
-    case 'raised':
-      return { x: shoulderX - t / 2, y: shoulderY - l, w: t, h: l };
-    case 'down':
-      return { x: shoulderX + facing * 30 - t / 2, y: shoulderY, w: t, h: l };
-    case 'sideways':
-      return { x: facing === 1 ? shoulderX : shoulderX - l, y: shoulderY - t / 2, w: l, h: t };
-    case 'back':
-      return { x: facing === 1 ? shoulderX - l : shoulderX, y: shoulderY - t / 2, w: l, h: t };
-    case 'crouch':
-      // Hangs low in front of the boss, shorter than the 'down' arm, as if the boss is gathering itself to spring.
-      return { x: shoulderX + facing * 20 - t / 2, y: shoulderY + 30, w: t, h: l * 0.6 };
-  }
-}
-
-export const BOSS_COLORS = {
-  ember: '#c8642a',
-  stagger: '#7fd6ff',
-  power: '#ffffff',
-  gold: '#f5c542',
-  red: '#e0403a',
-};
-
-export interface BossLook {
-  body: string;
-  /** The colour of the glow around the boss, or null for none. */
-  glow: string | null;
-}
-
-/**
- * How the boss looks right now: gold glow while a counterable attack winds up or is active, red for a
- * must-dodge one, blue when staggered, white while powering up between phases.
- */
-export function bossLook(b: BossState, boss: BossDef): BossLook {
-  if (b.mode === 'transition') return { body: BOSS_COLORS.ember, glow: BOSS_COLORS.power };
-  if (b.mode === 'stagger') return { body: BOSS_COLORS.stagger, glow: null };
-  if (b.mode === 'attack' && b.attackId !== null) {
-    const attack = boss.attacks.find((a) => a.id === b.attackId);
-    if (attack !== undefined && b.attackTick < attack.windup + attack.active) {
-      return {
-        body: BOSS_COLORS.ember,
-        glow: attack.class === 'counterable' ? BOSS_COLORS.gold : BOSS_COLORS.red,
-      };
-    }
-  }
-  return { body: BOSS_COLORS.ember, glow: null };
 }
 
 /** Where a running leap will land and what its shockwave covers, as `landingRing` reports it. */
@@ -133,12 +90,12 @@ export function landingSpan(ring: LandingRing): { left: number; right: number } 
 const COLORS = {
   bars: '#000000',
   arena: '#12121a',
-  floor: '#2a2a3a',
-  floorLine: '#8a8aa0',
-  platformBody: '#4b4b6e',
-  platformGlow: '#8fa8ff',
-  coverBody: '#23232f',
-  coverEdge: '#6a6a86',
+  floor: LOOK.floor,
+  floorLine: LOOK.floorLine,
+  platformBody: LOOK.platformBody,
+  platformGlow: LOOK.platformGlow,
+  coverBody: LOOK.coverBody,
+  coverEdge: LOOK.coverEdge,
   player: '#e8e8f0',
   playerDash: '#7fd6ff',
   playerHurt: '#ff3b3b',
@@ -148,19 +105,6 @@ const COLORS = {
   hud: '#e8e8f0',
   hudBack: '#3a3a4a',
 };
-
-/**
- * The boss body's vertical extent. A boss crouching to spring (a crouch-pose attack still winding up on the floor)
- * is 25% shorter; otherwise it is drawn `lift` units above the floor.
- */
-export function bossDrawBox(b: BossState, boss: BossDef): { top: number; height: number; crouching: boolean } {
-  const attack =
-    b.mode === 'attack' && b.attackId !== null ? boss.attacks.find((a) => a.id === b.attackId) : undefined;
-  const crouching =
-    attack !== undefined && attack.pose === 'crouch' && b.lift === 0 && b.attackTick < attack.windup;
-  const height = crouching ? boss.height * 0.75 : boss.height;
-  return { top: WORLD.floorY - height - b.lift, height, crouching };
-}
 
 const PLATFORM_THICKNESS = 14;
 
@@ -184,35 +128,76 @@ export function arenaRects(boss: BossDef): { platforms: Rect[]; covers: Rect[] }
   };
 }
 
-/** Draws the platforms (lighter, with a glowing top edge) and the covers (darker and solid, with a lighter top edge). */
-function drawArena(ctx: CanvasRenderingContext2D, boss: BossDef): void {
+/**
+ * Draws the platforms (lighter, with a glowing top edge) and the covers (darker and solid, with a lighter top edge).
+ * With a mood the edges take its accent colour and every piece gets a dark outline, so they stand out from the backdrop.
+ */
+function drawArena(ctx: CanvasRenderingContext2D, boss: BossDef, mood: Mood | null): void {
   const { platforms, covers } = arenaRects(boss);
+  const glow = mood?.accent ?? COLORS.platformGlow;
   for (const r of covers) {
     ctx.fillStyle = COLORS.coverBody;
     ctx.fillRect(r.x, r.y, r.w, r.h);
-    ctx.fillStyle = COLORS.coverEdge;
+    if (mood !== null) {
+      ctx.strokeStyle = COLORS.coverEdge;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 1);
+    }
+    ctx.fillStyle = mood?.accent ?? COLORS.coverEdge;
     ctx.fillRect(r.x, r.y, r.w, 4);
   }
   for (const r of platforms) {
     ctx.fillStyle = COLORS.platformBody;
     ctx.fillRect(r.x, r.y, r.w, r.h);
+    if (mood !== null) {
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = COLORS.bars;
+      ctx.fillRect(r.x, r.y + r.h - 3, r.w, 3);
+      ctx.restore();
+    }
     ctx.save();
     ctx.globalAlpha = 0.35;
-    ctx.fillStyle = COLORS.platformGlow;
+    ctx.fillStyle = glow;
     ctx.fillRect(r.x - 2, r.y - 5, r.w + 4, 8);
     ctx.restore();
-    ctx.fillStyle = COLORS.platformGlow;
+    ctx.fillStyle = glow;
     ctx.fillRect(r.x, r.y, r.w, 3);
   }
 }
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
+/** The colour of the boss's body: white in the flash after a hit, otherwise what `bossLook` says. */
+export function bossBodyColor(look: BossLook, feedback: FeedbackState): string {
+  return feedback.bossFlashTicks > 0 ? COLORS.flash : look.body;
+}
+
+/** The colour of the player's body: red after a hit, blue while dashing, otherwise the normal colour. */
+export function playerBodyColor(state: GameState, feedback: FeedbackState): string {
+  if (feedback.playerFlashTicks > 0) return COLORS.playerHurt;
+  return state.player.dashTick >= 0 ? COLORS.playerDash : COLORS.player;
+}
+
+/** Whether the player is drawn faint right now (invulnerable after a hit and not dashing, every other 3 ticks). */
+export function playerBlinking(state: GameState): boolean {
+  const p = state.player;
+  return p.invulnerableTicks > 0 && p.dashTick < 0 && Math.floor(state.tick / 3) % 2 === 1;
+}
+
+/** The x of the faint vertical lines that suggest floor tiles, across the world and the shake margin. */
+export function floorTileXs(): number[] {
+  const xs: number[] = [];
+  for (let x = 0; x <= WORLD.width; x += LOOK.floorTileSpacing) xs.push(x);
+  return xs;
+}
+
 function drawBoss(
   ctx: CanvasRenderingContext2D,
   state: GameState,
   boss: BossDef,
   feedback: FeedbackState,
+  mood: Mood | null,
 ): void {
   const b = state.boss;
   const look = bossLook(b, boss);
@@ -252,8 +237,16 @@ function drawBoss(
   const { top, height } = bossDrawBox(b, boss);
   const left = b.x - boss.width / 2;
 
-  ctx.fillStyle = feedback.bossFlashTicks > 0 ? COLORS.flash : look.body;
-  ctx.fillRect(left, top, boss.width, height);
+  const bodyColor = bossBodyColor(look, feedback);
+  if (mood !== null) {
+    drawPrimitives(
+      ctx,
+      bossFigure(state, boss, { body: bodyColor, accent: look.glow ?? mood.accent, glow: look.glow }),
+    );
+  } else {
+    ctx.fillStyle = bodyColor;
+    ctx.fillRect(left, top, boss.width, height);
+  }
   if (look.glow !== null) {
     ctx.globalAlpha = pulse;
     ctx.strokeStyle = look.glow;
@@ -262,17 +255,19 @@ function drawBoss(
     ctx.globalAlpha = 1;
   }
 
-  // The arm shows the pose of the attack being performed; when waiting it hangs at the side.
-  const shoulderY = top + height * 0.3;
-  const arm =
-    attack !== undefined
-      ? armRect(attack.pose, b.facing, b.x, shoulderY)
-      : { x: b.x + b.facing * 18 - 8, y: shoulderY, w: 16, h: 50 };
-  ctx.fillStyle = look.glow ?? '#e8965a';
-  ctx.fillRect(arm.x, arm.y, arm.w, arm.h);
-  // A small notch on the side the boss faces.
-  ctx.fillStyle = COLORS.arena;
-  ctx.fillRect(b.x + b.facing * (boss.width / 2 - 14) - 5, top + 24, 10, 10);
+  if (mood === null) {
+    // The arm shows the pose of the attack being performed; when waiting it hangs at the side.
+    const shoulderY = top + height * 0.3;
+    const arm =
+      attack !== undefined
+        ? armRect(attack.pose, b.facing, b.x, shoulderY)
+        : { x: b.x + b.facing * 18 - 8, y: shoulderY, w: 16, h: 50 };
+    ctx.fillStyle = look.glow ?? '#e8965a';
+    ctx.fillRect(arm.x, arm.y, arm.w, arm.h);
+    // A small notch on the side the boss faces.
+    ctx.fillStyle = COLORS.arena;
+    ctx.fillRect(b.x + b.facing * (boss.width / 2 - 14) - 5, top + 24, 10, 10);
+  }
 
   for (const box of activeHitBoxes(b, boss)) {
     ctx.globalAlpha = 0.5;
@@ -287,24 +282,26 @@ function drawPlayer(
   state: GameState,
   alpha: number,
   feedback: FeedbackState,
+  mood: Mood | null,
 ): void {
   const p = state.player;
   const x = lerp(p.prevX, p.x, alpha);
   const y = lerp(p.prevY, p.y, alpha);
-  const blinking = p.invulnerableTicks > 0 && p.dashTick < 0 && Math.floor(state.tick / 3) % 2 === 1;
+  const blinking = playerBlinking(state);
+  const body = playerBodyColor(state, feedback);
 
-  ctx.globalAlpha = blinking ? 0.35 : 1;
-  ctx.fillStyle =
-    feedback.playerFlashTicks > 0
-      ? COLORS.playerHurt
-      : p.dashTick >= 0
-        ? COLORS.playerDash
-        : COLORS.player;
-  ctx.fillRect(x - PLAYER.width / 2, y - PLAYER.height, PLAYER.width, PLAYER.height);
-  // A small notch on the side the player faces.
-  ctx.fillStyle = COLORS.arena;
-  ctx.fillRect(x + p.facing * (PLAYER.width / 2 - 8) - 4, y - PLAYER.height + 16, 8, 8);
-  ctx.globalAlpha = 1;
+  if (mood !== null) {
+    const accent = p.dashTick >= 0 ? LOOK.playerDashAccent : LOOK.playerAccent;
+    drawPrimitives(ctx, playerFigure(state, x, y, { body, accent }), blinking ? 0.35 : 1);
+  } else {
+    ctx.globalAlpha = blinking ? 0.35 : 1;
+    ctx.fillStyle = body;
+    ctx.fillRect(x - PLAYER.width / 2, y - PLAYER.height, PLAYER.width, PLAYER.height);
+    // A small notch on the side the player faces.
+    ctx.fillStyle = COLORS.arena;
+    ctx.fillRect(x + p.facing * (PLAYER.width / 2 - 8) - 4, y - PLAYER.height + 16, 8, 8);
+    ctx.globalAlpha = 1;
+  }
 
   if (attackActive(p)) {
     const box = attackBox(p);
@@ -313,6 +310,52 @@ function drawPlayer(
     ctx.fillRect(box.x, box.y, box.w, box.h);
     ctx.globalAlpha = 1;
   }
+}
+
+/** The floor: the mood's colour, a soft glow above its top edge, the bright edge line and faint tile lines. Covers everything below the layers, out to the shake margin. */
+function drawFloor(ctx: CanvasRenderingContext2D, mood: Mood): void {
+  const top = WORLD.floorY;
+  ctx.fillStyle = mood.floor;
+  ctx.fillRect(-8, top, WORLD.width + 16, WORLD.height - top + 8);
+  ctx.save();
+  ctx.fillStyle = mood.floorGlow;
+  for (const [reach, alpha] of [[28, 0.05], [16, 0.08], [7, 0.12]] as const) {
+    ctx.globalAlpha = alpha;
+    ctx.fillRect(-8, top - reach, WORLD.width + 16, reach);
+  }
+  ctx.globalAlpha = LOOK.floorTileAlpha;
+  ctx.fillStyle = COLORS.bars;
+  for (const x of floorTileXs()) ctx.fillRect(x - 1, top + 3, 2, WORLD.height - top + 5);
+  ctx.fillRect(-8, top + LOOK.floorTileRow, WORLD.width + 16, 2);
+  ctx.restore();
+  ctx.fillStyle = mood.floorLine;
+  ctx.fillRect(-8, top, WORLD.width + 16, 3);
+}
+
+/** The impact particles and rings, over the arena and under the HUD. */
+function drawEffects(ctx: CanvasRenderingContext2D, fx: EffectsState): void {
+  ctx.save();
+  for (const r of fx.rings) {
+    ctx.globalAlpha = Math.max(0, r.life / r.maxLife);
+    ctx.strokeStyle = r.color;
+    ctx.lineWidth = r.width;
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  for (const p of fx.particles) {
+    const fade = Math.max(0, p.life / p.maxLife);
+    ctx.globalAlpha = p.kind === 'trail' ? fade * LOOK.trailAlpha : fade;
+    ctx.fillStyle = p.color;
+    if (p.kind === 'spark') {
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    } else {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, state: GameState, boss: BossDef): void {
@@ -347,7 +390,9 @@ export function drawFrame(
   boss: BossDef,
   alpha: number,
   feedback: FeedbackState,
+  look?: FrameLook,
 ): void {
+  const mood = look === undefined ? null : moodFor(boss.id);
   const view = computeViewport(canvasWidth, canvasHeight);
   const shake = shakeOffset(feedback);
 
@@ -370,17 +415,24 @@ export function drawFrame(
   ctx.beginPath();
   ctx.rect(-8, -8, WORLD.width + 16, WORLD.height + 16);
   ctx.clip();
-  ctx.fillStyle = COLORS.arena;
-  // Drawn 8 units past every edge so the shake never shows the black bars.
-  ctx.fillRect(-8, -8, WORLD.width + 16, WORLD.height + 16);
-  ctx.fillStyle = COLORS.floor;
-  ctx.fillRect(-8, WORLD.floorY, WORLD.width + 16, WORLD.height - WORLD.floorY + 8);
-  ctx.fillStyle = COLORS.floorLine;
-  ctx.fillRect(-8, WORLD.floorY, WORLD.width + 16, 3);
+  if (look !== undefined && mood !== null) {
+    // Sky, layers and embers reach 8 units past every edge (what the shake shows); the floor covers the rest.
+    drawBackground(ctx, mood, look.background, state.tick, look.motion);
+    drawFloor(ctx, mood);
+  } else {
+    ctx.fillStyle = COLORS.arena;
+    // Drawn 8 units past every edge so the shake never shows the black bars.
+    ctx.fillRect(-8, -8, WORLD.width + 16, WORLD.height + 16);
+    ctx.fillStyle = COLORS.floor;
+    ctx.fillRect(-8, WORLD.floorY, WORLD.width + 16, WORLD.height - WORLD.floorY + 8);
+    ctx.fillStyle = COLORS.floorLine;
+    ctx.fillRect(-8, WORLD.floorY, WORLD.width + 16, 3);
+  }
 
-  drawArena(ctx, boss);
-  drawBoss(ctx, state, boss, feedback);
-  drawPlayer(ctx, state, alpha, feedback);
+  drawArena(ctx, boss, mood);
+  drawBoss(ctx, state, boss, feedback, mood);
+  drawPlayer(ctx, state, alpha, feedback, mood);
+  if (look !== undefined) drawEffects(ctx, look.effects);
   drawHud(ctx, state, boss);
 
   if (state.phase !== 'fight') {
