@@ -10,6 +10,13 @@
   "predictability": 0.2,
   "counter": { "window": 12, "range": 200, "staggerTicks": 90, "damageMultiplier": 2 },
   "transitionTicks": 60,
+  "arena": {
+    "platforms": [
+      { "x": 330, "width": 200, "height": 130 },
+      { "x": 950, "width": 200, "height": 130 }
+    ],
+    "covers": [{ "x": 640, "width": 60, "height": 120 }]
+  },
   "attacks": [
     {
       "id": "bite",

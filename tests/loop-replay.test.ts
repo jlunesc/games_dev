@@ -1,5 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, BOSSES, EMBER_DUELIST } from '../src/bosses';
+import { describe, expect, it } from 'vitest';
+import { ASHEN_HOUND, EMBER_DUELIST } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, NO_PRESSES, addPresses, applyPresses, type InputFrame } from '../src/engine/input-frame';
 import { planUpdates } from '../src/engine/loop';
@@ -418,22 +418,8 @@ describe('the update loop of the app with a study, replayed', () => {
 });
 
 describe('the update loop of the app in an arena, replayed', () => {
-  // The real Hound only gets its arena in a later task, and a record is replayed from the boss's id: so the
-  // arena Hound is registered under its own id for the length of this block.
-  const ARENA_HOUND: BossDef = {
-    ...ASHEN_HOUND,
-    id: 'arena-test-hound',
-    arena: {
-      platforms: [{ x: 700, width: 200, height: 120 }],
-      covers: [{ x: 520, width: 60, height: 130 }],
-    },
-  };
-  beforeAll(() => {
-    (BOSSES as BossDef[]).push(ARENA_HOUND);
-  });
-  afterAll(() => {
-    (BOSSES as BossDef[]).splice(BOSSES.indexOf(ARENA_HOUND), 1);
-  });
+  // The real Ashen Hound has the arena (two platforms and a cover).
+  const ARENA_HOUND: BossDef = ASHEN_HOUND;
 
   /** A player who runs right, jumps a lot (onto the cover and the platform) and swings and dashes now and then. */
   const climber = (f: number): InputFrame =>
@@ -455,7 +441,7 @@ describe('the update loop of the app in an arena, replayed', () => {
         player: climber,
         leaveAfterFrames: 2400,
       });
-      expect(played.record.bossId).toBe('arena-test-hound');
+      expect(played.record.bossId).toBe('ashen-hound');
       expect(played.boss.arena).toBeDefined();
       expect(played.framesWithoutUpdate).toBeGreaterThan(0);
       expect(played.record.ticks).toBeGreaterThan(300);

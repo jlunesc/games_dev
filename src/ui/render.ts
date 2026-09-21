@@ -135,6 +135,10 @@ const COLORS = {
   arena: '#12121a',
   floor: '#2a2a3a',
   floorLine: '#8a8aa0',
+  platformBody: '#4b4b6e',
+  platformGlow: '#8fa8ff',
+  coverBody: '#23232f',
+  coverEdge: '#6a6a86',
   player: '#e8e8f0',
   playerDash: '#7fd6ff',
   playerHurt: '#ff3b3b',
@@ -156,6 +160,50 @@ export function bossDrawBox(b: BossState, boss: BossDef): { top: number; height:
     attack !== undefined && attack.pose === 'crouch' && b.lift === 0 && b.attackTick < attack.windup;
   const height = crouching ? boss.height * 0.75 : boss.height;
   return { top: WORLD.floorY - height - b.lift, height, crouching };
+}
+
+const PLATFORM_THICKNESS = 14;
+
+/** The arena's pieces as world rectangles: platforms are thin slabs whose top is `height` above the floor, covers stand from the floor up to their height. */
+export function arenaRects(boss: BossDef): { platforms: Rect[]; covers: Rect[] } {
+  const arena = boss.arena;
+  if (arena === undefined) return { platforms: [], covers: [] };
+  return {
+    platforms: arena.platforms.map((p) => ({
+      x: p.x - p.width / 2,
+      y: WORLD.floorY - p.height,
+      w: p.width,
+      h: PLATFORM_THICKNESS,
+    })),
+    covers: arena.covers.map((c) => ({
+      x: c.x - c.width / 2,
+      y: WORLD.floorY - c.height,
+      w: c.width,
+      h: c.height,
+    })),
+  };
+}
+
+/** Draws the platforms (lighter, with a glowing top edge) and the covers (darker and solid, with a lighter top edge). */
+function drawArena(ctx: CanvasRenderingContext2D, boss: BossDef): void {
+  const { platforms, covers } = arenaRects(boss);
+  for (const r of covers) {
+    ctx.fillStyle = COLORS.coverBody;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = COLORS.coverEdge;
+    ctx.fillRect(r.x, r.y, r.w, 4);
+  }
+  for (const r of platforms) {
+    ctx.fillStyle = COLORS.platformBody;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = COLORS.platformGlow;
+    ctx.fillRect(r.x - 2, r.y - 5, r.w + 4, 8);
+    ctx.restore();
+    ctx.fillStyle = COLORS.platformGlow;
+    ctx.fillRect(r.x, r.y, r.w, 3);
+  }
 }
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -330,6 +378,7 @@ export function drawFrame(
   ctx.fillStyle = COLORS.floorLine;
   ctx.fillRect(-8, WORLD.floorY, WORLD.width + 16, 3);
 
+  drawArena(ctx, boss);
   drawBoss(ctx, state, boss, feedback);
   drawPlayer(ctx, state, alpha, feedback);
   drawHud(ctx, state, boss);

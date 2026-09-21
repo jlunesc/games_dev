@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ASHEN_HOUND } from '../src/bosses';
 import type { AttackDef, BossDef } from '../src/bosses/schema';
 import {
   DIALS,
@@ -247,6 +248,20 @@ function extremeDials(): Dials[] {
   for (let seed = 1; seed <= 200; seed++) list.push(randomDials(seed));
   return list;
 }
+
+describe('applyDials with an arena', () => {
+  it('keeps the arena exactly, at Normal and at every dial extreme', () => {
+    expect(ASHEN_HOUND.arena).toBeDefined();
+    expect(DUELIST.arena).toBeUndefined();
+    expect(applyDials(ASHEN_HOUND, NORMAL_DIALS).arena).toEqual(ASHEN_HOUND.arena);
+    for (const dial of DIALS) {
+      for (const value of [dial.min, dial.max]) {
+        expect(applyDials(ASHEN_HOUND, only({ [dial.id]: value })).arena).toEqual(ASHEN_HOUND.arena);
+      }
+    }
+    expect(applyDials(DUELIST, NORMAL_DIALS)).not.toHaveProperty('arena');
+  });
+});
 
 describe('applyDials with leaps and move directions', () => {
   it('leaves the moving attacks exactly as written at the Normal dials', () => {

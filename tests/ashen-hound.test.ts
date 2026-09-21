@@ -44,6 +44,7 @@ describe('the Ashen Hound file', () => {
 
   it('gives a valid Hound at every dial extreme, and the file itself at Normal', () => {
     expect(applyDials(ASHEN_HOUND, NORMAL_DIALS)).toEqual(ASHEN_HOUND);
+    expect(applyDials(ASHEN_HOUND, NORMAL_DIALS).arena).toEqual(ASHEN_HOUND.arena);
     for (const dial of DIALS) {
       for (const value of [dial.min, dial.max]) {
         const dials: Dials = { ...NORMAL_DIALS, [dial.id]: value };
@@ -81,6 +82,91 @@ describe('the Hound\'s two special attacks', () => {
     const landed = states[first + 52 - 1]!;
     expect(Math.abs(landed.boss.x - landed.player.x)).toBeLessThan(1);
     expect(landed.boss.lift).toBe(0);
+  });
+});
+
+describe('the Hound\'s arena', () => {
+  it('is in the file: two platforms and a cover', () => {
+    expect(ASHEN_HOUND.arena).toEqual({
+      platforms: [
+        { x: 330, width: 200, height: 130 },
+        { x: 950, width: 200, height: 130 },
+      ],
+      covers: [{ x: 640, width: 60, height: 120 }],
+    });
+  });
+
+  it('is kept exactly at every dial extreme', () => {
+    for (const dial of DIALS) {
+      for (const value of [dial.min, dial.max]) {
+        const dials: Dials = { ...NORMAL_DIALS, [dial.id]: value };
+        expect(applyDials(ASHEN_HOUND, dials).arena).toEqual(ASHEN_HOUND.arena);
+      }
+    }
+  });
+
+  /** The Hound and the player placed for one attack: the cover spans x 610 to 670, and the player's body is 48 wide. */
+  function scene(id: string, bossX: number, playerX: number, arena: boolean): { boss: BossDef; state: GameState } {
+    const { arena: _arena, ...bare } = solo(id);
+    const boss: BossDef = arena ? solo(id) : bare;
+    const state = createInitialState(boss, 1);
+    state.boss.x = bossX;
+    state.boss.facing = bossX > playerX ? -1 : 1;
+    state.player.x = playerX;
+    state.player.prevX = playerX;
+    return { boss, state };
+  }
+
+  /** Runs the first attack the Hound starts (and a bit after it) and returns the updates on which the player was hurt. */
+  function firstAttack(id: string, bossX: number, playerX: number, arena: boolean): number[] {
+    const { boss, state } = scene(id, bossX, playerX, arena);
+    const states = run(state, 100, () => NO_INPUT, boss);
+    const warned = windupUpdates(states);
+    expect(warned.length).toBeGreaterThan(0);
+    expect(states[warned[0]! - 1]!.boss.attackId).toBe(id);
+    return updatesWith(states.slice(0, warned[0]! + 80), 'playerHit');
+  }
+
+  it('the cover blocks a bite from the right, and a player in the open is bitten', () => {
+    // The Hound at x 690 bites toward x 550..690: it reaches a player at x 570 behind the cover (x 610..670).
+    expect(firstAttack('bite', 690, 570, false)).not.toEqual([]);
+    expect(firstAttack('bite', 690, 570, true)).toEqual([]);
+    // The same the other way round: the Hound at x 590 bites toward x 590..730, and the player at x 700 is behind the cover.
+    expect(firstAttack('bite', 590, 700, false)).not.toEqual([]);
+    expect(firstAttack('bite', 590, 700, true)).toEqual([]);
+  });
+
+  it('the cover blocks a rush that stops short of it, and a player in the open is hit', () => {
+    // The rush covers 320 units: from x 1000 it ends at x 680, just short of the cover, with its window reaching x 580.
+    expect(firstAttack('rush', 1000, 570, false)).not.toEqual([]);
+    expect(firstAttack('rush', 1000, 570, true)).toEqual([]);
+  });
+
+  it('the cover stops the low shockwave of a pounce that lands beside it', () => {
+    // The Hound leaps from the right to where the player stood at take-off (x 700, right of the cover); the player
+    // then slips behind the cover. Its shockwave (60 tall) is cut at the cover (120 tall).
+    function pounce(arena: boolean, hide: boolean): number[] {
+      const { boss, state } = scene('pounce', 960, 700, arena);
+      const states: GameState[] = [];
+      let s = state;
+      let takenOff = false;
+      for (let n = 1; n <= 140; n++) {
+        s = step(s, NO_INPUT, boss);
+        if (!takenOff && s.boss.lift > 0) {
+          takenOff = true;
+          if (hide) {
+            s.player.x = 570;
+            s.player.prevX = 570;
+          }
+        }
+        states.push(s);
+      }
+      const first = windupUpdates(states)[0]!;
+      return updatesWith(states.slice(0, first + 80), 'playerHit');
+    }
+    expect(pounce(true, false)).not.toEqual([]); // standing in the open: hit at the landing
+    expect(pounce(false, true)).not.toEqual([]); // hiding, but no cover in the arena: hit
+    expect(pounce(true, true)).toEqual([]);
   });
 });
 
