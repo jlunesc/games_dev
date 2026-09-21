@@ -18,6 +18,7 @@ const ROWS: ReadonlyArray<{ id: keyof Settings; label: string; help: string }> =
   { id: 'freeze', label: 'Hit freeze', help: 'A tiny pause when a hit lands, so hits feel heavy.' },
   { id: 'shake', label: 'Screen shake', help: 'The screen shakes a little when something is hit.' },
   { id: 'flash', label: 'Flashes', help: 'White and red flashes when something is hit.' },
+  { id: 'effects', label: 'Effects', help: 'Particles, drifting embers and moving background layers.' },
   { id: 'sound', label: 'Sound', help: 'The beeps for hits, dashes and warnings.' },
 ];
 

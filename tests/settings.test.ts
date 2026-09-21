@@ -4,15 +4,15 @@ import { BrokenStorage, MemoryStorage } from './memory-storage';
 
 describe('settings', () => {
   it('start with everything on', () => {
-    expect(DEFAULT_SETTINGS).toEqual({ freeze: true, shake: true, flash: true, sound: true });
+    expect(DEFAULT_SETTINGS).toEqual({ freeze: true, shake: true, flash: true, effects: true, sound: true });
     expect(loadSettings(new MemoryStorage())).toEqual(DEFAULT_SETTINGS);
     expect(loadSettings(null)).toEqual(DEFAULT_SETTINGS);
   });
 
   it('are remembered', () => {
     const storage = new MemoryStorage();
-    saveSettings(storage, { freeze: false, shake: true, flash: false, sound: true });
-    expect(loadSettings(storage)).toEqual({ freeze: false, shake: true, flash: false, sound: true });
+    saveSettings(storage, { freeze: false, shake: true, flash: false, effects: false, sound: true });
+    expect(loadSettings(storage)).toEqual({ freeze: false, shake: true, flash: false, effects: false, sound: true });
   });
 
   it('fall back to the defaults for broken or partial stored data', () => {
@@ -22,6 +22,26 @@ describe('settings', () => {
     expect(parseSettings('{"shake": false, "sound": "no"}')).toEqual({
       ...DEFAULT_SETTINGS,
       shake: false,
+    });
+  });
+
+  it('read the Effects switch: missing or not a boolean is on, false is kept, the others stay intact', () => {
+    expect(parseSettings('{"freeze": false, "shake": true, "flash": true, "sound": true}')).toEqual({
+      freeze: false,
+      shake: true,
+      flash: true,
+      effects: true,
+      sound: true,
+    });
+    expect(parseSettings('{"effects": "no"}').effects).toBe(true);
+    expect(parseSettings('{"effects": 0}').effects).toBe(true);
+    expect(parseSettings('{"effects": false}')).toEqual({ ...DEFAULT_SETTINGS, effects: false });
+    expect(parseSettings('{"effects": false, "sound": false, "freeze": false}')).toEqual({
+      freeze: false,
+      shake: true,
+      flash: true,
+      effects: false,
+      sound: false,
     });
   });
 

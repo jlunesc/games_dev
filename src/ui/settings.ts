@@ -5,10 +5,12 @@ export interface Settings {
   freeze: boolean;
   shake: boolean;
   flash: boolean;
+  /** Particles, drifting embers and moving background layers. */
+  effects: boolean;
   sound: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { freeze: true, shake: true, flash: true, sound: true };
+export const DEFAULT_SETTINGS: Settings = { freeze: true, shake: true, flash: true, effects: true, sound: true };
 
 const KEY = 'boss-trainer.settings';
 
@@ -20,7 +22,13 @@ export function parseSettings(raw: string | null): Settings {
     if (typeof data !== 'object' || data === null) return { ...DEFAULT_SETTINGS };
     const o = data as Record<string, unknown>;
     const flag = (value: unknown): boolean => (typeof value === 'boolean' ? value : true);
-    return { freeze: flag(o.freeze), shake: flag(o.shake), flash: flag(o.flash), sound: flag(o.sound) };
+    return {
+      freeze: flag(o.freeze),
+      shake: flag(o.shake),
+      flash: flag(o.flash),
+      effects: flag(o.effects),
+      sound: flag(o.sound),
+    };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

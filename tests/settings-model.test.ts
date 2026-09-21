@@ -10,9 +10,12 @@ import {
 const at = (focus: number): SettingsModel => ({ ...createSettingsModel(DEFAULT_SETTINGS), focus });
 
 describe('the settings rows', () => {
-  it('list the four switches with On or Off and a help line', () => {
+  it('list the five switches with On or Off and a help line', () => {
     const rows = settingsRows(createSettingsModel(DEFAULT_SETTINGS));
-    expect(rows.map((r) => r.id)).toEqual(['freeze', 'shake', 'flash', 'sound']);
+    expect(rows.map((r) => r.id)).toEqual(['freeze', 'shake', 'flash', 'effects', 'sound']);
+    const effects = rows.find((r) => r.id === 'effects')!;
+    expect(effects.label).toBe('Effects');
+    expect(effects.help).toBe('Particles, drifting embers and moving background layers.');
     expect(rows.every((r) => r.value === 'On' && r.help.length > 0)).toBe(true);
     const off = settingsRows(createSettingsModel({ ...DEFAULT_SETTINGS, shake: false }));
     expect(off.find((r) => r.id === 'shake')!.value).toBe('Off');
@@ -21,14 +24,22 @@ describe('the settings rows', () => {
 
 describe('the settings screen', () => {
   it('up and down move the focus and wrap', () => {
-    expect(settingsStep(createSettingsModel(DEFAULT_SETTINGS), 'up').model.focus).toBe(3);
-    expect(settingsStep(at(3), 'down').model.focus).toBe(0);
+    expect(settingsStep(createSettingsModel(DEFAULT_SETTINGS), 'up').model.focus).toBe(4);
+    expect(settingsStep(at(4), 'down').model.focus).toBe(0);
   });
 
   it('left, right and confirm toggle the focused switch', () => {
     for (const action of ['left', 'right', 'confirm'] as const) {
       const toggled = settingsStep(at(1), action).model;
       expect(toggled.settings).toEqual({ ...DEFAULT_SETTINGS, shake: false });
+      expect(settingsStep(toggled, action).model.settings).toEqual(DEFAULT_SETTINGS);
+    }
+  });
+
+  it('left, right and confirm toggle Effects', () => {
+    for (const action of ['left', 'right', 'confirm'] as const) {
+      const toggled = settingsStep(at(3), action).model;
+      expect(toggled.settings).toEqual({ ...DEFAULT_SETTINGS, effects: false });
       expect(settingsStep(toggled, action).model.settings).toEqual(DEFAULT_SETTINGS);
     }
   });
