@@ -8,8 +8,8 @@ describe('arenaRects', () => {
     const { platforms, covers } = arenaRects(ASHEN_HOUND);
     expect(WORLD.floorY).toBe(640);
     expect(platforms).toEqual([
-      { x: 230, y: 510, w: 200, h: 14 },
-      { x: 850, y: 510, w: 200, h: 14 },
+      { x: 230, y: 550, w: 200, h: 14 },
+      { x: 850, y: 550, w: 200, h: 14 },
     ]);
     expect(covers).toEqual([{ x: 610, y: 520, w: 60, h: 120 }]);
   });

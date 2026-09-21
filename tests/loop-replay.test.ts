@@ -418,9 +418,6 @@ describe('the update loop of the app with a study, replayed', () => {
 });
 
 describe('the update loop of the app in an arena, replayed', () => {
-  // The real Ashen Hound has the arena (two platforms and a cover).
-  const ARENA_HOUND: BossDef = ASHEN_HOUND;
-
   /** A player who runs right, jumps a lot (onto the cover and the platform) and swings and dashes now and then. */
   const climber = (f: number): InputFrame =>
     withInput({
@@ -437,7 +434,7 @@ describe('the update loop of the app in an arena, replayed', () => {
         ...c,
         seed,
         deltas: messyDeltas(seed),
-        bossDef: ARENA_HOUND,
+        bossDef: ASHEN_HOUND,
         player: climber,
         leaveAfterFrames: 2400,
       });
@@ -458,7 +455,7 @@ describe('the update loop of the app in an arena, replayed', () => {
       seed: 8,
       study: 1,
       deltas: messyDeltas(8),
-      bossDef: ARENA_HOUND,
+      bossDef: ASHEN_HOUND,
       player: climber,
       leaveAfterFrames: 2400,
     });
@@ -473,7 +470,7 @@ describe('the update loop of the app in an arena, replayed', () => {
       dials: presetDials('normal'),
       seed: 4,
       deltas: messyDeltas(9),
-      bossDef: ARENA_HOUND,
+      bossDef: ASHEN_HOUND,
       player: passive,
     });
     expect(played.result).toBe('defeat');

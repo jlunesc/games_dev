@@ -3,6 +3,7 @@ import { ASHEN_HOUND, bossById } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { DIALS, NORMAL_DIALS, applyDials, presetDials, type Dials, type PresetId } from '../src/game/difficulty';
+import { WORLD } from '../src/game/params';
 import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 import { analyzeRun } from '../src/stats/analyze';
@@ -89,8 +90,8 @@ describe('the Hound\'s arena', () => {
   it('is in the file: two platforms and a cover', () => {
     expect(ASHEN_HOUND.arena).toEqual({
       platforms: [
-        { x: 330, width: 200, height: 130 },
-        { x: 950, width: 200, height: 130 },
+        { x: 330, width: 200, height: 90 },
+        { x: 950, width: 200, height: 90 },
       ],
       covers: [{ x: 640, width: 60, height: 120 }],
     });
@@ -106,7 +107,13 @@ describe('the Hound\'s arena', () => {
   });
 
   /** The Hound and the player placed for one attack: the cover spans x 610 to 670, and the player's body is 48 wide. */
-  function scene(id: string, bossX: number, playerX: number, arena: boolean): { boss: BossDef; state: GameState } {
+  function scene(
+    id: string,
+    bossX: number,
+    playerX: number,
+    arena: boolean,
+    standingHeight = 0,
+  ): { boss: BossDef; state: GameState } {
     const { arena: _arena, ...bare } = solo(id);
     const boss: BossDef = arena ? solo(id) : bare;
     const state = createInitialState(boss, 1);
@@ -114,12 +121,14 @@ describe('the Hound\'s arena', () => {
     state.boss.facing = bossX > playerX ? -1 : 1;
     state.player.x = playerX;
     state.player.prevX = playerX;
+    state.player.y = WORLD.floorY - standingHeight;
+    state.player.prevY = state.player.y;
     return { boss, state };
   }
 
   /** Runs the first attack the Hound starts (and a bit after it) and returns the updates on which the player was hurt. */
-  function firstAttack(id: string, bossX: number, playerX: number, arena: boolean): number[] {
-    const { boss, state } = scene(id, bossX, playerX, arena);
+  function firstAttack(id: string, bossX: number, playerX: number, arena: boolean, standingHeight = 0): number[] {
+    const { boss, state } = scene(id, bossX, playerX, arena, standingHeight);
     const states = run(state, 100, () => NO_INPUT, boss);
     const warned = windupUpdates(states);
     expect(warned.length).toBeGreaterThan(0);
@@ -167,6 +176,15 @@ describe('the Hound\'s arena', () => {
     expect(pounce(true, false)).not.toEqual([]); // standing in the open: hit at the landing
     expect(pounce(false, true)).not.toEqual([]); // hiding, but no cover in the arena: hit
     expect(pounce(true, true)).toEqual([]);
+  });
+
+  it('a player standing on a platform (90 high) is reached by the bite and the rush, but the pounce\'s low shockwave passes under', () => {
+    // The left platform spans x 230 to 430; the player stands at x 330.
+    expect(firstAttack('bite', 430, 330, true, 90)).not.toEqual([]);
+    expect(firstAttack('rush', 600, 330, true, 90)).not.toEqual([]);
+    expect(firstAttack('pounce', 700, 330, true, 90)).toEqual([]);
+    // The same pounce does hit a player who stands on the floor at that spot, so the check has teeth.
+    expect(firstAttack('pounce', 700, 330, true, 0)).not.toEqual([]);
   });
 });
 
@@ -297,6 +315,38 @@ describe('the Hound never makes a degenerate fight (bots)', () => {
       const list = results.get(key('normal', name))!;
       expect(list.every((r) => r.won && r.damage === 0), name).toBe(false);
     }
+  });
+});
+
+/** Jumps onto the left platform (x 230 to 430, 90 high) and never leaves it, whatever the Hound does. */
+const camper: Bot = (_n, prev) => {
+  const p = prev.player;
+  const onPlatform = p.onGround && p.y < WORLD.floorY - 1;
+  if (onPlatform) return NO_INPUT;
+  const dx = 330 - p.x;
+  return withInput({ moveX: Math.abs(dx) < 8 ? 0 : dx > 0 ? 1 : -1, jumpPressed: p.onGround, jumpHeld: true });
+};
+
+describe('a player who camps on a platform cannot make the Hound unbeatable', () => {
+  const camp = (seed: number) => {
+    const boss = applyDials(ASHEN_HOUND, presetDials('normal'));
+    const start = createInitialState(boss, seed);
+    let s = start;
+    let platformUpdates = 0;
+    for (let n = 1; n <= MAX_UPDATES && s.phase === 'fight'; n++) {
+      s = step(s, camper(n, s), boss);
+      if (s.player.onGround && s.player.y < WORLD.floorY - 1) platformUpdates += 1;
+    }
+    return { ended: s.phase !== 'fight', damage: start.player.health - s.player.health, platformUpdates, updates: s.tick };
+  };
+
+  it.each([1, 2, 3, 4])('takes hits and the fight ends within the limit (seed %i)', (seed) => {
+    const r = camp(seed);
+    expect(r.damage).toBeGreaterThan(0);
+    expect(r.ended).toBe(true);
+    expect(r.updates).toBeLessThanOrEqual(MAX_UPDATES);
+    // The bot really did camp: it spent most of the fight standing on the platform.
+    expect(r.platformUpdates).toBeGreaterThan(r.updates / 2);
   });
 });
 
