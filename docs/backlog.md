@@ -11,10 +11,10 @@ Notes for the design: the player's numbers already live in one data file (`src/g
 Things happening in the background of the arena that can hurt the player, on top of the boss's own attacks: falling objects, moving hazards, and so on. The spec already lists related mechanics as candidates (arena as a mechanic, lingering hazards, shrinking safe area).
 
 **Partly built in M5c** (awaiting the owner's play test): platforms and cover are done (`docs/SPEC.md` section 11, format and rules in `docs/bosses.md`). Ideas that are **not built**, only listed:
+- **A boss blocked by cover (top arena item, raised after the M5c review)**: the real fix for the weak wall. A probe on the shipped arena (wall 100 high, 40 seeds x 1800 updates) showed that a player standing still behind the wall takes exactly as many hits as with the wall removed (496 vs 496), because the Hound walks through the wall (the rush is carried through it, the pounce lands on the player's take-off spot) and the bite (window top 110) passes over it. The wall does cut hit windows (1020 of 9261 window-updates) but the attack lands anyway, so the `cover` evasion is expected to stay at 0 or rare until the boss is stopped by cover or walks around it.
 - **Platforms the boss uses**: the boss stands on, jumps to or fights from platforms (today it ignores the arena and walks through it).
 - **Hazards**: falling objects and moving hazards with their own timing.
 - **Moving or destroyable pieces**: platforms that move, cover that breaks.
-- **A boss blocked by cover**: the real fix for the weak wall (the Hound walks through it, so a rush can end inside the cover and still hit a player behind it). The boss would be stopped by cover or walk around it.
 - **A narrower foot test for ledges**: today any overlap of the 48-wide body lands the player on a ledge, so a body can hang over an edge with up to 47 units off it. A test on the feet only (or the body's centre) would fix that.
 - **Arena pieces chosen at random** (the generator, M5e).
 

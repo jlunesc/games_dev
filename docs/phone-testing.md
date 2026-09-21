@@ -137,12 +137,12 @@ The Ashen Hound's fight now has a **scenery**: two **ledges** (raised platforms)
 ### How to use them
 - **Getting up on a ledge.** Jump from below: you pass **through** the ledge on the way up, and when you come down you **land on top** of it. Hold the jump button, because a quick tap only hops a little and does not reach 90. On top you can stand, run, jump, swing and dash like on the floor, and you drop off by walking off the edge. You do not have to be fully over the ledge to stay up: even a small part of your body over it holds you.
 - **From a ledge your swing cannot reach the Hound while it is on the floor**, so you cannot hit it from up there (and the counter, which the Hound does not even have, would not work from there either). Come down to hit it.
-- **The wall stops you sideways.** You cannot run through it, and a **dash stops** when it hits the wall. You can jump **onto** it (it is 100 high and a jump goes up to about 155) and stand on top, or jump **over** it.
-- **The Hound walks straight through the wall and the ledges** (a first simplification; it will look odd, and it is on the list to fix). The wall does not stop the Hound. What the wall does is stop the Hound's **attacks**, when the Hound is on the other side.
+- **The wall stops you sideways.** You cannot run through it, and a **dash stops** when it hits the wall. You can jump **onto** it (it is 100 high and a jump goes up to about 163) and stand on top, or jump **over** it.
+- **The Hound walks straight through the wall and the ledges** (a first simplification; it will look odd, and it is on the list to fix). The wall does not stop the Hound. On paper the wall cuts off the Hound's **attacks** when the Hound is on the other side, but in practice this protects you very little (see below).
 
 ### What is safe where
 - **On a ledge** (90 high): you are safe from the pounce's low shockwave (it is only 60 high, so it passes under your feet). You are **not** safe from the bite (110 high) or the rush (100 high): both still reach you up there.
-- **Behind the wall** (the wall between you and the Hound): the wall stops the rush and the pounce's shockwave that come from the Hound's side, because it is at least as tall as they are (100 and 60). It does **not** stop the bite (110 high): the bite passes over the wall and still bites you behind it. The wall protection only holds **while the Hound is on the other side of the wall**: once the Hound is standing inside the wall or has walked past it, the wall no longer blocks anything. So a rush that ends inside the wall can still hit you just behind it. And the pounce lands where **you were standing when it took off**, so hiding only works if you step behind the wall after it takes off.
+- **Behind the wall** (the wall between you and the Hound): **do not expect the wall to protect you yet.** On paper it stops the rush and the pounce's shockwave that come from the Hound's side (it is at least as tall as they are: 100 and 60), and it does not stop the bite (110 high, it passes over the wall). In practice the Hound **walks through the wall**: a rush is carried through it and ends inside or past it, and the pounce lands where **you were standing when it took off**. We measured it: a player who stands still behind the wall gets hit exactly as often as with the wall removed (496 hits against 496 in the same 40 test fights). So a player hiding behind the wall is not safer. The real fix is a later step: the Hound being blocked by the wall.
 - **On top of the wall** (100 high): the bite (110 high) still reaches you up there. The rush (100 high) only touches your feet and the pounce's shockwave (60 high) passes below, so those two should not hurt you on top of the wall. You cannot hit the Hound from there either. So the top of the wall is not a place to hide forever, but please check this by feel (see the questions).
 
 ### Checklist
@@ -154,16 +154,16 @@ The Ashen Hound's fight now has a **scenery**: two **ledges** (raised platforms)
 - [ ] You can jump onto the wall and stand on it, and you can jump over it.
 - [ ] Standing on a ledge, you are not hurt by the pounce's low shockwave. Note what the bite and the rush do to you up there (by the numbers they should still hit you).
 - [ ] Standing on a ledge, your swing does not hurt the Hound while it is on the floor.
-- [ ] Behind the wall, the rush and the pounce's shockwave coming from the Hound's side are stopped, as long as the Hound is on the far side. The bite is **not** stopped (it should still bite you behind the wall). Note any time the rush or the shockwave hurt you while behind the wall, and where the Hound was then.
+- [ ] Behind the wall: the wall does not protect you much yet (the Hound walks through it, and the bite passes over it). Tell me if it feels useless or if it surprises you. The fix is a later step, the Hound being blocked by the wall.
 - [ ] Standing on top of the wall, the bite still hurts you; the rush and the pounce's shockwave should not. Note what happens if you stay up there.
 - [ ] The Hound walks through the wall and the ledges without being stopped (expected for now).
 - [ ] The Duelist's arena is flat, and the Duelist plays exactly as before.
-- [ ] Stats still save (the summary's last line counts them) and Export works. In the exported file, the `evasion` of an attack you avoided by standing on a ledge or the wall can say `platform`, and behind the wall it can say `cover` (see `docs/stats.md`).
+- [ ] Stats still save (the summary's last line counts them) and Export works. In the exported file, the `evasion` of an attack you avoided by standing on a ledge or on top of the wall can say `platform`. It is expected to say `cover` rarely or never for now, because the wall barely protects you yet (see `docs/stats.md`).
 
 ### Questions about the arena
 - Are the ledges too high or too low? Is 90 a good height to jump up to?
 - Is the wall in a good place? Is it too far from where you usually stand?
-- Does hiding behind the wall feel too safe, or too useless (it stops the rush and the shockwave but not the bite, the Hound walks through it, and the pounce lands where you were)?
+- Does hiding behind the wall feel useless (the Hound walks through it, the bite passes over it, and the pounce lands where you were)? Or did it ever surprise you by protecting you?
 - Can you tell what a ledge and the wall do at a glance, without trying them?
 - Does the wall look clearly different from the floor and from the ledges?
 - Did you find a place where you could not be hurt at all? (There should be none: the bite reaches you behind the wall and on top of it.) Did that spoil the fight?
