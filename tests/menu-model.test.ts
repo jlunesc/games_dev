@@ -22,9 +22,12 @@ const press = (model: MenuModel, ...actions: MenuAction[]): MenuModel =>
 describe('the menu rows', () => {
   it('are in order and show the boss and the difficulty', () => {
     const rows = menuRows(createMenu(DEFAULT_PREFS));
-    expect(rows.map((r) => r.id)).toEqual(['fight', 'boss', 'difficulty', 'tweak', 'stats', 'settings', 'test']);
+    expect(rows.map((r) => r.id)).toEqual(['fight', 'boss', 'difficulty', 'study', 'tweak', 'stats', 'settings', 'test']);
     expect(rows.find((r) => r.id === 'boss')!.value).toBe(EMBER_DUELIST.name);
     expect(rows.find((r) => r.id === 'difficulty')!.value).toBe('Normal');
+    const study = rows.find((r) => r.id === 'study')!;
+    expect(study.label).toBe('Study');
+    expect(study.value).toBe('Once');
   });
 
   it('starts with Fight focused', () => {
@@ -112,6 +115,31 @@ describe('choosing in the menu', () => {
 
   it('confirm on the Boss row does nothing (only left and right choose)', () => {
     expect(menuStep(at('boss'), 'confirm').outcome).toEqual({ kind: 'stay' });
+  });
+
+  it('left, right and confirm cycle the Study setting and wrap, staying on the menu', () => {
+    const valueOf = (m: MenuModel) => menuRows(m).find((r) => r.id === 'study')!.value;
+    const m = at('study');
+    expect(m.prefs.study).toBe(1);
+    expect(valueOf(m)).toBe('Once');
+    expect(valueOf(press(m, 'right'))).toBe('Twice');
+    expect(valueOf(press(m, 'right', 'right'))).toBe('Off');
+    expect(valueOf(press(m, 'right', 'right', 'right'))).toBe('Once');
+    expect(valueOf(press(m, 'left'))).toBe('Off');
+    expect(valueOf(press(m, 'left', 'left'))).toBe('Twice');
+    expect(press(m, 'confirm').prefs.study).toBe(2);
+    for (const action of ['left', 'right', 'confirm'] as const) {
+      expect(menuStep(m, action).outcome).toEqual({ kind: 'stay' });
+    }
+  });
+
+  it('changing Study touches nothing else', () => {
+    const custom = nudgeDial(selectPreset({ ...DEFAULT_PREFS, bossId: ASHEN_HOUND.id }, 'hard'), 'speed', 1);
+    const start = at('study', { focus: 0, prefs: custom });
+    const after = press(start, 'right');
+    expect(after.focus).toBe(start.focus);
+    expect(after.prefs).toEqual({ ...custom, study: 2 });
+    expect(after.prefs.dials).toEqual(custom.dials);
   });
 
   it('does not change the model it is given', () => {

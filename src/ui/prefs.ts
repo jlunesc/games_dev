@@ -11,19 +11,25 @@ import {
   type Dials,
   type PresetId,
 } from '../game/difficulty';
+import { wrap } from './nav';
 import type { StorageLike } from './storage';
 
-/** What the menu remembers: the boss, the preset, and the dial values (which differ from the preset once tweaked). */
+/** How many times the study phase runs before a fight: 0 = Off, 1 = Once, 2 = Twice. */
+export type StudySetting = 0 | 1 | 2;
+
+/** What the menu remembers: the boss, the preset, the dial values (which differ from the preset once tweaked), and the study setting. */
 export interface Prefs {
   bossId: string;
   presetId: PresetId;
   dials: Dials;
+  study: StudySetting;
 }
 
 export const DEFAULT_PREFS: Prefs = {
   bossId: EMBER_DUELIST.id,
   presetId: 'normal',
   dials: { ...NORMAL_DIALS },
+  study: 1,
 };
 
 const KEY = 'boss-trainer.prefs';
@@ -55,6 +61,15 @@ export function changedFromPreset(prefs: Prefs): DialId[] {
   return changedDials(presetDials(prefs.presetId), prefs.dials);
 }
 
+/** The next study setting, wrapping 0 -> 1 -> 2 -> 0 (or backwards). */
+export function nextStudy(value: StudySetting, direction: 1 | -1): StudySetting {
+  return wrap(value, direction, 3) as StudySetting;
+}
+
+export function studyLabel(value: StudySetting): 'Off' | 'Once' | 'Twice' {
+  return value === 0 ? 'Off' : value === 2 ? 'Twice' : 'Once';
+}
+
 /** Reads stored choices; anything missing, unknown or out of range falls back safely. */
 export function parsePrefs(raw: string | null): Prefs {
   const fallback: Prefs = { ...DEFAULT_PREFS, dials: { ...NORMAL_DIALS } };
@@ -75,6 +90,7 @@ export function parsePrefs(raw: string | null): Prefs {
       bossId: typeof o.bossId === 'string' ? o.bossId : fallback.bossId,
       presetId,
       dials,
+      study: o.study === 0 || o.study === 1 || o.study === 2 ? o.study : fallback.study,
     };
   } catch {
     return fallback;

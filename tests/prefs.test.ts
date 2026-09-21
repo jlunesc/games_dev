@@ -6,11 +6,13 @@ import {
   changedFromPreset,
   isCustom,
   loadPrefs,
+  nextStudy,
   nudgeDial,
   parsePrefs,
   resetDials,
   savePrefs,
   selectPreset,
+  studyLabel,
 } from '../src/ui/prefs';
 import { BrokenStorage, MemoryStorage } from './memory-storage';
 
@@ -20,6 +22,7 @@ describe('the remembered choices', () => {
       bossId: EMBER_DUELIST.id,
       presetId: 'normal',
       dials: NORMAL_DIALS,
+      study: 1,
     });
     expect(isCustom(DEFAULT_PREFS)).toBe(false);
   });
@@ -115,9 +118,42 @@ describe('storing the choices', () => {
     expect(bossById(parsed.bossId)).toBe(EMBER_DUELIST);
   });
 
+  it.each([0, 1, 2] as const)('keeps a stored study value of %i', (study) => {
+    expect(parsePrefs(JSON.stringify({ study })).study).toBe(study);
+    const storage = new MemoryStorage();
+    savePrefs(storage, { ...DEFAULT_PREFS, study });
+    expect(loadPrefs(storage).study).toBe(study);
+  });
+
+  it.each([3, -1, 'x', null, 1.5, undefined])('reads an invalid study value (%s) as Once and keeps the other fields', (bad) => {
+    const raw = JSON.stringify({ bossId: 'some-boss', presetId: 'hard', dials: { speed: 1.2 }, study: bad });
+    const parsed = parsePrefs(raw);
+    expect(parsed.study).toBe(1);
+    expect(parsed.bossId).toBe('some-boss');
+    expect(parsed.presetId).toBe('hard');
+    expect(parsed.dials.speed).toBe(1.2);
+  });
+
   it('survive a browser that blocks storage', () => {
     const broken = new BrokenStorage();
     expect(loadPrefs(broken)).toEqual(DEFAULT_PREFS);
     expect(() => savePrefs(broken, DEFAULT_PREFS)).not.toThrow();
+  });
+});
+
+describe('the study setting', () => {
+  it('cycles Off, Once, Twice and wraps both ways', () => {
+    expect(nextStudy(0, 1)).toBe(1);
+    expect(nextStudy(1, 1)).toBe(2);
+    expect(nextStudy(2, 1)).toBe(0);
+    expect(nextStudy(0, -1)).toBe(2);
+    expect(nextStudy(2, -1)).toBe(1);
+    expect(nextStudy(1, -1)).toBe(0);
+  });
+
+  it('has a plain label for each value', () => {
+    expect(studyLabel(0)).toBe('Off');
+    expect(studyLabel(1)).toBe('Once');
+    expect(studyLabel(2)).toBe('Twice');
   });
 });

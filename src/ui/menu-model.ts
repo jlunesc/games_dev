@@ -1,14 +1,15 @@
 import { BOSSES, bossById } from '../bosses';
 import { PRESETS } from '../game/difficulty';
 import { wrap, type NavAction } from './nav';
-import { isCustom, selectPreset, type Prefs } from './prefs';
+import { isCustom, nextStudy, selectPreset, studyLabel, type Prefs } from './prefs';
 
-export type MenuItemId = 'fight' | 'boss' | 'difficulty' | 'tweak' | 'stats' | 'settings' | 'test';
+export type MenuItemId = 'fight' | 'boss' | 'difficulty' | 'study' | 'tweak' | 'stats' | 'settings' | 'test';
 
 export const MENU_ITEMS: readonly MenuItemId[] = [
   'fight',
   'boss',
   'difficulty',
+  'study',
   'tweak',
   'stats',
   'settings',
@@ -47,6 +48,7 @@ export function menuRows(model: MenuModel): MenuRow[] {
     { id: 'fight', label: 'Fight' },
     { id: 'boss', label: 'Boss', value: bossById(model.prefs.bossId).name },
     { id: 'difficulty', label: 'Difficulty', value: difficultyLabel(model.prefs) },
+    { id: 'study', label: 'Study', value: studyLabel(model.prefs.study) },
     { id: 'tweak', label: 'Tweak difficulty' },
     { id: 'stats', label: 'Stats' },
     { id: 'settings', label: 'Settings' },
@@ -78,6 +80,9 @@ export function menuStep(
   }
 
   const direction: 1 | -1 = action === 'left' ? -1 : 1;
+  if (item === 'study') {
+    return stay({ ...model, prefs: { ...model.prefs, study: nextStudy(model.prefs.study, direction) } });
+  }
   if (item === 'difficulty') {
     const current = PRESETS.findIndex((p) => p.id === model.prefs.presetId);
     const next = PRESETS[wrap(Math.max(0, current), direction, PRESETS.length)];
