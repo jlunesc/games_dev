@@ -143,7 +143,7 @@ In the menu, **Study** sits between **Difficulty** and **Tweak difficulty**. Lef
 - When an attack would have hit you, you get the usual red flash and a soft, low sound, and you lose nothing. (The flash follows the Flashes switch in Settings and the sound follows the Sound switch. There is no freeze and no screen shake in the study.)
 - When the last attack has been shown, the line changes to "The fight begins!" for about two seconds. From then on it is the real fight: the boss is at full health and waits its normal pause before its first real attack, and every hit that lands hurts you as usual. You stay where you were.
 - On **Easy**, the preset leaves some attacks out of the fight (the Duelist's lunge, the Hound's slip). The study shows only the attacks that are in that fight, so on Easy you will not see those either. Tweaking Variety does the same.
-- How long it is: with Once, about 7 to 8 seconds; with Twice, about 13 to 16 seconds.
+- How long it is: with Once, roughly 6 to 9 seconds; with Twice, roughly 12 to 17 seconds.
 
 ### Leaving during the study
 Hold the top button for about a second, as in any fight. The summary says "You left the fight" and, under it, "You left during the study.". Its time is 0:00, because no real fight had started, and the "Study time" line shows how long you stayed in the study. The study fight is saved like any other left fight.
