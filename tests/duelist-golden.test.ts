@@ -65,14 +65,37 @@ function fnv1a(hash: number, text: string): number {
   return h >>> 0;
 }
 
+/**
+ * A deterministic brawler that cannot die: closes in on the boss (using the state), swings often,
+ * and dashes and jumps now and then. Used to reach the Duelist's second phase and the victory.
+ */
+function brawler(n: number, s: GameState): InputFrame {
+  const dx = s.boss.x - s.player.x;
+  const near = Math.abs(dx) < 80;
+  return withInput({
+    moveX: near ? 0 : dx > 0 ? 1 : -1,
+    attackPressed: n % 14 === 0,
+    dashPressed: n % 97 === 0,
+    jumpPressed: n % 150 === 0,
+    jumpHeld: n % 150 < 8,
+  });
+}
+
 /** Plays up to `max` updates (stopping once the fight is over) and hashes every update's fingerprint. */
-function play(dials: Dials, seed: number, max: number): { hash: number; updates: number; state: GameState } {
+function play(
+  dials: Dials,
+  seed: number,
+  max: number,
+  inputFor: (n: number, s: GameState) => InputFrame = scripted,
+  immortal = false,
+): { hash: number; updates: number; state: GameState } {
   const boss = applyDials(DUELIST, dials);
   let state = createInitialState(boss, seed);
+  if (immortal) state = { ...state, player: { ...state.player, health: 1_000_000 } };
   let hash = 0x811c9dc5;
   let updates = 0;
   for (let n = 1; n <= max; n++) {
-    state = step(state, scripted(n), boss);
+    state = step(state, inputFor(n, state), boss);
     updates++;
     hash = fnv1a(hash, fingerprint(state) + '\n');
     if (state.phase !== 'fight') break;
@@ -111,6 +134,19 @@ describe('Ember Duelist golden fights', () => {
       bossPhase: 0,
       bossHp: 42,
       playerHealth: 0,
+    });
+  });
+
+  // The player cannot die here, so the fight runs through the phase change to the end.
+  it('Normal dials, seed 7001, immortal brawler (reaches phase 2)', () => {
+    const r = play(NORMAL_DIALS, 7001, 6000, brawler, true);
+    expect(summary(r)).toEqual({
+      hash: 529258817,
+      updates: 1027,
+      phase: 'victory',
+      bossPhase: 1,
+      bossHp: 0,
+      playerHealth: 999996,
     });
   });
 });
