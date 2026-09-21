@@ -1,7 +1,7 @@
 /**
  * Golden test for the Ember Duelist, the reference boss.
  *
- * It plays two scripted fights against the real Duelist and folds every update's state into one
+ * It plays four scripted scenarios against the real Duelist and folds every update's state into one
  * hash. The hash covers only the fields that existed before M5a boss movement skills, so adding new
  * fields to the boss state does not change it. Its statistics must stay comparable over time, so the
  * Duelist's simulation must not change by accident.

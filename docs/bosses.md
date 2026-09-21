@@ -192,7 +192,7 @@ All times are in updates (60 = 1 second); speeds are units per second.
 | `leap.height` | A higher arc. | The peak is `height`; it only changes how the flight looks and how long the body is out of reach of the swing (more updates above about 88). It does not change the landing. |
 | Longer flight (`leap.to - leap.from`) | More time in the air, and more time to react to the landing bar. | The landing bar shows the whole flight, so a long flight gives a long warning; keep the shockwave window starting at or after `to`, and the leap inside the active updates. |
 | `leap.target` and `leap.distance` | `player` lands where the player stood at take-off; `forward` and `back` land a fixed distance away. | A distance that would land outside the arena is clamped to the wall. |
-| Shockwave `x1` or `top` | Longer or taller shockwave. | The bar drawn on the floor follows `x0` and `x1`, but not `top`: a tall shockwave that cannot be jumped looks the same as a low one. |
+| Shockwave `x1` or `top` | Longer or taller shockwave. | The bar drawn on the floor follows `x0` and `x1`, but not `top`: a tall shockwave that cannot be jumped looks the same as a low one. The bar is the union over every hit window of the attack (the smallest `x0` to the largest `x1`), so a boss with a hit window during the flight would draw a bar that does not match its landing. Author leap hit windows at or after `leap.to`. |
 | Higher `predictability` | Attack order more repeatable. | 1 makes the whole fight a fixed cycle. |
 | More weight on an attack | It is picked more often. | The "no third in a row" rule still applies. |
 | Shorter `gap` | Less rest between attacks. | Also raises the pressure of chaining, which skips the gap altogether. |

@@ -159,7 +159,14 @@ A window is counted only when it closed (the attack ended and the boss moved on)
 
 Known limitation: a window is also not counted when the player's punishing hit lands on the very first update of the recovery and that hit triggers a phase change (the phase change cancels the attack on that same update, so the window never registers as open). This is rare and the analyzer does not correct for it.
 
-**Not measured yet: "greedy" attacks** (SPEC section 9: the player attacks when they should not). They cannot happen against the Ember Duelist, whose recovery is longer than the player's swing and whose attacks all warn for 24 updates or more. They will be added, with a `schemaVersion` bump, when a boss can make them happen.
+**Not measured yet: "greedy" attacks** (SPEC section 9: the player attacks when they should not). They are still not measured, and this is "not measured yet", not "impossible". No boss exists yet where a swing started in a punish window can overlap the next danger window: the player's swing lasts 16 updates (3 startup, 4 active, 9 recovery), and the earliest a following attack can hurt is 22 updates after its warning starts (the Ashen Hound's bite; its slip warns for 18 but never hurts, and the Ember Duelist's attacks all warn for 24 or more). Even a swing started on the last update of a recovery has therefore ended by then. This was checked by hand against the two boss files, not proven for every possible boss. They will be added, with a `schemaVersion` bump, when a boss can make them happen.
+
+### 7.4 Attacks that move the boss
+
+Some attacks move the boss (a dash, a leap, or a move that only repositions). The fields in 7.2 still work, but they mean different things for these attacks, so read them with care.
+- `windupTicks` is always the length of the warning. For a leap (the Hound's pounce) the dangerous moment is the shockwave at the landing, not the take-off: `firstDangerTick` is the start plus the `from` of the first hit window, which for the Hound is exactly the landing. The pounce's `reactionTicks` can therefore be up to 52 for the Hound (crouch and flight together), so it is not comparable with a slam's.
+- An attack with no hit windows (a reposition-only attack such as the Hound's slip) has no danger window: the analyzer falls back to the whole active part (from `windupTicks` to `windupTicks` plus `active`). Such an attack always scores `"dodged"` with evasion `"distance"` (it cannot hurt, and nothing can dash through it), unless it was cut short, when it is `"interrupted"`.
+- Compare reaction times per attack id, never across kinds of attack.
 
 ## 8. Replaying a fight
 
