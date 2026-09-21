@@ -13,10 +13,14 @@ import { step } from '../game/step';
 import type { FightResult } from '../game/summary';
 import { decodeInputs, pushFrame, type InputRun } from './input-log';
 
-export const STATS_SCHEMA_VERSION = 2;
+export const STATS_SCHEMA_VERSION = 3;
 
-/** Bump when a change to the game numbers or a boss file changes how a recorded fight replays. */
-export const GAME_VERSION = '0.3.0';
+/**
+ * Bump when a change to the game numbers or a boss file changes how a recorded fight replays.
+ * 0.4.0: arenas (platforms and cover). Giving the Ashen Hound an arena changes how Hound fights replay, so
+ * records made by 0.3.0 no longer replay exactly for the Hound; Ember Duelist records (no arena) still do.
+ */
+export const GAME_VERSION = '0.4.0';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {

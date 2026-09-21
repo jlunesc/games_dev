@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, EMBER_DUELIST } from '../src/bosses';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ASHEN_HOUND, BOSSES, EMBER_DUELIST } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, NO_PRESSES, addPresses, applyPresses, type InputFrame } from '../src/engine/input-frame';
 import { planUpdates } from '../src/engine/loop';
 import { applyDials, presetDials, type Dials, type PresetId } from '../src/game/difficulty';
+import { WORLD } from '../src/game/params';
 import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 import type { FightResult, FightSummary } from '../src/game/summary';
@@ -83,7 +84,14 @@ interface Played {
   mostUpdatesInAFrame: number;
   updatesSkippedByHitStop: number;
   /** What the emulated loop saw of the study on the recorded updates, counted from the live states. */
-  live: { studyHits: number; studyEnds: number; studyUpdates: number; studyAttackStarts: number };
+  live: {
+    studyHits: number;
+    studyEnds: number;
+    studyUpdates: number;
+    studyAttackStarts: number;
+    /** Recorded updates on which the player stood on a raised surface. */
+    platformUpdates: number;
+  };
 }
 
 function playLikeTheApp(options: PlayOptions): Played {
@@ -105,7 +113,7 @@ function playLikeTheApp(options: PlayOptions): Played {
   let updatesSkippedByHitStop = 0;
   let frames = 0;
   let shown = false;
-  const live = { studyHits: 0, studyEnds: 0, studyUpdates: 0, studyAttackStarts: 0 };
+  const live = { studyHits: 0, studyEnds: 0, studyUpdates: 0, studyAttackStarts: 0, platformUpdates: 0 };
 
   const maxFrames = options.maxFrames ?? 6000;
   for (let f = 1; f <= maxFrames && !shown; f++) {
@@ -132,6 +140,7 @@ function playLikeTheApp(options: PlayOptions): Played {
       // Only the recorded updates count: the ones up to and including the ending update, not the end pause.
       if (flow.ended === null) {
         if (before.study.active) live.studyUpdates += 1;
+        if (state.player.onGround && state.player.y < WORLD.floorY - 1) live.platformUpdates += 1;
         live.studyHits += state.events.filter((e) => e === 'studyHit').length;
         live.studyEnds += state.events.filter((e) => e === 'studyEnd').length;
         if (state.study.active && state.events.some((e) => e === 'bossWindupGold' || e === 'bossWindupRed')) {
@@ -203,6 +212,7 @@ function expectFaithful(played: Played): void {
   expect(analysis.study.ticks).toBe(live.studyUpdates);
   expect(analysis.study.attacks).toBe(live.studyAttackStarts);
   expect(analysis.attacks.filter((a) => a.study).length).toBe(live.studyAttackStarts);
+  expect(analysis.behavior.updatesOnPlatform).toBe(live.platformUpdates);
   expect(live.studyEnds).toBe(record.study > 0 && !finalState.study.active ? 1 : 0);
   // The fight time leaves the study out, like the summary's.
   expect(analysis.fightSeconds).toBe(summary.seconds);
@@ -404,5 +414,102 @@ describe('the update loop of the app with a study, replayed', () => {
     const analysis = analyzeFight(played.record);
     expect(analysis.study.hits).toBeGreaterThan(0);
     for (const t of analysis.playerHitTicks) expect(t).toBeGreaterThan(analysis.study.ticks);
+  });
+});
+
+describe('the update loop of the app in an arena, replayed', () => {
+  // The real Hound only gets its arena in a later task, and a record is replayed from the boss's id: so the
+  // arena Hound is registered under its own id for the length of this block.
+  const ARENA_HOUND: BossDef = {
+    ...ASHEN_HOUND,
+    id: 'arena-test-hound',
+    arena: {
+      platforms: [{ x: 700, width: 200, height: 120 }],
+      covers: [{ x: 520, width: 60, height: 130 }],
+    },
+  };
+  beforeAll(() => {
+    (BOSSES as BossDef[]).push(ARENA_HOUND);
+  });
+  afterAll(() => {
+    (BOSSES as BossDef[]).splice(BOSSES.indexOf(ARENA_HOUND), 1);
+  });
+
+  /** A player who runs right, jumps a lot (onto the cover and the platform) and swings and dashes now and then. */
+  const climber = (f: number): InputFrame =>
+    withInput({
+      moveX: f % 90 < 45 ? 1 : f % 90 < 60 ? 0 : -1,
+      jumpPressed: f % 23 === 0,
+      jumpHeld: f % 23 < 12,
+      attackPressed: f % 31 === 0,
+      dashPressed: f % 53 === 0,
+    });
+
+  it.each(CASES)('$name: a long fight against a Hound with an arena replays and analyzes faithfully', (c) => {
+    for (const seed of [21, 22]) {
+      const played = playLikeTheApp({
+        ...c,
+        seed,
+        deltas: messyDeltas(seed),
+        bossDef: ARENA_HOUND,
+        player: climber,
+        leaveAfterFrames: 2400,
+      });
+      expect(played.record.bossId).toBe('arena-test-hound');
+      expect(played.boss.arena).toBeDefined();
+      expect(played.framesWithoutUpdate).toBeGreaterThan(0);
+      expect(played.record.ticks).toBeGreaterThan(300);
+      // The player really used the arena, and the analysis saw it on the same updates the live loop did.
+      expect(played.live.platformUpdates).toBeGreaterThan(0);
+      expectFaithful(played);
+    }
+  });
+
+  it('an arena fight with a study replays and analyzes faithfully', () => {
+    const played = playLikeTheApp({
+      presetId: 'normal',
+      dials: presetDials('normal'),
+      seed: 8,
+      study: 1,
+      deltas: messyDeltas(8),
+      bossDef: ARENA_HOUND,
+      player: climber,
+      leaveAfterFrames: 2400,
+    });
+    expect(played.record.study).toBe(1);
+    expectFaithful(played);
+    expect(analyzeRecording(played.recording)).toEqual(analyzeFight(played.record));
+  });
+
+  it('a passive player in the arena is defeated and the record replays', () => {
+    const played = playLikeTheApp({
+      presetId: 'normal',
+      dials: presetDials('normal'),
+      seed: 4,
+      deltas: messyDeltas(9),
+      bossDef: ARENA_HOUND,
+      player: passive,
+    });
+    expect(played.result).toBe('defeat');
+    expectFaithful(played);
+  });
+});
+
+describe('records made before the arena', () => {
+  it('a version 2 record (a Duelist fight, no arena effects) still replays and analyzes', () => {
+    const played = playLikeTheApp({
+      presetId: 'normal',
+      dials: presetDials('normal'),
+      seed: 21,
+      deltas: messyDeltas(5),
+      leaveAfterFrames: 1200,
+    });
+    // As stored by game 0.3.0: the older version numbers, and an analysis without the new field.
+    const old = JSON.parse(JSON.stringify({ ...played.record, schemaVersion: 2, gameVersion: '0.3.0' })) as FightRecord;
+    expect(replayFinalState(old)).toEqual(played.finalState);
+    const analysis = analyzeFight(old);
+    expect(analysis.ticks).toBe(played.summary.ticks);
+    expect(analysis.hitsTaken).toBe(played.summary.hitsTaken);
+    expect(analysis.behavior.updatesOnPlatform).toBe(0);
   });
 });

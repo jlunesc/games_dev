@@ -10,6 +10,7 @@ import { advanceFlow, startFlow } from '../src/ui/fight-flow';
 import { actionOf, analyzeFight, analyzeRecording, analyzeRun, CLOSE_BELOW, MID_UP_TO, POSITION_EVERY } from '../src/stats/analyze';
 import { decodeInputs } from '../src/stats/input-log';
 import { buildRecord, recordUpdate, startRecording, type FightMeta } from '../src/stats/record';
+import { WORLD } from '../src/game/params';
 import { solo, standAt, windupUpdates } from './boss-helpers';
 import { DUELIST, QUIET_BOSS, run, withInput } from './helpers';
 
@@ -811,5 +812,166 @@ describe('analyzeRecording', () => {
       input: rec.runs,
     });
     expect(without).not.toEqual(analyzeRecording(rec));
+  });
+});
+
+describe('evasion by platform and cover', () => {
+  // The Duelist's sweep (attack time 24 to 31, 250 long, 100 high) from the boss at x 960, in an arena.
+  const platformBoss: BossDef = { ...sweepBoss, arena: { platforms: [{ x: 780, width: 100, height: 130 }], covers: [] } };
+  const coverBoss = (height: number): BossDef => ({
+    ...sweepBoss,
+    arena: { platforms: [], covers: [{ x: 830, width: 40, height }] },
+  });
+
+  /** A fresh fight with the player standing on the floor or on a surface `height` high, `distance` left of the boss. */
+  function standOn(boss: BossDef, distance: number, height = 0) {
+    const s = standAt(boss, distance);
+    s.player.y = WORLD.floorY - height;
+    s.player.prevY = s.player.y;
+    return s;
+  }
+
+  // `at` is given the first warning update so that a scenario can time its inputs.
+  const scenario = (
+    boss: BossDef,
+    distance: number,
+    height: number,
+    at: (first: number) => Record<number, Partial<InputFrame>> = () => ({}),
+  ) => {
+    const start = standOn(boss, distance, height);
+    const first = windupUpdates(run(start, 80, () => NO_INPUT, boss))[0]!;
+    return { first, a: analyzeRun(boss, start, frames(first + 60, at(first))) };
+  };
+
+  it('a player standing on a platform higher than the sweep dodges it, and the evasion is the platform', () => {
+    const { a } = scenario(platformBoss, 180, 130);
+    expect(a.attacks[0]).toMatchObject({
+      attackId: 'sweep',
+      outcome: 'dodged',
+      evasion: 'platform',
+      damageTaken: 0,
+      reactionTicks: null,
+      marginTicks: null,
+    });
+    expect(a.hitsTaken).toBe(0);
+  });
+
+  it('the same player on the floor is hit', () => {
+    const { a } = scenario(platformBoss, 180, 0);
+    expect(a.attacks[0]).toMatchObject({ outcome: 'hit', evasion: null });
+    expect(a.hitsTaken).toBe(1);
+  });
+
+  it('a platform lower than the sweep does not save the player', () => {
+    const low: BossDef = { ...sweepBoss, arena: { platforms: [{ x: 780, width: 100, height: 60 }], covers: [] } };
+    const { a } = scenario(low, 180, 60);
+    expect(a.attacks[0]).toMatchObject({ outcome: 'hit', evasion: null });
+  });
+
+  it('a player behind a cover as tall as the sweep dodges it, and the evasion is the cover', () => {
+    const { a } = scenario(coverBoss(120), 190, 0);
+    expect(a.attacks[0]).toMatchObject({ attackId: 'sweep', outcome: 'dodged', evasion: 'cover', damageTaken: 0 });
+    expect(a.hitsTaken).toBe(0);
+  });
+
+  it('a cover exactly as tall as the sweep still blocks it', () => {
+    const { a } = scenario(coverBoss(100), 190, 0);
+    expect(a.attacks[0]).toMatchObject({ outcome: 'dodged', evasion: 'cover' });
+  });
+
+  it('a player behind a cover that is too short is hit', () => {
+    const { a } = scenario(coverBoss(90), 190, 0);
+    expect(a.attacks[0]).toMatchObject({ outcome: 'hit', evasion: null });
+  });
+
+  it('a player in front of the cover (between it and the boss) gets no credit from it', () => {
+    const { a } = scenario(coverBoss(120), 70, 0);
+    expect(a.attacks[0]).toMatchObject({ outcome: 'hit', evasion: null });
+  });
+
+  it('a player who jumps over the sweep with a cover behind them is a jump, not a cover', () => {
+    const boss = coverBoss(120);
+    const { a } = scenario(boss, 70, 0, (first) => {
+      const at: Record<number, Partial<InputFrame>> = { [first + 10]: { jumpPressed: true, jumpHeld: true } };
+      for (let n = first + 11; n <= first + 40; n++) at[n] = { jumpHeld: true };
+      return at;
+    });
+    expect(a.attacks[0]).toMatchObject({ outcome: 'dodged', evasion: 'jump', reactionTicks: 10 });
+  });
+
+  it('a player who dashes and also stands behind a cover: the dash has priority', () => {
+    // Two windows: a low one (top 100) the cover blocks, then a tall one (top 200) it does not. The player
+    // waits behind the cover for the first and dashes through the second.
+    const two: BossDef = {
+      ...coverBoss(120),
+      attacks: coverBoss(120).attacks.map((atk) =>
+        atk.id === 'sweep'
+          ? {
+              ...atk,
+              active: 16,
+              hits: [
+                { from: 24, to: 32, x0: 0, x1: 250, bottom: 0, top: 100 },
+                { from: 34, to: 40, x0: 0, x1: 250, bottom: 0, top: 200 },
+              ],
+            }
+          : atk,
+      ),
+    };
+    const { a } = scenario(two, 190, 0, (first) => ({ [first + 34]: { dashPressed: true, moveX: 1 } }));
+    expect(a.attacks[0]).toMatchObject({ outcome: 'dodged', evasion: 'dash', damageTaken: 0 });
+    // Without the dash the same player is hit by the tall window.
+    const still = scenario(two, 190, 0);
+    expect(still.a.attacks[0]).toMatchObject({ outcome: 'hit', evasion: null });
+  });
+
+  it('a dash behind the cover does not count as a dash: the cover protected the player', () => {
+    const { a } = scenario(coverBoss(120), 190, 0, (first) => ({ [first + 22]: { dashPressed: true, moveX: -1 } }));
+    expect(a.attacks[0]).toMatchObject({ outcome: 'dodged', evasion: 'cover' });
+    expect(a.dashes).toBe(1);
+  });
+
+  it('a flat arena never produces platform or cover', () => {
+    const { a } = scenario(sweepBoss, 200, 0);
+    expect(a.attacks[0]!.evasion).toBe(null);
+    const far = analyzeRun(sweepBoss, standAt(sweepBoss, 120), frames(sweepFirst + 60, { [sweepFirst + 22]: { dashPressed: true } }));
+    expect(far.attacks[0]).toMatchObject({ evasion: 'dash' });
+    expect(far.behavior.updatesOnPlatform).toBe(0);
+  });
+
+  it('updatesOnPlatform counts the updates the player stood on a raised surface (checked against the live states)', () => {
+    // Run right and jump onto the platform (x 730 to 830, 130 high), stand, then walk off it.
+    const inputAt = (n: number): InputFrame =>
+      n === 1
+        ? withInput({ moveX: 1, jumpPressed: true, jumpHeld: true })
+        : n <= 12
+          ? withInput({ moveX: 1, jumpHeld: true })
+          : n <= 24
+            ? withInput({ jumpHeld: true })
+            : n <= 100
+              ? NO_INPUT
+              : withInput({ moveX: -1 });
+    const start = standAt(platformBoss, 260);
+    const states = run(start, 140, inputAt, platformBoss);
+    const live = states.filter((s) => s.player.onGround && s.player.y < WORLD.floorY - 1).length;
+    expect(live).toBeGreaterThan(40);
+    expect(live).toBeLessThan(140);
+    const a = analyzeRun(platformBoss, start, Array.from({ length: 140 }, (_, i) => inputAt(i + 1)));
+    expect(a.behavior.updatesOnPlatform).toBe(live);
+  });
+
+  it('updatesOnPlatform is 0 for a flat fight and counts the whole session, the study included', () => {
+    const start = createInitialState(DUELIST, 3, 1);
+    const a = analyzeRun(DUELIST, start, frames(400), 1);
+    expect(a.behavior.updatesOnPlatform).toBe(0);
+    // A study run on a platform: the count covers the study updates too.
+    const s = standOn(platformBoss, 180, 130);
+    const withStudy = createInitialState(platformBoss, 3, 1);
+    withStudy.player.x = s.player.x;
+    withStudy.player.y = s.player.y;
+    withStudy.player.prevX = s.player.x;
+    withStudy.player.prevY = s.player.y;
+    const b = analyzeRun(platformBoss, withStudy, frames(200), 1);
+    expect(b.study.ticks).toBeGreaterThan(0);
+    expect(b.behavior.updatesOnPlatform).toBe(b.ticks);
   });
 });

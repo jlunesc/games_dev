@@ -22,7 +22,11 @@ export type PlayerAction = 'idle' | 'running' | 'airborne' | 'dashing' | 'attack
  * or a phase change cancelled it).
  */
 export type AttackOutcome = 'hit' | 'countered' | 'dodged' | 'interrupted';
-export type Evasion = 'dash' | 'jump' | 'distance';
+/**
+ * How a dodged attack was avoided, by priority: `dash`, `jump`, `platform` (standing on a raised surface the attack
+ * passes under), `cover` (behind a cover that blocked the attack), else `distance` (out of its reach).
+ */
+export type Evasion = 'dash' | 'jump' | 'platform' | 'cover' | 'distance';
 
 export interface AttackOccurrence {
   attackId: string;
@@ -108,8 +112,13 @@ export interface Analysis {
     /** The player's x every `positionEvery` updates, rounded. */
     positions: number[];
     punish: PunishWindows;
+    /** Updates (the whole session, the study included) on which the player stood on a platform or a cover top. */
+    updatesOnPlatform: number;
   };
 }
+
+/** Standing (not falling or jumping) on a platform or a cover top rather than on the floor. */
+const onRaisedSurface = (p: PlayerState): boolean => p.onGround && p.y < WORLD.floorY - 1;
 
 const toMs = (ticks: number): number => Math.round(((ticks * 1000) / TICK_RATE) * 10) / 10;
 
@@ -135,6 +144,10 @@ interface OpenAttack {
   dodgeStart: number | null;
   dashedInDanger: boolean;
   airborneInDanger: boolean;
+  /** Standing on a raised surface that put the player under a window that would have reached the floor. */
+  platformInDanger: boolean;
+  /** Behind a cover that cut a window which would have reached the player. */
+  coveredInDanger: boolean;
   hit: boolean;
   countered: boolean;
   damage: number;
@@ -159,7 +172,17 @@ function occurrence(open: OpenAttack): AttackOccurrence {
         ? 'dodged'
         : 'interrupted';
   const evasion: Evasion | null =
-    outcome !== 'dodged' ? null : open.dashedInDanger ? 'dash' : open.airborneInDanger ? 'jump' : 'distance';
+    outcome !== 'dodged'
+      ? null
+      : open.dashedInDanger
+        ? 'dash'
+        : open.airborneInDanger
+          ? 'jump'
+          : open.platformInDanger
+            ? 'platform'
+            : open.coveredInDanger
+              ? 'cover'
+              : 'distance';
   const firstDanger = open.startTick + open.dangerFrom;
   const dodge = open.dodgeStart;
   const reactionTicks = dodge !== null && dodge <= firstDanger ? dodge - open.startTick : null;
@@ -216,6 +239,7 @@ export function analyzeRun(
   let studyClose = 0;
   let studyMid = 0;
   let studyFar = 0;
+  let platformUpdates = 0;
   let maxPhase = state.boss.phase;
   let open: OpenAttack | null = null;
 
@@ -246,15 +270,26 @@ export function analyzeRun(
       (before.player.onGround && !after.player.onGround && after.player.vy < 0);
     if (dodgeStarted && attack.dodgeStart === null && t <= attack.dangerTo) attack.dodgeStart = tick;
 
-    // What saved the player is judged against the boxes that were really dangerous on this update.
+    // What saved the player is judged against the boxes that were really dangerous on this update (`boxes`, cut
+    // by cover) and, for cover, against what the attack would have covered in a bare arena (`bare`).
     const boxes = activeHitBoxes(after.boss, boss);
+    const real = playerBox(after.player);
     if (boxes.length > 0) {
-      const real = playerBox(after.player);
       const touched = boxes.some((b) => overlaps(b, real));
       if (touched && after.player.dashTick >= 0) attack.dashedInDanger = true;
       if (!touched && !after.player.onGround && after.player.dashTick < 0) {
         const grounded = playerBox({ ...after.player, y: WORLD.floorY });
         if (boxes.some((b) => overlaps(b, grounded))) attack.airborneInDanger = true;
+      }
+      if (!touched && onRaisedSurface(after.player)) {
+        const grounded = playerBox({ ...after.player, y: WORLD.floorY });
+        if (boxes.some((b) => overlaps(b, grounded))) attack.platformInDanger = true;
+      }
+    }
+    if (boss.arena !== undefined) {
+      const bare = activeHitBoxes(after.boss, boss, { ignoreCover: true });
+      if (bare.some((b) => overlaps(b, real)) && !boxes.some((b) => overlaps(b, real))) {
+        attack.coveredInDanger = true;
       }
     }
     // A demonstration that reaches the player counts as a hit for this attack (it just takes no health).
@@ -314,6 +349,7 @@ export function analyzeRun(
       far += 1;
       if (inStudy) studyFar += 1;
     }
+    if (onRaisedSurface(after.player)) platformUpdates += 1;
     if (tick % POSITION_EVERY === 0) positions.push(Math.round(after.player.x));
 
     if (open !== null) observe(open, before, after, frame);
@@ -342,6 +378,8 @@ export function analyzeRun(
         dodgeStart: null,
         dashedInDanger: false,
         airborneInDanger: false,
+        platformInDanger: false,
+        coveredInDanger: false,
         hit: false,
         countered: false,
         damage: 0,
@@ -398,6 +436,7 @@ export function analyzeRun(
       positionEvery: POSITION_EVERY,
       positions,
       punish,
+      updatesOnPlatform: platformUpdates,
     },
   };
 }
