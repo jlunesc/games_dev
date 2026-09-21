@@ -145,7 +145,7 @@ interface OpenAttack {
   dodgeStart: number | null;
   dashedInDanger: boolean;
   airborneInDanger: boolean;
-  /** Standing on a raised surface (a platform or a cover top) that put the player under a window that would have reached the floor. */
+  /** Standing (not dashing) on a raised surface (a platform or a cover top) that put the player under a window that would have reached the floor. */
   platformInDanger: boolean;
   /** Behind a cover that cut a window which would have reached the player. */
   coveredInDanger: boolean;
@@ -290,7 +290,10 @@ export function analyzeRun(
       if (!cutReal && !rawReal && rawFloor && !after.player.onGround && after.player.dashTick < 0) {
         attack.airborneInDanger = true;
       }
-      if (!cutReal && !rawReal && rawFloor && onRaisedSurface(after.player)) attack.platformInDanger = true;
+      // The same test from a raised surface (a dash along it is judged by the dash rule instead).
+      if (!cutReal && !rawReal && rawFloor && onRaisedSurface(after.player) && after.player.dashTick < 0) {
+        attack.platformInDanger = true;
+      }
       // Cover saved the player: the bare attack would have reached them (standing or where they stood), the cut
       // one reaches neither.
       if (!cutReal && !cutFloor && (rawReal || rawFloor)) attack.coveredInDanger = true;

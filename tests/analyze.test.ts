@@ -856,6 +856,15 @@ describe('evasion by platform and cover', () => {
     expect(a.hitsTaken).toBe(0);
   });
 
+  it('a player dashing along a platform while the sweep passes underneath is not credited with the platform', () => {
+    // A long platform (x 550 to 850, 130 high) so that the whole dash stays on it: the sweep never reaches the
+    // player up there, and the dash was not needed (no cut box reaches the real box), so the evasion is distance.
+    const long: BossDef = { ...sweepBoss, arena: { platforms: [{ x: 700, width: 300, height: 130 }], covers: [] } };
+    const { a } = scenario(long, 180, 130, (first) => ({ [first + 24]: { dashPressed: true, moveX: -1 } }));
+    expect(a.dashes).toBe(1);
+    expect(a.attacks[0]).toMatchObject({ attackId: 'sweep', outcome: 'dodged', evasion: 'distance', damageTaken: 0 });
+  });
+
   it('the same player on the floor is hit', () => {
     const { a } = scenario(platformBoss, 180, 0);
     expect(a.attacks[0]).toMatchObject({ outcome: 'hit', evasion: null });
