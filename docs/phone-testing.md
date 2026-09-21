@@ -27,11 +27,11 @@ If the controller shows nothing, note which mode it was in and whether the page 
 
 ## Playing the fight and the menu (M2 and M3a)
 ### The menu
-Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Tweak difficulty**, **Stats**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
+Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Study**, **Tweak difficulty**, **Stats**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
 
-How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty). On the Boss row they switch between the two bosses, the Ember Duelist and the Ashen Hound (from the last one it goes round to the first). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
+How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty, Study). On the Boss row they switch between the two bosses, the Ember Duelist and the Ashen Hound (from the last one it goes round to the first). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
 
-The menu remembers your last choices (boss, difficulty and any tweaks), even after you close the app. It opens with Fight highlighted, so pressing the bottom button once starts the same fight as last time. After a fight the summary comes first, so it takes two presses: one to leave the summary, one for Fight.
+The menu remembers your last choices (boss, difficulty, study and any tweaks), even after you close the app. It opens with Fight highlighted, so pressing the bottom button once starts the same fight as last time. After a fight the summary comes first, so it takes two presses: one to leave the summary, one for Fight.
 
 **Difficulty** has three presets (a preset is a ready-made set of values): **Easy**, **Normal** and **Hard**. Left and right switch between them. Normal is the fight as designed. Easy gives longer warnings, slower and less frequent attacks, less boss health and fewer kinds of attack. Hard is faster, attacks more often, gives shorter warnings and gives the boss more health, and each attack that hits you costs 2 hits instead of 1. If you change any value in the Tweak screen, the menu shows **Custom (from Normal)**, or from whichever preset you started with.
 
@@ -48,7 +48,7 @@ The last row, **Reset to preset**, puts every value back to the preset (Easy, No
 
 **Settings** switches four things on or off: **Hit freeze** (a tiny pause when a hit lands), **Screen shake**, **Flashes** (white and red flashes when something is hit) and **Sound**. They only change how a fight looks and sounds, and the fight rules stay the same. One honest catch: switching Hit freeze off does not change the rules, but you get slightly less time to react after a hit, so timing can feel different. Left, right or the bottom button switch one; the top button goes back.
 
-**The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time, the phase reached, the hits you took, the boss's health left, and the attack that hurt you most (if nothing hit you, it says "You were never hit."). The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident. Under the lines, a last line says whether the fight was saved on the phone (see "Stats and export" below).
+**The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time (the real fight only; if you played a study first, a "Study time" line shows how long it took), the phase reached, the hits you took, the boss's health left, and the attack that hurt you most (if nothing hit you, it says "You were never hit."). The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident. Under the lines, a last line says whether the fight was saved on the phone (see "Stats and export" below).
 
 ### The fight
 The installed app opens sideways (landscape) by itself. If it does not after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site. In a normal Chrome tab, turn the phone sideways yourself.
@@ -126,6 +126,53 @@ A soft shadow on the floor shows where the Hound is while it is in the air.
 - Do you know what to do against each attack after two or three tries?
 - Is the Hound too easy or too hard on Normal?
 - Did anything look wrong while it was in the air (the jump, the shadow, the bar, the body)?
+
+## The study phase (M5b)
+A new step before the real fight: a **study**, in which the boss shows you its attacks and nothing can hurt you. The idea is to learn to read each attack first, then fight for real. The boss and the fight itself are unchanged.
+
+### The Study row
+In the menu, **Study** sits between **Difficulty** and **Tweak difficulty**. Left and right (or the bottom button, or a tap) go round three values: **Off**, **Once** and **Twice**. It starts on **Once**, and the menu remembers your choice, even after you close the app.
+- **Off**: the fight starts straight away, like before.
+- **Once**: the boss shows each of its attacks one time before the fight.
+- **Twice**: it shows the whole set two times, each time in a new random order.
+
+### What happens in the study
+- The fight starts in the study. A line on the screen says "Study: watch what it can do. Nothing can hurt you." and the boss's name at the top right has "STUDY" in front of it.
+- The boss shows the attacks of its **first phase** only, one after another, in random order. Each one has its normal warning, its normal speed and its normal pause before the next one. For the Ember Duelist that is the slam, the sweep and the lunge (not the ground burst, which only comes in phase 2, so you meet it for the first time in the real fight). For the Ashen Hound it is the bite, the rush, the slip and the pounce. Each attack is shown as the boss would use it: it walks towards you first if you are far away.
+- You can move, jump and dash as much as you like, to practise dodging. **Nothing can hurt you**: your hearts stay full. You **cannot hurt the boss** either: your swing does nothing to it, and the counter does not work.
+- When an attack would have hit you, you get the usual red flash and a soft, low sound, and you lose nothing. (The flash follows the Flashes switch in Settings and the sound follows the Sound switch. There is no freeze and no screen shake in the study.)
+- When the last attack has been shown, the line changes to "The fight begins!" for about two seconds. From then on it is the real fight: the boss is at full health and waits its normal pause before its first real attack, and every hit that lands hurts you as usual. You stay where you were.
+- On **Easy**, the preset leaves some attacks out of the fight (the Duelist's lunge, the Hound's slip). The study shows only the attacks that are in that fight, so on Easy you will not see those either. Tweaking Variety does the same.
+- How long it is: with Once, about 7 to 8 seconds; with Twice, about 13 to 16 seconds.
+
+### Leaving during the study
+Hold the top button for about a second, as in any fight. The summary says "You left the fight" and, under it, "You left during the study.". Its time is 0:00, because no real fight had started, and the "Study time" line shows how long you stayed in the study. The study fight is saved like any other left fight.
+
+### The summary and the stats
+The summary's **Time** counts the real fight only; a **Study time** line under it shows the study (it is left out when you played with Study Off). The saved stats mark the study fights and keep the study apart from the real fight (details in `docs/stats.md`, section 7.5), so Export works as before.
+
+### Checklist
+- [ ] The Study row is between Difficulty and Tweak difficulty, and left and right cycle Off, Once, Twice (and round again). The bottom button and a tap also cycle it. Close and reopen the app: it remembers your choice. A fresh install starts on Once.
+- [ ] With **Off**, the fight starts straight away, with no study line, like before.
+- [ ] With **Once** on the Ember Duelist, the boss shows exactly the slam, the sweep and the lunge, each one time, in a random order, and never the ground burst. Try a few fights: the order changes.
+- [ ] With **Once** on the Ashen Hound, the boss shows exactly the bite, the rush, the slip and the pounce, each one time. On Easy the Hound has no slip, and the Duelist has no lunge, so you see only the attacks that are in the fight.
+- [ ] With **Twice**, each attack is shown two times, and the two rounds are each in a random order (now and then both rounds may happen to be in the same order, that is chance).
+- [ ] The study line "Study: watch what it can do. Nothing can hurt you." shows during the study, and "The fight begins!" shows for about two seconds after it, then goes away.
+- [ ] In the study your hearts stay full. Standing in an attack gives the red flash and a soft low sound, and costs nothing.
+- [ ] In the study your swing does nothing to the boss (no hit flash, no damage), even in the window of the gold slam (the counter does nothing).
+- [ ] After "The fight begins!" the real fight hurts you normally, and your swing hurts the boss again. The boss has full health.
+- [ ] The boss's pause and speed in the study feel like the real fight (same warning, same speed).
+- [ ] The summary's Time is the real fight only, and a "Study time" line shows the study. With Off there is no Study time line.
+- [ ] Leaving with the top button during the study shows "You left the fight" and "You left during the study.", and the fight is saved.
+- [ ] The stats save the study fights (the summary's last line counts them) and Export still works. When you send the file I replay every study fight from it, to check that they replay exactly.
+
+### Questions about the study
+- Does the study help you learn the attacks?
+- Is it too long or too short? How many seconds does it feel like with Once and with Twice?
+- Should the boss be hittable in the study, so you can practise your punishes too?
+- Can you read the study line, and "The fight begins!"? Do they get in the way?
+- Is the soft low sound audible? Is it annoying?
+- Is the red flash enough to tell you an attack would have hit you?
 
 ## Stats and export (M3b)
 ### What is recorded

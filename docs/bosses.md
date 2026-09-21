@@ -154,6 +154,8 @@ The boss is always in one of five modes (`BossState.mode` in `src/game/state.ts`
 
 **The phase change:** it is checked when the player's hit lands. If health is at or below `maxHp * startsAtHpFraction` of the *next* phase, the boss immediately drops whatever it was doing (the attack in progress does not finish) and goes to `transition` (event `phaseChange`). One phase change per hit: if one hit (for example a double-damage hit) falls below two thresholds, the second phase change happens on the next hit. At 0 health the fight is won instead ("Victory"; the game itself would start a new fight 60 updates later, but the app shows the summary screen at that point and the next fight starts from the menu).
 
+**The study phase** (M5b; see `docs/phone-testing.md` and `docs/stats.md` section 7.5): with the menu's Study setting on Once or Twice the fight begins with a study, in which the boss performs each attack listed in the **first phase's** `attacks` (after the difficulty dials, so a low Variety leaves some out), once per round in a random order taken from the seeded generator, with no random choice for the attack and no chains. Its behaviour is otherwise the normal one: the same walk, `approach`, warning, speed and `gap`. Nothing can hurt the player, the boss cannot be hurt and counters do nothing. When the last demonstration ends the boss goes back to `gap` and the real fight starts. A later phase's attacks and `opening` are never shown. No boss file field is needed for this.
+
 **The player's side** (`src/game/params.ts`): 5 health, hit blinking for 60 updates, a dash of 11 updates that is untouchable for its whole length, a jump that rises roughly 150 units when the button is held.
 
 ## 3a. The Ashen Hound
