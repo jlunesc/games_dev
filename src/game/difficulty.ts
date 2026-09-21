@@ -131,6 +131,11 @@ export const PRESETS: readonly Preset[] = [
   },
 ];
 
+/** The dial values of a preset, as a new object. */
+export function presetDials(id: PresetId): Dials {
+  return { ...(PRESETS.find((p) => p.id === id)?.dials ?? NORMAL_DIALS) };
+}
+
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
 /** Keeps a dial value inside its range and on its step (so repeated tweaks never drift). */

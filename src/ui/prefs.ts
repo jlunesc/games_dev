@@ -6,6 +6,7 @@ import {
   changedDials,
   clampDial,
   dialsEqual,
+  presetDials,
   type DialId,
   type Dials,
   type PresetId,
@@ -26,11 +27,6 @@ export const DEFAULT_PREFS: Prefs = {
 };
 
 const KEY = 'boss-trainer.prefs';
-
-/** The dial values of a preset, as a new object. */
-export function presetDials(id: PresetId): Dials {
-  return { ...(PRESETS.find((p) => p.id === id)?.dials ?? NORMAL_DIALS) };
-}
 
 /** True once the dials differ from the preset the choice began from. */
 export function isCustom(prefs: Prefs): boolean {

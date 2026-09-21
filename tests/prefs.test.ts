@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMBER_DUELIST, bossById } from '../src/bosses';
-import { DIALS, NORMAL_DIALS, PRESETS } from '../src/game/difficulty';
+import { DIALS, NORMAL_DIALS, PRESETS, presetDials } from '../src/game/difficulty';
 import {
   DEFAULT_PREFS,
   changedFromPreset,
@@ -8,7 +8,6 @@ import {
   loadPrefs,
   nudgeDial,
   parsePrefs,
-  presetDials,
   resetDials,
   savePrefs,
   selectPreset,

@@ -1,10 +1,16 @@
 import { bossById } from '../bosses';
 import type { InputFrame } from '../engine/input-frame';
-import { applyDials, changedDials, type DialId, type Dials, type PresetId } from '../game/difficulty';
+import {
+  applyDials,
+  changedDials,
+  presetDials,
+  type DialId,
+  type Dials,
+  type PresetId,
+} from '../game/difficulty';
 import { createInitialState, type GameState } from '../game/state';
 import { step } from '../game/step';
 import type { FightResult } from '../game/summary';
-import { presetDials } from '../ui/prefs';
 import { decodeInputs, pushFrame, type InputRun } from './input-log';
 
 export const STATS_SCHEMA_VERSION = 1;
@@ -44,7 +50,7 @@ export interface FightRecord<A = unknown> {
   gameVersion: string;
   id: string;
   playedAt: string;
-  /** Which try this was at that boss and preset in the session. */
+  /** The number of fights saved on this device when this one was saved, plus one (all bosses and presets; restarts after 'Delete all fights'). */
   attempt: number;
   bossId: string;
   presetId: PresetId;
@@ -68,12 +74,12 @@ export function buildRecord<A>(
   return {
     schemaVersion: STATS_SCHEMA_VERSION,
     gameVersion: GAME_VERSION,
-    id: `${meta.playedAt}#${meta.seed.toString(16)}`,
+    id: `${meta.playedAt}#${(meta.seed >>> 0).toString(16)}`,
     playedAt: meta.playedAt,
     attempt,
     bossId: meta.bossId,
     presetId: meta.presetId,
-    dials: meta.dials,
+    dials: { ...meta.dials },
     changedDials: changedDials(presetDials(meta.presetId), meta.dials),
     seed: meta.seed,
     result,

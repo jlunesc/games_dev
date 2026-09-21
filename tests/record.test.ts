@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { bossById } from '../src/bosses';
 import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
-import { applyDials, changedDials, NORMAL_DIALS, type Dials } from '../src/game/difficulty';
+import { applyDials, changedDials, NORMAL_DIALS, presetDials, type Dials } from '../src/game/difficulty';
+import { PLAYER } from '../src/game/params';
 import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
-import { presetDials } from '../src/ui/prefs';
 import {
   buildRecord,
   GAME_VERSION,
@@ -15,6 +15,7 @@ import {
   type FightMeta,
   type Recording,
 } from '../src/stats/record';
+import { countUpdates } from '../src/stats/input-log';
 import { withInput } from './helpers';
 
 const BOSS_ID = 'ember-duelist';
@@ -87,6 +88,7 @@ describe('buildRecord', () => {
     let rec = startRecording(metaOf());
     for (let n = 1; n <= 5; n++) rec = recordUpdate(rec, scripted(n));
     const record = buildRecord(rec, 'victory', 3, { note: 'x' });
+    expect(countUpdates(rec.runs)).toBe(record.ticks);
     expect(record).toEqual({
       schemaVersion: STATS_SCHEMA_VERSION,
       gameVersion: GAME_VERSION,
@@ -110,6 +112,19 @@ describe('buildRecord', () => {
     expect(buildRecord(rec, 'left', 1, null).id).toBe('2026-09-20T10:00:00.000Z#ff');
   });
 
+  it('uses the seed as an unsigned number in the id', () => {
+    const rec = startRecording(metaOf({ seed: -1 }));
+    expect(buildRecord(rec, 'left', 1, null).id).toBe('2026-09-20T10:00:00.000Z#ffffffff');
+  });
+
+  it('copies the dials, so changing them later cannot change a stored record', () => {
+    const meta = metaOf({ dials: { ...NORMAL_DIALS } });
+    const record = buildRecord(startRecording(meta), 'left', 1, null);
+    meta.dials.speed = 1.4;
+    expect(record.dials).toEqual(NORMAL_DIALS);
+    expect(record.dials).not.toBe(meta.dials);
+  });
+
   it('lists the dials that differ from the preset it began from', () => {
     const dials: Dials = { ...presetDials('hard'), speed: 1 };
     const rec = startRecording(metaOf({ presetId: 'hard', dials }));
@@ -120,10 +135,15 @@ describe('buildRecord', () => {
   });
 });
 
+/** True when the fight really happened: updates ran and someone lost health. */
+const didSomething = (state: GameState, bossMaxHp: number): boolean =>
+  state.tick > 0 && (state.boss.hp < bossMaxHp || state.player.health < PLAYER.maxHealth);
+
 describe('replay guarantee', () => {
   it('replays a Normal fight to the identical final state', () => {
     const { state, rec } = playLive(metaOf(), 1200, scripted);
     const record = buildRecord(rec, 'left', 1, null);
+    expect(didSomething(state, applyDials(bossById(BOSS_ID), NORMAL_DIALS).maxHp)).toBe(true);
     expect(replayFinalState(record)).toEqual(state);
   });
 
@@ -132,6 +152,7 @@ describe('replay guarantee', () => {
     const { state, rec } = playLive(meta, 1200, scripted);
     const record = buildRecord(rec, 'left', 1, null);
     expect(record.ticks).toBeGreaterThan(0);
+    expect(didSomething(state, applyDials(bossById(BOSS_ID), presetDials('hard')).maxHp)).toBe(true);
     expect(replayFinalState(record)).toEqual(state);
   });
 
