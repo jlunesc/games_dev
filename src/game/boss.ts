@@ -119,10 +119,11 @@ function updateGap(s: GameState, boss: BossDef, phase: PhaseDef): void {
     moveBoss(b, boss, toward === 1 ? -1 : 1, phase.retreatSpeed);
   }
   if (b.modeTick >= phase.gap) {
-    const id = chooseAttack(s, boss, phase);
+    // During the study the attacks come from the planned queue: no random draws, no chains.
+    const id = s.study.active ? (s.study.queue.shift() ?? null) : chooseAttack(s, boss, phase);
     if (id !== null) {
       b.pendingAttackId = id;
-      b.chainLeft = planChain(s, phase);
+      b.chainLeft = s.study.active ? 0 : planChain(s, phase);
       b.mode = 'approach';
       b.modeTick = 0;
     }
@@ -159,6 +160,16 @@ function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   const b = s.boss;
   // Defensive: a leap that did not reach its `to` before the attack ended must not leave the boss floating.
   landBoss(b);
+  if (s.study.active) {
+    b.chainLeft = 0;
+    if (s.study.queue.length === 0) {
+      s.study.active = false;
+      s.study.endTick = s.tick;
+      s.events.push('studyEnd');
+    }
+    enterGap(b);
+    return;
+  }
   if (b.chainLeft > 0) {
     const id = chooseAttack(s, boss, phase);
     if (id !== null) {

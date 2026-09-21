@@ -123,6 +123,7 @@ export function hurtPlayer(s: GameState, amount: number): void {
  */
 function tryCounter(s: GameState, boss: BossDef): void {
   const { player: p, boss: b } = s;
+  if (s.study.active) return;
   if (b.mode !== 'attack' || b.attackId === null || p.attackTick !== 0) return;
   const attack = attackById(boss, b.attackId);
   if (attack.class !== 'counterable') return;
@@ -141,7 +142,7 @@ function tryCounter(s: GameState, boss: BossDef): void {
 /** The player's swing hurts the boss once per swing. It ends the fight at 0 health and can start the next phase. */
 function resolvePlayerAttack(s: GameState, boss: BossDef): void {
   const { player: p, boss: b } = s;
-  if (b.mode === 'transition') return;
+  if (s.study.active || b.mode === 'transition') return;
   if (!attackActive(p) || p.attackConnected || !overlaps(attackBox(p), bossBox(b, boss))) return;
   p.attackConnected = true;
   const damage = b.mode === 'stagger' ? boss.counter.damageMultiplier : 1;
@@ -163,6 +164,12 @@ function resolveBossHits(s: GameState, boss: BossDef): void {
   if (isInvulnerable(p)) return;
   const box = playerBox(p);
   if (!activeHitBoxes(s.boss, boss).some((hit) => overlaps(hit, box))) return;
+  if (s.study.active) {
+    // A demonstration: it reaches the player but hurts nobody. The short untouchability makes it count once.
+    p.invulnerableTicks = PLAYER.hitInvulnerability;
+    s.events.push('studyHit');
+    return;
+  }
   const attack = boss.attacks.find((a) => a.id === s.boss.attackId);
   hurtPlayer(s, attack?.damage ?? 1);
 }

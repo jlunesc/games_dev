@@ -1,5 +1,6 @@
 import type { BossDef } from '../bosses/schema';
 import { PLAYER, WORLD } from './params';
+import { nextRandom } from './rng';
 
 export interface Buffered {
   jump: number;
@@ -76,7 +77,21 @@ export type GameEvent =
   | 'counter'
   | 'phaseChange'
   | 'bossDefeated'
-  | 'playerDefeated';
+  | 'playerDefeated'
+  | 'studyHit'
+  | 'studyEnd';
+
+/**
+ * The study before the real fight: the boss demonstrates each first-phase attack and nothing can hurt anyone.
+ * It is separate from `GameState.phase` (which means the fight ended); the fight is on while the study runs.
+ */
+export interface StudyState {
+  active: boolean;
+  /** Attack ids still to demonstrate, in order; the boss takes the first one each time it is ready to attack. */
+  queue: string[];
+  /** The update on which the last demonstration finished (0 until then). */
+  endTick: number;
+}
 
 export interface GameState {
   tick: number;
@@ -91,10 +106,35 @@ export interface GameState {
   rng: number;
   /** The seed this fight started from, kept so it can be replayed and recorded. */
   seed: number;
+  study: StudyState;
 }
 
-export function createInitialState(boss: BossDef, seed = 1): GameState {
+/**
+ * The study queue: every first-phase attack once per round, each round in its own random order (Fisher-Yates
+ * with the fight's seeded generator). Returns the queue and the advanced generator state.
+ */
+function planStudy(boss: BossDef, rng: number, rounds: number): { queue: string[]; rng: number } {
+  const ids = (boss.phases[0]?.attacks ?? []).map((entry) => entry.id);
+  const queue: string[] = [];
+  let state = rng;
+  for (let round = 0; round < rounds; round++) {
+    const order = [...ids];
+    for (let i = order.length - 1; i >= 1; i--) {
+      const next = nextRandom(state);
+      state = next.state;
+      const j = Math.floor(next.value * (i + 1));
+      const kept = order[i] as string;
+      order[i] = order[j] as string;
+      order[j] = kept;
+    }
+    queue.push(...order);
+  }
+  return { queue, rng: state };
+}
+
+export function createInitialState(boss: BossDef, seed = 1, studyRounds = 0): GameState {
   const start = seed >>> 0;
+  const study = studyRounds > 0 ? planStudy(boss, start, studyRounds) : { queue: [], rng: start };
   return {
     tick: 0,
     phase: 'fight',
@@ -136,7 +176,8 @@ export function createInitialState(boss: BossDef, seed = 1): GameState {
       cycleIndex: 0,
     },
     events: [],
-    rng: start,
+    rng: study.rng,
     seed: start,
+    study: { active: study.queue.length > 0, queue: study.queue, endTick: 0 },
   };
 }
