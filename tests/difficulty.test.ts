@@ -81,8 +81,13 @@ describe('applyDials', () => {
 
   it('never modifies the boss it is given', () => {
     const before = JSON.stringify(DUELIST);
-    applyDials(DUELIST, PRESETS[2]!.dials);
+    const beforeMoving = JSON.stringify(MOVING);
+    for (const preset of PRESETS) {
+      applyDials(DUELIST, preset.dials);
+      applyDials(MOVING, preset.dials);
+    }
     expect(JSON.stringify(DUELIST)).toBe(before);
+    expect(JSON.stringify(MOVING)).toBe(beforeMoving);
   });
 
   it.each(PRESETS)('gives a valid boss for the $label preset', ({ dials }) => {
@@ -254,7 +259,7 @@ describe('applyDials with leaps and move directions', () => {
     for (const dials of extremeDials()) {
       const adjusted = applyDials(MOVING, dials);
       expect(attackOf(adjusted, 'slipBack').move!.dir).toBe('back');
-      expect(attackOf(adjusted, 'slip').move!.dir).toBeUndefined();
+      expect('dir' in attackOf(adjusted, 'slip').move!).toBe(false);
     }
   });
 
@@ -272,6 +277,40 @@ describe('applyDials with leaps and move directions', () => {
         expect(b.leap!.target).toBe(original.leap!.target);
       }
     }
+  });
+
+  it('shifts the times of a counterable leap by the ACTUAL windup change when the warning hits its floor', () => {
+    const window = DUELIST.counter.window;
+    const counterPounce: AttackDef = {
+      ...pounce,
+      id: 'counterPounce',
+      class: 'counterable',
+      windup: window + 4,
+      active: 30,
+      leap: { from: window + 4, to: window + 26, height: 200, target: 'forward', distance: 300 },
+      hits: [{ from: window + 26, to: window + 32, x0: 0, x1: 200, bottom: 0, top: 60 }],
+    };
+    const boss: BossDef = { ...DUELIST, attacks: [...DUELIST.attacks, counterPounce] };
+    // 0.7 would take the warning below the counter window, so it stops at the window.
+    expect(Math.round(counterPounce.windup * 0.7)).toBeLessThan(window);
+    const b = attackOf(applyDials(boss, only({ readability: 0.7 })), 'counterPounce');
+    const shift = window - counterPounce.windup;
+    expect(b.windup).toBe(window);
+    expect(shift).not.toBe(Math.round(counterPounce.windup * 0.7) - counterPounce.windup);
+    expect(b.leap!.from).toBe(counterPounce.leap!.from + shift);
+    expect(b.leap!.to).toBe(counterPounce.leap!.to + shift);
+    expect(b.hits[0]!.from).toBe(counterPounce.hits[0]!.from + shift);
+    expect(b.leap!.from).toBe(b.windup);
+  });
+
+  it('never takes a leap distance below the parser minimum of 1', () => {
+    const tiny: AttackDef = { ...pounce, id: 'tiny', leap: { from: 30, to: 52, height: 200, target: 'forward', distance: 1 } };
+    const boss: BossDef = { ...DUELIST, attacks: [...DUELIST.attacks, tiny] };
+    let adjusted: BossDef | undefined;
+    expect(() => {
+      adjusted = applyDials(boss, only({ range: 0.8 }));
+    }).not.toThrow();
+    expect(attackOf(adjusted!, 'tiny').leap!.distance).toBe(1);
   });
 
   it('scales the leap distance with the range dial and leaves the height and flight length alone', () => {

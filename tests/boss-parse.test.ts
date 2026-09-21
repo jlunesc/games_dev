@@ -14,11 +14,19 @@ const rejects = (boss: unknown, where: string): void => {
 
 describe('the real Ember Duelist file', () => {
   it('is accepted and has the planned shape', () => {
-    expect(parseBoss(raw)).toEqual(EMBER_DUELIST);
+    expect(() => parseBoss(raw)).not.toThrow();
     expect(EMBER_DUELIST.id).toBe('ember-duelist');
     expect(EMBER_DUELIST.attacks.map((a) => a.id)).toEqual(['slam', 'sweep', 'lunge', 'burst']);
     expect(EMBER_DUELIST.phases).toHaveLength(2);
     expect(EMBER_DUELIST.phases[0]!.startsAtHpFraction).toBe(1);
+  });
+
+  it('uses none of the movement-skill keys and survives a JSON round trip unchanged', () => {
+    for (const attack of EMBER_DUELIST.attacks) {
+      expect('leap' in attack).toBe(false);
+      if (attack.move !== undefined) expect('dir' in attack.move).toBe(false);
+    }
+    expect(parseBoss(JSON.parse(JSON.stringify(EMBER_DUELIST)))).toEqual(EMBER_DUELIST);
   });
 
   it('has exactly one counterable attack, the slam', () => {
@@ -187,7 +195,7 @@ describe('attack damage', () => {
   });
 });
 
-/** The Duelist's slam (windup 30, active 6 unless `active` is given) with the given leap and move. */
+/** The Duelist's slam (its own windup and active unless `active` is given) with the given leap and move. */
 const withLeap = (
   leap: unknown,
   move?: { from: number; to: number; speed: number },
@@ -201,9 +209,9 @@ const withLeap = (
   return b;
 };
 
-describe('attack leap', () => {
-  const at = (slam: BossDef['attacks'][number]) => ({ from: slam.windup, to: slam.windup + 6 });
+const at = (slam: BossDef['attacks'][number]) => ({ from: slam.windup, to: slam.windup + slam.active });
 
+describe('attack leap', () => {
   it('accepts a leap aimed at each kind of target and keeps it exactly', () => {
     const slam = copy().attacks[0]!;
     const { from, to } = at(slam);
@@ -274,6 +282,24 @@ describe('attack leap', () => {
     expect(parseBoss(withLeap(leap, { from: a + 8, to: a + 10, speed: 300 }, 20)).attacks[0]!.leap).toBeDefined();
   });
 
+  it('rejects a leap that is not an object', () => {
+    for (const leap of [null, 5, 'up', [1, 2]]) rejects(withLeap(leap), 'boss.attacks[0].leap');
+  });
+
+  it('rejects a leap that fully contains a move, and a move that fully contains a leap', () => {
+    const a = copy().attacks[0]!.windup;
+    const inner = { from: a + 4, to: a + 6, speed: 300 };
+    const outer = { from: a + 2, to: a + 10, height: 100, target: 'player' };
+    const containing = withLeap(outer, inner, 20);
+    rejects(containing, 'boss.attacks[0].leap');
+    expect(() => parseBoss(containing)).toThrow('must not overlap the move');
+
+    const leap = { from: a + 4, to: a + 8, height: 100, target: 'player' };
+    const wide = withLeap(leap, { from: a, to: a + 10, speed: 300 }, 20);
+    rejects(wide, 'boss.attacks[0].leap');
+    expect(() => parseBoss(wide)).toThrow('must not overlap the move');
+  });
+
   it('rejects a move and a leap that overlap', () => {
     const a = copy().attacks[0]!.windup;
     const leap = { from: a + 4, to: a + 8, height: 100, target: 'player' };
@@ -299,6 +325,12 @@ describe('attack move direction', () => {
     expect('dir' in parsed.attacks[2]!.move!).toBe(false);
   });
 
+  it('rejects a direction that is null', () => {
+    const b = copy();
+    (b.attacks[2]!.move as unknown as { dir: null }).dir = null;
+    rejects(b, 'boss.attacks[2].move.dir');
+  });
+
   it('rejects an unknown direction', () => {
     const b = copy();
     const lunge = b.attacks[2]!;
@@ -315,7 +347,8 @@ describe('attacks with no hit window', () => {
   });
 
   it('is accepted with a leap', () => {
-    const b = withLeap({ from: 30, to: 36, height: 100, target: 'player' });
+    const { from, to } = at(copy().attacks[0]!);
+    const b = withLeap({ from, to, height: 100, target: 'player' });
     b.attacks[0]!.hits = [];
     expect(parseBoss(b).attacks[0]!.hits).toEqual([]);
   });

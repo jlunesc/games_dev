@@ -190,7 +190,8 @@ function adjustAttack(attack: AttackDef, boss: BossDef, d: Dials): AttackDef {
     // The flight length and height are not scaled by any dial: stretching the flight would move the landing
     // (and its shockwave) in time. Only the timing shifts with the warning, and the range dial sets how far it lands.
     next.leap = { ...attack.leap, from: attack.leap.from + shift, to: attack.leap.to + shift };
-    if (attack.leap.distance !== undefined) next.leap.distance = attack.leap.distance * d.range;
+    // The parser needs a distance of at least 1, so a small distance at a low range must not fall below it.
+    if (attack.leap.distance !== undefined) next.leap.distance = Math.max(1, attack.leap.distance * d.range);
   }
   return next;
 }
