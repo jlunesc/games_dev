@@ -46,6 +46,8 @@ export function createSound(): Sound {
       for (const event of events) {
         if (event === 'bossHit') beep(220, 90, 'square', 0.15);
         if (event === 'playerHit') beep(110, 200, 'sawtooth', 0.2);
+        // A soft low beep, shorter and quieter than the real hit sound: the study hurts nobody.
+        if (event === 'studyHit') beep(150, 90, 'sine', 0.08);
         if (event === 'dash') beep(660, 70, 'triangle', 0.1);
         // Two different warnings: a high clear note for the counterable (gold) attack, a low rough one for red.
         if (event === 'bossWindupGold') beep(880, 140, 'sine', 0.14);

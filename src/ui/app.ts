@@ -54,6 +54,7 @@ import {
   type StatsModel,
 } from './stats-model';
 import { browserStorage } from './storage';
+import { studyBanner } from './study-banner';
 import { summaryLines } from './summary-text';
 import { createTweak, tweakRows, tweakStep, type TweakModel } from './tweak-model';
 
@@ -140,7 +141,7 @@ export function mountApp(root: HTMLElement): void {
     presetId: prefs.presetId,
     dials: prefs.dials,
     seed: 1,
-    study: 0, // wired to the menu setting in Task 4
+    study: 0, // placeholder: never played, startFight makes the real one
     playedAt: new Date().toISOString(),
   });
   let feedback: FeedbackState = NO_FEEDBACK;
@@ -481,13 +482,13 @@ export function mountApp(root: HTMLElement): void {
     shownSummary = null;
     boss = applyDials(bossById(prefs.bossId), prefs.dials);
     const seed = newSeed();
-    state = createInitialState(boss, seed);
+    state = createInitialState(boss, seed, prefs.study);
     flow = startFlow({
       bossId: boss.id,
       presetId: prefs.presetId,
       dials: prefs.dials,
       seed,
-      study: 0, // wired to the menu setting in Task 4
+      study: prefs.study,
       playedAt: new Date().toISOString(),
     });
     nav = NAV_START;
@@ -581,6 +582,8 @@ export function mountApp(root: HTMLElement): void {
       if (freezeLeft > 0) hitStopView = true;
       sound.play(state.events);
     }
+    // The study line has the lowest priority: the paused-controller banner returned above and never reaches here.
+    setBanner(studyBanner(state.study, state.tick));
     // During a hit-stop nothing moves, so blend at 1 instead of the sweeping leftover (that would make the player judder).
     draw(hitStopView ? 1 : plan.alpha);
   }

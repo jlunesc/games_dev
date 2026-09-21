@@ -42,6 +42,8 @@ export function applyEvents(
       if (settings.shake) next.shakeTicks = FEEDBACK.shakeTicks;
       if (settings.flash) next.playerFlashTicks = FEEDBACK.playerFlashTicks;
     }
+    // A study hit is a demonstration: the same flash as a real hit, but no shake.
+    if (event === 'studyHit' && settings.flash) next.playerFlashTicks = FEEDBACK.playerFlashTicks;
     if (event === 'phaseChange' && settings.shake) next.shakeTicks = FEEDBACK.shakeTicks;
   }
   return next;

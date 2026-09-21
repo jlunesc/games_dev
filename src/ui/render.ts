@@ -287,7 +287,7 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState, boss: BossDef)
   ctx.font = '600 16px system-ui, sans-serif';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
-  ctx.fillText(boss.name, WORLD.width - 24, 46);
+  ctx.fillText(state.study.active ? `STUDY  ${boss.name}` : boss.name, WORLD.width - 24, 46);
 }
 
 /** Draws one frame. `alpha` (0 to just under 1) blends the player between the last two updates. */

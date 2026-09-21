@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FEEDBACK } from '../src/game/params';
+import { DEFAULT_SETTINGS } from '../src/ui/settings';
 import {
   NO_FEEDBACK,
   advanceFeedback,
@@ -20,6 +21,25 @@ describe('freezeFor', () => {
     );
     expect(freezeFor(['dash', 'bossWindupGold'])).toBe(0);
     expect(freezeFor([])).toBe(0);
+  });
+});
+
+describe('study hit feedback', () => {
+  it('never freezes the loop, whatever the settings', () => {
+    expect(freezeFor(['studyHit'])).toBe(0);
+    expect(freezeFor(['studyHit', 'studyEnd'])).toBe(0);
+  });
+
+  it('flashes the player like a hit but does not shake or flash the boss', () => {
+    const fb = applyEvents(NO_FEEDBACK, ['studyHit']);
+    expect(fb.playerFlashTicks).toBe(FEEDBACK.playerFlashTicks);
+    expect(fb.shakeTicks).toBe(0);
+    expect(fb.bossFlashTicks).toBe(0);
+  });
+
+  it('honours the Flashes setting like the hit flash', () => {
+    const off = applyEvents(NO_FEEDBACK, ['studyHit'], { ...DEFAULT_SETTINGS, flash: false });
+    expect(off).toEqual(NO_FEEDBACK);
   });
 });
 
