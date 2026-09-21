@@ -11,7 +11,7 @@ describe('arenaRects', () => {
       { x: 230, y: 550, w: 200, h: 14 },
       { x: 850, y: 550, w: 200, h: 14 },
     ]);
-    expect(covers).toEqual([{ x: 610, y: 520, w: 60, h: 120 }]);
+    expect(covers).toEqual([{ x: 610, y: 540, w: 60, h: 100 }]);
   });
 
   it('is empty for the Duelist, which has no arena', () => {

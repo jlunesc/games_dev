@@ -257,7 +257,8 @@ describe('the update loop of the app, replayed', () => {
       expect(played.boss.id).toBe('ashen-hound');
       expect(played.record.bossId).toBe('ashen-hound');
       expect(played.framesWithoutUpdate).toBeGreaterThan(0);
-      expect(played.record.ticks).toBeGreaterThan(300);
+      // (200 and not 300: the cover no longer stops the bite, so the scripted pad is beaten sooner at Hard.)
+      expect(played.record.ticks).toBeGreaterThan(200);
       // The Hound really attacked, and the analysis saw its leaps and dashes.
       const ids = new Set(analyzeFight(played.record).attacks.map((a) => a.attackId));
       expect(ids.size).toBeGreaterThan(1);

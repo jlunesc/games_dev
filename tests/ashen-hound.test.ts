@@ -93,7 +93,7 @@ describe('the Hound\'s arena', () => {
         { x: 330, width: 200, height: 90 },
         { x: 950, width: 200, height: 90 },
       ],
-      covers: [{ x: 640, width: 60, height: 120 }],
+      covers: [{ x: 640, width: 60, height: 100 }],
     });
   });
 
@@ -136,13 +136,13 @@ describe('the Hound\'s arena', () => {
     return updatesWith(states.slice(0, warned[0]! + 80), 'playerHit');
   }
 
-  it('the cover blocks a bite from the right, and a player in the open is bitten', () => {
+  it('the cover (100 high) does not stop the bite (110 tall): it still reaches a player behind the wall', () => {
     // The Hound at x 690 bites toward x 550..690: it reaches a player at x 570 behind the cover (x 610..670).
-    expect(firstAttack('bite', 690, 570, false)).not.toEqual([]);
-    expect(firstAttack('bite', 690, 570, true)).toEqual([]);
+    expect(firstAttack('bite', 690, 570, false)).not.toEqual([]); // in the open: bitten
+    expect(firstAttack('bite', 690, 570, true)).not.toEqual([]); // behind the wall: still bitten
     // The same the other way round: the Hound at x 590 bites toward x 590..730, and the player at x 700 is behind the cover.
     expect(firstAttack('bite', 590, 700, false)).not.toEqual([]);
-    expect(firstAttack('bite', 590, 700, true)).toEqual([]);
+    expect(firstAttack('bite', 590, 700, true)).not.toEqual([]);
   });
 
   it('the cover blocks a rush that stops short of it, and a player in the open is hit', () => {
@@ -153,7 +153,7 @@ describe('the Hound\'s arena', () => {
 
   it('the cover stops the low shockwave of a pounce that lands beside it', () => {
     // The Hound leaps from the right to where the player stood at take-off (x 700, right of the cover); the player
-    // then slips behind the cover. Its shockwave (60 tall) is cut at the cover (120 tall).
+    // then slips behind the cover. Its shockwave (60 tall) is cut at the cover (100 tall).
     function pounce(arena: boolean, hide: boolean): number[] {
       const { boss, state } = scene('pounce', 960, 700, arena);
       const states: GameState[] = [];
@@ -176,6 +176,16 @@ describe('the Hound\'s arena', () => {
     expect(pounce(true, false)).not.toEqual([]); // standing in the open: hit at the landing
     expect(pounce(false, true)).not.toEqual([]); // hiding, but no cover in the arena: hit
     expect(pounce(true, true)).toEqual([]);
+  });
+
+  it('a player standing on top of the wall (100 high) is reached by the bite, but not by the rush or the pounce\'s shockwave', () => {
+    // The wall spans x 610 to 670; the player stands on it at x 640.
+    expect(firstAttack('bite', 730, 640, true, 100)).not.toEqual([]); // the bite (110 tall) reaches feet at 100
+    expect(firstAttack('rush', 1000, 640, true, 100)).toEqual([]); // the rush (100 tall) only touches the feet
+    expect(firstAttack('pounce', 800, 640, true, 100)).toEqual([]); // the shockwave (60 tall) passes under
+    // The same rush and pounce do hit a player on the floor at that spot, so the checks have teeth.
+    expect(firstAttack('rush', 1000, 640, false, 0)).not.toEqual([]);
+    expect(firstAttack('pounce', 800, 640, false, 0)).not.toEqual([]);
   });
 
   it('a player standing on a platform (90 high) is reached by the bite and the rush, but the pounce\'s low shockwave passes under', () => {
@@ -347,6 +357,38 @@ describe('a player who camps on a platform cannot make the Hound unbeatable', ()
     expect(r.updates).toBeLessThanOrEqual(MAX_UPDATES);
     // The bot really did camp: it spent most of the fight standing on the platform.
     expect(r.platformUpdates).toBeGreaterThan(r.updates / 2);
+  });
+});
+
+/** Jumps toward the top of the wall (x 610 to 670, 100 high) and never leaves it, whatever the Hound does. */
+const wallCamper: Bot = (_n, prev) => {
+  const p = prev.player;
+  const onWall = p.onGround && p.y < WORLD.floorY - 95 && p.x >= 610 && p.x <= 670;
+  if (onWall) return NO_INPUT;
+  const dx = 640 - p.x;
+  return withInput({ moveX: Math.abs(dx) < 8 ? 0 : dx > 0 ? 1 : -1, jumpPressed: p.onGround, jumpHeld: true });
+};
+
+describe('a player who camps on top of the wall cannot make the Hound unbeatable', () => {
+  const camp = (seed: number) => {
+    const boss = applyDials(ASHEN_HOUND, presetDials('normal'));
+    const start = createInitialState(boss, seed);
+    let s = start;
+    let wallUpdates = 0;
+    for (let n = 1; n <= MAX_UPDATES && s.phase === 'fight'; n++) {
+      s = step(s, wallCamper(n, s), boss);
+      if (s.player.onGround && s.player.y < WORLD.floorY - 95) wallUpdates += 1;
+    }
+    return { ended: s.phase !== 'fight', damage: start.player.health - s.player.health, wallUpdates, updates: s.tick };
+  };
+
+  it.each([1, 2, 3, 4])('takes hits and the fight ends within the limit (seed %i)', (seed) => {
+    const r = camp(seed);
+    expect(r.damage).toBeGreaterThan(0);
+    expect(r.ended).toBe(true);
+    expect(r.updates).toBeLessThanOrEqual(MAX_UPDATES);
+    // The bot really did camp: it spent most of the fight standing on the wall.
+    expect(r.wallUpdates).toBeGreaterThan(r.updates / 2);
   });
 });
 
