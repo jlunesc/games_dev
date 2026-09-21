@@ -1,4 +1,4 @@
-import type { BossDef } from '../bosses/schema';
+import type { ArenaDef, BossDef } from '../bosses/schema';
 import { PLAYER, WORLD } from './params';
 import type { BossState, PlayerState } from './state';
 
@@ -57,4 +57,25 @@ export function activeHitBoxes(b: BossState, boss: BossDef): Box[] {
       w: hit.x1 - hit.x0,
       h: hit.top - hit.bottom,
     }));
+}
+
+/** A top surface the player can stand on: `y` is the world y of its top (WORLD.floorY - height). */
+export interface Surface {
+  left: number;
+  right: number;
+  y: number;
+  kind: 'platform' | 'cover';
+}
+
+/** The surfaces of an arena: platforms first, then covers. Empty for a flat arena. */
+export function arenaSurfaces(boss: { arena?: ArenaDef }): Surface[] {
+  const { arena } = boss;
+  if (arena === undefined) return [];
+  const make = (kind: Surface['kind']) => (piece: { x: number; width: number; height: number }): Surface => ({
+    left: piece.x - piece.width / 2,
+    right: piece.x + piece.width / 2,
+    y: WORLD.floorY - piece.height,
+    kind,
+  });
+  return [...arena.platforms.map(make('platform')), ...arena.covers.map(make('cover'))];
 }

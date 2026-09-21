@@ -1,10 +1,11 @@
-import type { BossDef } from '../bosses/schema';
+import type { ArenaDef, BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { DT } from '../engine/time';
 import { attackById, beginTransition, landBoss, updateBoss } from './boss';
 import {
   activeHitBoxes,
   attackActive,
+  arenaSurfaces,
   attackBox,
   bossBox,
   isInvulnerable,
@@ -24,9 +25,15 @@ const ATTACK_TOTAL = PLAYER.attack.startup + PLAYER.attack.active + PLAYER.attac
 
 /**
  * Moves the player one update: input buffers, timers, dash, attack, run, jump
- * (with an early-release cut), gravity, walls and floor.
+ * (with an early-release cut), gravity, walls, cover and landing (floor, platforms, cover tops).
+ * Without an arena (or with empty lists) the floor is the only surface, exactly as before.
  */
-export function updatePlayer(p: PlayerState, input: InputFrame, events: GameEvent[]): void {
+export function updatePlayer(
+  p: PlayerState,
+  input: InputFrame,
+  events: GameEvent[],
+  arena?: ArenaDef,
+): void {
   p.prevX = p.x;
   p.prevY = p.y;
 
@@ -95,8 +102,29 @@ export function updatePlayer(p: PlayerState, input: InputFrame, events: GameEven
   const half = PLAYER.width / 2;
   p.x = Math.min(Math.max(p.x, half), WORLD.width - half);
 
-  if (p.y >= WORLD.floorY) {
-    p.y = WORLD.floorY;
+  const surfaces = arenaSurfaces({ arena });
+
+  // Cover is a wall below its top: the previous position says which side the body came from, so even a dash
+  // (about 24 units per update) cannot cross a narrow cover. A body already inside is left alone.
+  for (const c of surfaces) {
+    if (c.kind !== 'cover' || p.prevY <= c.y) continue;
+    if (p.x + half <= c.left || p.x - half >= c.right) continue;
+    if (p.prevX + half <= c.left) p.x = c.left - half;
+    else if (p.prevX - half >= c.right) p.x = c.right + half;
+  }
+
+  // Landing: the highest surface the feet cross while falling (or resting). Platforms are one-way: a rising
+  // player never lands. The floor lands the player whatever its speed, as before.
+  let landing: number | null = p.y >= WORLD.floorY ? WORLD.floorY : null;
+  if (p.vy >= 0) {
+    for (const t of surfaces) {
+      if (p.x + half <= t.left || p.x - half >= t.right) continue;
+      if (p.prevY > t.y + 1 || p.y < t.y) continue;
+      if (landing === null || t.y < landing) landing = t.y;
+    }
+  }
+  if (landing !== null) {
+    p.y = landing;
     p.vy = 0;
     p.onGround = true;
   } else {
@@ -193,7 +221,7 @@ export function step(prev: GameState, input: InputFrame, boss: BossDef): GameSta
   // Whether this update is part of the study is fixed now: the update on which the last demonstration finishes
   // still counts as study (nothing hurts anyone on it), and the real fight starts on the next one.
   const studying = s.study.active;
-  updatePlayer(s.player, input, s.events);
+  updatePlayer(s.player, input, s.events, boss.arena);
   updateBoss(s, boss);
   tryCounter(s, boss, studying);
   resolvePlayerAttack(s, boss, studying);
