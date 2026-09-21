@@ -205,11 +205,10 @@ describe('the update loop of the app, replayed', () => {
     }
   });
 
-  it('the Ashen Hound at Normal: a long fight through the app loop replays and analyzes faithfully', () => {
+  it.each(CASES)('the Ashen Hound at $name: a long fight through the app loop replays and analyzes faithfully', (c) => {
     for (const seed of [21, 22]) {
       const played = playLikeTheApp({
-        presetId: 'normal',
-        dials: presetDials('normal'),
+        ...c,
         seed,
         deltas: messyDeltas(seed),
         bossDef: ASHEN_HOUND,
