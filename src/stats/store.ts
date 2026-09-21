@@ -47,8 +47,8 @@ const requestResult = <T>(request: IDBRequest<T>): Promise<T> =>
 const transactionDone = (tx: IDBTransaction): Promise<void> =>
   new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB transaction failed'));
+    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB transaction aborted'));
   });
 
 /**
@@ -68,6 +68,8 @@ export async function openIndexedDbStore(factory?: IDBFactory): Promise<FightSto
       open.onerror = () => reject(open.error);
       open.onblocked = () => reject(new Error('IndexedDB is blocked'));
     });
+    // Let a newer version of the game (another tab) upgrade the database instead of being blocked by this one.
+    db.onversionchange = () => db.close();
     const store = (mode: IDBTransactionMode): { tx: IDBTransaction; fights: IDBObjectStore } => {
       const tx = db.transaction(STORE_NAME, mode);
       return { tx, fights: tx.objectStore(STORE_NAME) };

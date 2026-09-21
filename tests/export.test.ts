@@ -149,10 +149,63 @@ describe('shareOrDownload', () => {
   it('downloads the file when the browser cannot share files', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('navigator', { canShare: () => false, share: vi.fn() });
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake-url');
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const anchor = stubDocument();
     expect(await shareOrDownload(file)).toBe('downloaded');
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(anchor.href).toBe('blob:fake-url');
     expect(anchor.download).toBe(file.name);
     expect(anchor.click).toHaveBeenCalledTimes(1);
+    expect(anchor.remove).toHaveBeenCalledTimes(1);
+    // The address is kept for a while so the browser can finish the download, then released.
+    expect(revoke).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(10_000);
+    expect(revoke).toHaveBeenCalledWith('blob:fake-url');
+    create.mockRestore();
+    revoke.mockRestore();
+  });
+
+  it('falls back to a download when canShare itself throws', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('navigator', {
+      canShare: () => {
+        throw new TypeError('not supported');
+      },
+      share: vi.fn(),
+    });
+    const anchor = stubDocument();
+    expect(await shareOrDownload(file)).toBe('downloaded');
+    expect(anchor.click).toHaveBeenCalledTimes(1);
+  });
+
+  it('shares the same content as plain text when the browser refuses a JSON file', async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    const canShare = vi.fn((data: { files: File[] }) => data.files[0]!.type === 'text/plain');
+    vi.stubGlobal('navigator', { canShare, share });
+    expect(await shareOrDownload(file)).toBe('shared');
+    expect(canShare).toHaveBeenCalledTimes(2);
+    const shared = share.mock.calls[0]![0] as { files: File[] };
+    expect(shared.files[0]!.type).toBe('text/plain');
+    expect(shared.files[0]!.name).toBe(file.name);
+    expect(await shared.files[0]!.text()).toBe(file.json);
+  });
+
+  it('shares a JSON file first when the browser accepts it', async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { canShare: () => true, share });
+    await shareOrDownload(file);
+    expect((share.mock.calls[0]![0] as { files: File[] }).files[0]!.type).toBe('application/json');
+  });
+
+  it('removes the link even when the click fails', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('navigator', {});
+    const anchor = stubDocument();
+    anchor.click.mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(await shareOrDownload(file)).toBe('failed');
     expect(anchor.remove).toHaveBeenCalledTimes(1);
   });
 

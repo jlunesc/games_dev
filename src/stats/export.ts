@@ -42,27 +42,34 @@ export type ShareResult = 'shared' | 'downloaded' | 'cancelled' | 'failed';
  */
 export async function shareOrDownload(file: ExportFile): Promise<ShareResult> {
   try {
-    const blob = new Blob([file.json], { type: 'application/json' });
-    const shareable = new File([blob], file.name, { type: 'application/json' });
-    if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [shareable] })) {
+    // Some browsers only accept a file type they know: try JSON first, then the same text as plain text.
+    if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
       try {
-        await navigator.share({ files: [shareable], title: 'Boss Trainer stats' });
-        return 'shared';
+        for (const type of ['application/json', 'text/plain']) {
+          const shareable = new File([file.json], file.name, { type });
+          if (navigator.canShare({ files: [shareable] })) {
+            await navigator.share({ files: [shareable], title: 'Boss Trainer stats' });
+            return 'shared';
+          }
+        }
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
         // The share sheet failed for another reason: fall back to a download.
       }
     }
     if (typeof document === 'undefined') return 'failed';
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(new Blob([file.json], { type: 'application/json' }));
     const link = document.createElement('a');
-    link.href = url;
-    link.download = file.name;
-    link.hidden = true;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    try {
+      link.href = url;
+      link.download = file.name;
+      link.hidden = true;
+      document.body.append(link);
+      link.click();
+    } finally {
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    }
     return 'downloaded';
   } catch {
     return 'failed';
