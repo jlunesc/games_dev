@@ -122,6 +122,36 @@ describe('cover', () => {
     expect(t.player.dashTick).toBe(7);
   });
 
+  it('never pushes the player outside the world when a cover is flush against either edge', () => {
+    // Covers spanning 0 to 100 and 1180 to 1280 (x - width / 2 == 0 and x + width / 2 == 1280).
+    const edges = withArena({
+      platforms: [],
+      covers: [
+        { x: 50, width: 100, height: 120 },
+        { x: 1230, width: 100, height: 120 },
+      ],
+    });
+    const inside = (states: GameState[]): void => {
+      for (const s of states) {
+        expect(s.player.x).toBeGreaterThanOrEqual(HALF);
+        expect(s.player.x).toBeLessThanOrEqual(WORLD.width - HALF);
+      }
+    };
+    const walkLeft = run(placed(edges, 400), 120, () => withInput({ moveX: -1 }), edges);
+    inside(walkLeft);
+    expect(walkLeft[walkLeft.length - 1]!.player.x).toBe(100 + HALF);
+    const walkRight = run(placed(edges, 900), 120, () => withInput({ moveX: 1 }), edges);
+    inside(walkRight);
+    expect(walkRight[walkRight.length - 1]!.player.x).toBe(1180 - HALF);
+    // Dashes from close by, at every start x, into each edge cover.
+    for (let startX = 100 + HALF; startX <= 100 + HALF + 40; startX += 1) {
+      inside(run(placed(edges, startX), 15, (n) => (n === 1 ? withInput({ dashPressed: true, moveX: -1 }) : withInput({})), edges));
+    }
+    for (let startX = 1180 - HALF; startX >= 1180 - HALF - 40; startX -= 1) {
+      inside(run(placed(edges, startX), 15, (n) => (n === 1 ? withInput({ dashPressed: true, moveX: 1 }) : withInput({})), edges));
+    }
+  });
+
   it('is not crossed by a full-speed dash even at the minimum width', () => {
     const thin = withArena({ covers: [{ x: 800, width: 40, height: 120 }] });
     for (let startX = 600; startX <= 730; startX += 1) {

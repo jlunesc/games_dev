@@ -541,6 +541,7 @@ export function mountApp(root: HTMLElement): void {
       exitHoldMs = 0;
       leaveHint.hidden = true;
       setBanner('No usable controller. Reconnect it and press a button (or tap here to go back).');
+      setStudyNote(null);
       lastTime = now;
       draw(0);
       return;
@@ -558,6 +559,8 @@ export function mountApp(root: HTMLElement): void {
         setBanner(null);
         pending = NO_PRESSES;
       }
+      // No study note under the pause banner; the next running update brings it back.
+      setStudyNote(null);
       lastTime = now;
       draw(0);
       return;
