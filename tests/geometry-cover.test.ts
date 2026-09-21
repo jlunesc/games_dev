@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ASHEN_HOUND } from '../src/bosses';
 import type { ArenaDef, BossDef } from '../src/bosses/schema';
 import { NO_INPUT } from '../src/engine/input-frame';
 import { activeHitBoxes, type Box } from '../src/game/geometry';
@@ -133,17 +134,76 @@ describe('cover cutting the hit windows', () => {
   it('cuts the burst windows (top 50) even with a low cover', () => {
     const burst = DUELIST.attacks.find((a) => a.id === 'burst')!;
     const cover = { x: BX + 40, width: 20, height: 50 }; // near edge at BX + 30
-    let cutAny = false;
+    let cutWindows = 0;
+    let droppedWindows = 0;
     for (let tick = 0; tick < 120; tick++) {
       const b = attacking('burst', tick, BX, 1);
       const old = oldBoxes(b, DUELIST);
       const cut = activeHitBoxes(b, withCovers(cover));
       expect(cut.length).toBeLessThanOrEqual(old.length);
       for (const box of cut) expect(box.x + box.w).toBeLessThanOrEqual(BX + 30);
-      if (old.length > 0) cutAny = true;
+      if (cut.length < old.length) droppedWindows += 1;
+      cut.forEach((box, i) => {
+        if (box.w < old[i]!.w) cutWindows += 1;
+      });
     }
     expect(burst.hits.length).toBeGreaterThan(0);
-    expect(cutAny).toBe(true);
+    // The first ring (tick 30, x 600 to 740) is cut to the cover's near edge; the rings beyond it are dropped.
+    expect(activeHitBoxes(attacking('burst', 30, BX, 1), withCovers(cover))).toEqual([
+      { x: BX, y: WORLD.floorY - 50, w: 30, h: 50 },
+    ]);
+    expect(activeHitBoxes(attacking('burst', 34, BX, 1), withCovers(cover))).toEqual([]);
+    expect(cutWindows).toBeGreaterThan(0);
+    expect(droppedWindows).toBeGreaterThan(0);
+  });
+
+  describe('edges', () => {
+    const sweepBox = (x: number): Box => ({ x, y: WORLD.floorY - 100, w: 250, h: 100 });
+
+    it('a cover whose near edge is exactly at the boss centre does not block', () => {
+      const right = withCovers({ x: BX + 20, width: 40, height: 120 }); // left edge == BX
+      expect(activeHitBoxes(attacking('sweep', SWEEP_TICK, BX, 1), right)).toEqual([sweepBox(BX)]);
+      const left = withCovers({ x: BX - 20, width: 40, height: 120 }); // right edge == BX
+      expect(activeHitBoxes(attacking('sweep', SWEEP_TICK, BX, -1), left)).toEqual([sweepBox(BX - 250)]);
+    });
+
+    it('a cover whose near edge is exactly at the far edge of the window leaves the box unchanged', () => {
+      const right = withCovers({ x: BX + 270, width: 40, height: 120 }); // left edge == BX + 250
+      expect(activeHitBoxes(attacking('sweep', SWEEP_TICK, BX, 1), right)).toEqual([sweepBox(BX)]);
+      const left = withCovers({ x: BX - 270, width: 40, height: 120 }); // right edge == BX - 250
+      expect(activeHitBoxes(attacking('sweep', SWEEP_TICK, BX, -1), left)).toEqual([sweepBox(BX - 250)]);
+    });
+
+    it('a cover one unit inside the window does cut it', () => {
+      const right = withCovers({ x: BX + 269, width: 40, height: 120 }); // left edge == BX + 249
+      expect(activeHitBoxes(attacking('sweep', SWEEP_TICK, BX, 1), right)).toEqual([{ ...sweepBox(BX), w: 249 }]);
+      const left = withCovers({ x: BX - 269, width: 40, height: 120 }); // right edge == BX - 249
+      expect(activeHitBoxes(attacking('sweep', SWEEP_TICK, BX, -1), left)).toEqual([
+        { ...sweepBox(BX - 249), w: 249 },
+      ]);
+    });
+  });
+
+  it('cuts the pounce\'s landing shockwave at the cover beside the landing spot', () => {
+    // The Hound has landed at x 800 (the shockwave is active at attack times 52 to 57: x 0 to 200, 60 tall).
+    const hound = (cover: Piece): BossDef => ({ ...ASHEN_HOUND, arena: arenaOf(cover) });
+    const landed = (tick: number, facing: 1 | -1): BossState => ({
+      ...createInitialState(ASHEN_HOUND).boss,
+      x: 800,
+      facing,
+      mode: 'attack',
+      attackId: 'pounce',
+      attackTick: tick,
+    });
+    const ahead = hound({ x: 880, width: 40, height: 120 }); // near edge at x 860
+    expect(activeHitBoxes(landed(52, 1), ahead)).toEqual([{ x: 800, y: WORLD.floorY - 60, w: 60, h: 60 }]);
+    const behind = hound({ x: 720, width: 40, height: 120 }); // near edge at x 740
+    expect(activeHitBoxes(landed(52, -1), behind)).toEqual([{ x: 740, y: WORLD.floorY - 60, w: 60, h: 60 }]);
+    // Without the cover the whole 200 units are dangerous, and before the landing there is nothing.
+    expect(activeHitBoxes(landed(52, 1), ahead, { ignoreCover: true })).toEqual([
+      { x: 800, y: WORLD.floorY - 60, w: 200, h: 60 },
+    ]);
+    expect(activeHitBoxes(landed(51, 1), ahead)).toEqual([]);
   });
 });
 

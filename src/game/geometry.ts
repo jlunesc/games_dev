@@ -73,6 +73,8 @@ export function activeHitBoxes(b: BossState, boss: BossDef, options: { ignoreCov
         x = coverRight;
       }
     }
+    // A window with no width left was cut away by a cover and is dropped. Without covers every window is kept as
+    // written, even a zero-width one, so the bare arena gives exactly the old boxes.
     if (covers.length === 0 || w > 0) boxes.push({ x, y: WORLD.floorY - hit.top, w, h: hit.top - hit.bottom });
   }
   return boxes;

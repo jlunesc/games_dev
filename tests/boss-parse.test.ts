@@ -9,7 +9,8 @@ const copy = (): BossDef => structuredClone(EMBER_DUELIST);
 
 const rejects = (boss: unknown, where: string): void => {
   expect(() => parseBoss(boss)).toThrow(BossFormatError);
-  expect(() => parseBoss(boss)).toThrow(where);
+  // The path must be exactly `where` (not merely start with it): the message reads "error at <path>: <reason>".
+  expect(() => parseBoss(boss)).toThrow(`Boss data error at ${where}:`);
 };
 
 describe('the real Ember Duelist file', () => {
@@ -495,6 +496,29 @@ describe('the arena', () => {
     expect(parseBoss(touching).arena!.platforms).toHaveLength(2);
     const touchingCovers = withArena({ covers: [piece(700, 200, 100), piece(500, 200, 100)] });
     expect(parseBoss(touchingCovers).arena!.covers).toHaveLength(2);
+  });
+
+  it('rejects a piece that fully contains another, or is fully inside another', () => {
+    const big = piece(600, 400, 100); // x 400 to 800
+    const small = piece(600, 100, 100); // x 550 to 650
+    for (const kind of ['platforms', 'covers'] as const) {
+      rejects(withArena({ [kind]: [big, small] }), `boss.arena.${kind}[1]`);
+      rejects(withArena({ [kind]: [small, big] }), `boss.arena.${kind}[1]`);
+    }
+    expect(() => parseBoss(withArena({ platforms: [big, small] }))).toThrow('must not overlap boss.arena.platforms[0]');
+    expect(() => parseBoss(withArena({ covers: [small, big] }))).toThrow('must not overlap boss.arena.covers[0]');
+  });
+
+  it('rejects an overlap with an earlier piece that is not the one right before it, naming both', () => {
+    // [0] spans x 400 to 600, [1] x 700 to 800, [2] x 550 to 650 overlaps [0] only.
+    const pieces = [piece(500, 200, 100), piece(750, 100, 100), piece(600, 100, 100)];
+    rejects(withArena({ platforms: pieces }), 'boss.arena.platforms[2]');
+    expect(() => parseBoss(withArena({ platforms: pieces }))).toThrow('must not overlap boss.arena.platforms[0]');
+    rejects(withArena({ covers: pieces }), 'boss.arena.covers[2]');
+    expect(() => parseBoss(withArena({ covers: pieces }))).toThrow('must not overlap boss.arena.covers[0]');
+    // The same three pieces with the last one clear of both are fine.
+    const fine = [piece(500, 200, 100), piece(750, 100, 100), piece(900, 100, 100)];
+    expect(parseBoss(withArena({ platforms: fine })).arena!.platforms).toHaveLength(3);
   });
 
   it('rejects a platform and a cover that overlap in x, naming the platform', () => {
