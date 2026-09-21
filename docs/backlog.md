@@ -22,3 +22,8 @@ Notes for the design:
 
 ## Export only new fights / pagination of the store (raised in the M3b review)
 Export reads every saved fight at once; fine for hundreds, would matter for thousands.
+
+## Issues noticed by the owner while testing M3b on the phone (raised 2026-09-21)
+Written down only; nothing changed yet.
+- **"Custom (from Normal)" shows in the Difficulty row when the menu first opens.** The owner expected plain "Normal" at the start. Possible cause, not yet checked: the phone still holds tweaked values saved during earlier testing (choices are remembered on the device), or a stored value is slightly off the preset. To investigate: does a fresh install show "Normal"?
+- **The menu screens have no Back button on screen.** Tweak difficulty, Settings, Stats (and the summary) can only be left with the controller's top button, so touch-only use cannot go back. A "Back" row or button on each of those screens would fix it (the Stats screen already has a Back row; check the others).
