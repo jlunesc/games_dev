@@ -101,16 +101,9 @@ export function mountApp(root: HTMLElement): void {
   leaveHint.hidden = true;
   root.replaceChildren(canvas, panel, banner, leaveHint);
 
-  // The fight store opens once, in the background. It stays null when the device cannot store stats (the game plays on).
-  let store: FightStore | null = null;
-  openIndexedDbStore().then(
-    (opened) => {
-      store = opened;
-    },
-    () => {
-      store = null;
-    },
-  );
+  // The fight store opens once, in the background. It resolves to null when the device cannot store stats (the
+  // game plays on) and never rejects. Anything that needs the store awaits this.
+  const storeReady: Promise<FightStore | null> = openIndexedDbStore();
 
   const sound = createSound();
   sound.setEnabled(settings.sound);
@@ -283,7 +276,7 @@ export function mountApp(root: HTMLElement): void {
     renderList(
       panel,
       'Stats',
-      'Up and down move, bottom button chooses, top button goes back.',
+      "Up and down move, bottom button chooses, top button goes back. Tap Export with a finger to use the phone's share sheet.",
       statsRows(statsModel).map((row) => ({ label: row.label, value: row.value, help: row.help })),
       statsModel.focus,
       (index) => {
@@ -308,6 +301,7 @@ export function mountApp(root: HTMLElement): void {
   async function loadStatsCount(session: number): Promise<void> {
     let count: number | null = null;
     try {
+      const store = await storeReady;
       count = store === null ? null : await store.count();
     } catch {
       count = null;
@@ -333,6 +327,8 @@ export function mountApp(root: HTMLElement): void {
   /** Runs an export or delete as the current visit to the Stats screen, and ignores it if the player has since left or reopened it. */
   async function runStatsTask(session: number, task: () => Promise<(model: StatsModel) => StatsModel>): Promise<void> {
     statsBusy = true;
+    statsModel = withNotice(statsModel, 'Working…');
+    renderStats();
     let change: (model: StatsModel) => StatsModel;
     try {
       change = await task();
@@ -348,6 +344,7 @@ export function mountApp(root: HTMLElement): void {
 
   function runExport(session: number): Promise<void> {
     return runStatsTask(session, async () => {
+      const store = await storeReady;
       if (store === null) return (model) => withNotice(model, 'This device cannot store stats.');
       const fights = await store.all();
       const result = await shareOrDownload(buildExport(fights, new Date()));
@@ -364,6 +361,7 @@ export function mountApp(root: HTMLElement): void {
 
   function runDelete(session: number): Promise<void> {
     return runStatsTask(session, async () => {
+      const store = await storeReady;
       if (store === null) return (model) => withNotice(model, 'This device cannot store stats.');
       await store.clear();
       return (model) => withNotice(withCount(model, 0), 'All fights deleted.');
@@ -433,19 +431,22 @@ export function mountApp(root: HTMLElement): void {
     const epoch = saveEpoch;
     let line: string;
     try {
-      const target = store;
+      const target = await storeReady;
       if (target === null) {
         line = 'This fight was not saved: this device cannot store stats.';
       } else {
-        const attempt = (await target.count()) + 1;
+        const saved = await target.count();
+        // Let the browser paint the summary or the end pause before the replay below runs (it can take a moment
+        // on a long fight and would otherwise freeze the screen on the last fight frame).
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
         const analysis = analyzeFight({
           bossId: recording.meta.bossId,
           dials: recording.meta.dials,
           seed: recording.meta.seed,
           input: recording.runs,
         });
-        await target.add(buildRecord(recording, result, attempt, analysis));
-        line = `Fight saved (${await target.count()} on this device).`;
+        await target.add(buildRecord(recording, result, saved + 1, analysis));
+        line = `Fight saved (${saved + 1} on this device).`;
       }
     } catch {
       line = 'This fight could not be saved.';
@@ -481,7 +482,7 @@ export function mountApp(root: HTMLElement): void {
     const seed = newSeed();
     state = createInitialState(boss, seed);
     flow = startFlow({
-      bossId: bossById(prefs.bossId).id,
+      bossId: boss.id,
       presetId: prefs.presetId,
       dials: prefs.dials,
       seed,
