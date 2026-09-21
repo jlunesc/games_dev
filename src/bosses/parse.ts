@@ -1,4 +1,7 @@
+import { WORLD } from '../game/params';
 import type {
+  ArenaDef,
+  ArenaPiece,
   AttackDef,
   AttackMove,
   BossDef,
@@ -198,6 +201,61 @@ function phase(value: unknown, path: string, attackIds: ReadonlySet<string>): Ph
   return opening === undefined ? result : { ...result, opening };
 }
 
+const ARENA_MAX_PIECES = 6;
+const ARENA_WIDTH = { min: 40, max: 600 };
+const ARENA_HEIGHT = {
+  platforms: { min: 40, max: 300 },
+  covers: { min: 20, max: 400 },
+} as const;
+
+/** The horizontal span of a piece, `[left, right)`. */
+const span = (p: ArenaPiece): [number, number] => [p.x - p.width / 2, p.x + p.width / 2];
+
+const spansOverlap = (a: ArenaPiece, b: ArenaPiece): boolean => {
+  const [al, ar] = span(a);
+  const [bl, br] = span(b);
+  return al < br && bl < ar;
+};
+
+function arenaPieces(value: unknown, path: string, kind: 'platforms' | 'covers'): ArenaPiece[] {
+  if (value === undefined) return [];
+  const entries = list(value, path);
+  if (entries.length > ARENA_MAX_PIECES) fail(path, `at most ${ARENA_MAX_PIECES} allowed`);
+  const pieces = entries.map((entry, i): ArenaPiece => {
+    const at = `${path}[${i}]`;
+    const o = object(entry, at);
+    const piece: ArenaPiece = {
+      x: num(o.x, `${at}.x`),
+      width: num(o.width, `${at}.width`, ARENA_WIDTH),
+      height: num(o.height, `${at}.height`, ARENA_HEIGHT[kind]),
+    };
+    const [left, right] = span(piece);
+    // The arena is WORLD.width wide, from x = 0.
+    if (left < 0 || right > WORLD.width) fail(at, 'must lie inside the arena');
+    return piece;
+  });
+  pieces.forEach((p, i) => {
+    for (let j = 0; j < i; j++) {
+      if (spansOverlap(p, pieces[j]!)) {
+        fail(`${path}[${i}]`, `must not overlap ${path}[${j}]`);
+      }
+    }
+  });
+  return pieces;
+}
+
+function arena(value: unknown, path: string): ArenaDef {
+  const o = object(value, path);
+  const platforms = arenaPieces(o.platforms, `${path}.platforms`, 'platforms');
+  const covers = arenaPieces(o.covers, `${path}.covers`, 'covers');
+  platforms.forEach((p, i) => {
+    if (covers.some((c) => spansOverlap(p, c))) {
+      fail(`${path}.platforms[${i}]`, 'must not overlap a cover');
+    }
+  });
+  return { platforms, covers };
+}
+
 /** Checks a boss file and returns it typed. Throws a `BossFormatError` naming the first problem found. */
 export function parseBoss(data: unknown): BossDef {
   const o = object(data, 'boss');
@@ -254,6 +312,8 @@ export function parseBoss(data: unknown): BossDef {
     }
   });
 
+  const parsedArena = o.arena === undefined ? undefined : arena(o.arena, 'boss.arena');
+
   return {
     id: text(o.id, 'boss.id'),
     name: text(o.name, 'boss.name'),
@@ -268,5 +328,6 @@ export function parseBoss(data: unknown): BossDef {
     transitionTicks: num(o.transitionTicks, 'boss.transitionTicks', { min: 0, integer: true }),
     attacks,
     phases,
+    ...(parsedArena === undefined ? {} : { arena: parsedArena }),
   };
 }

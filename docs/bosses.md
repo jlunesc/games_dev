@@ -43,6 +43,23 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 | `transitionTicks` | Length of the powering-up pause between phases, in which the boss cannot be hurt. | whole number, at least 0 |
 | `attacks` | The list of attacks the boss can perform, whatever the phase. | at least one; ids must be unique |
 | `phases` | The phases in order. | at least one |
+| `arena` | Platforms and cover standing in the arena. Optional; absent means a bare arena (the Duelist has none). See "Arena" below. | an object, see below |
+
+### Arena
+The optional `arena` object describes scenery for the fight. It has two optional lists, `platforms` and `covers` (absent means empty; once parsed, both lists are always present). This section covers the file format only; how platforms and cover behave in the fight is documented with the simulation.
+
+Each piece in either list has:
+
+| Field | Meaning | Checked |
+|---|---|---|
+| `x` | Horizontal centre of the piece, in world units. | number |
+| `width` | How wide it is. The piece spans `x - width/2` up to `x + width/2`. | number, 40 to 600; the whole span must lie inside the arena (from 0 to 1280) |
+| `height` | How tall it is, measured up from the floor. | number; platforms 40 to 300, covers 20 to 400 |
+
+Rules across pieces:
+- At most 6 pieces per list.
+- Pieces of the same kind must not overlap horizontally. Touching is allowed: a piece ending exactly where the next begins is fine.
+- A platform and a cover must not overlap horizontally at all (the error names the platform). Touching is allowed here too.
 
 ### `counter`
 The counter is one setting for the whole boss and only works against attacks whose `class` is `counterable`.

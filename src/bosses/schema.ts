@@ -94,6 +94,19 @@ export interface CounterDef {
   damageMultiplier: number;
 }
 
+/** One standing piece of the arena, a platform or a cover: centred on `x`, `width` wide, `height` tall. */
+export interface ArenaPiece {
+  x: number;
+  width: number;
+  height: number;
+}
+
+/** Extra scenery for a fight. Both lists are always present once parsed (empty when the file omits one). */
+export interface ArenaDef {
+  platforms: ArenaPiece[];
+  covers: ArenaPiece[];
+}
+
 export interface BossDef {
   id: string;
   name: string;
@@ -112,4 +125,6 @@ export interface BossDef {
   transitionTicks: number;
   attacks: AttackDef[];
   phases: PhaseDef[];
+  /** Platforms and cover in the arena. Absent means a bare arena. */
+  arena?: ArenaDef;
 }

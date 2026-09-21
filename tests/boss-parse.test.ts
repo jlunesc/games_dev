@@ -368,3 +368,128 @@ describe('the crouch pose', () => {
     expect(parseBoss(b).attacks[0]!.pose).toBe('crouch');
   });
 });
+
+describe('the arena', () => {
+  const withArena = (arena: unknown): unknown => ({ ...copy(), arena });
+  const piece = (x: number, width: number, height: number) => ({ x, width, height });
+
+  it('is absent from the Duelist and from a file without it, with no stray key', () => {
+    expect('arena' in EMBER_DUELIST).toBe(false);
+    expect('arena' in parseBoss(copy())).toBe(false);
+    expect(Object.keys(parseBoss(copy()))).not.toContain('arena');
+  });
+
+  it('accepts only platforms, only covers, both, and empty lists', () => {
+    const p = piece(400, 200, 120);
+    const c = piece(900, 100, 80);
+    expect(parseBoss(withArena({ platforms: [p] })).arena).toEqual({ platforms: [p], covers: [] });
+    expect(parseBoss(withArena({ covers: [c] })).arena).toEqual({ platforms: [], covers: [c] });
+    expect(parseBoss(withArena({ platforms: [p], covers: [c] })).arena).toEqual({
+      platforms: [p],
+      covers: [c],
+    });
+    expect(parseBoss(withArena({ platforms: [], covers: [] })).arena).toEqual({
+      platforms: [],
+      covers: [],
+    });
+    expect(parseBoss(withArena({})).arena).toEqual({ platforms: [], covers: [] });
+  });
+
+  it('returns pieces with exactly x, width and height', () => {
+    const parsed = parseBoss(withArena({ platforms: [{ ...piece(400, 200, 120), extra: 1 }] }));
+    expect(Object.keys(parsed.arena!.platforms[0]!).sort()).toEqual(['height', 'width', 'x']);
+  });
+
+  it('rejects an arena that is not an object', () => {
+    rejects(withArena(5), 'boss.arena');
+    rejects(withArena([]), 'boss.arena');
+    rejects(withArena(null), 'boss.arena');
+  });
+
+  it('rejects lists that are not lists', () => {
+    rejects(withArena({ platforms: 3 }), 'boss.arena.platforms');
+    rejects(withArena({ covers: {} }), 'boss.arena.covers');
+  });
+
+  it('rejects a piece that is not an object and a non-number x', () => {
+    rejects(withArena({ platforms: [7] }), 'boss.arena.platforms[0]');
+    rejects(withArena({ covers: [{ x: '5', width: 100, height: 50 }] }), 'boss.arena.covers[0].x');
+    rejects(withArena({ platforms: [{ width: 100, height: 50 }] }), 'boss.arena.platforms[0].x');
+  });
+
+  it('checks width from 40 to 600', () => {
+    rejects(withArena({ platforms: [piece(400, 39, 100)] }), 'boss.arena.platforms[0].width');
+    rejects(withArena({ platforms: [piece(640, 601, 100)] }), 'boss.arena.platforms[0].width');
+    rejects(withArena({ covers: [piece(400, 30, 100)] }), 'boss.arena.covers[0].width');
+    expect(parseBoss(withArena({ platforms: [piece(400, 40, 100)] }))).toBeTruthy();
+    expect(parseBoss(withArena({ platforms: [piece(640, 600, 100)] }))).toBeTruthy();
+  });
+
+  it('checks platform height from 40 to 300', () => {
+    rejects(withArena({ platforms: [piece(400, 100, 39)] }), 'boss.arena.platforms[0].height');
+    rejects(withArena({ platforms: [piece(400, 100, 301)] }), 'boss.arena.platforms[0].height');
+    expect(parseBoss(withArena({ platforms: [piece(400, 100, 40)] }))).toBeTruthy();
+    expect(parseBoss(withArena({ platforms: [piece(400, 100, 300)] }))).toBeTruthy();
+  });
+
+  it('checks cover height from 20 to 400', () => {
+    rejects(withArena({ covers: [piece(400, 100, 19)] }), 'boss.arena.covers[0].height');
+    rejects(withArena({ covers: [piece(400, 100, 401)] }), 'boss.arena.covers[0].height');
+    expect(parseBoss(withArena({ covers: [piece(400, 100, 20)] }))).toBeTruthy();
+    expect(parseBoss(withArena({ covers: [piece(400, 100, 400)] }))).toBeTruthy();
+  });
+
+  it('requires a piece to lie inside the arena', () => {
+    rejects(withArena({ platforms: [piece(50, 200, 100)] }), 'boss.arena.platforms[0]');
+    expect(() => parseBoss(withArena({ platforms: [piece(50, 200, 100)] }))).toThrow(
+      'must lie inside the arena',
+    );
+    rejects(withArena({ covers: [piece(1250, 100, 100)] }), 'boss.arena.covers[0]');
+    expect(() => parseBoss(withArena({ covers: [piece(1250, 100, 100)] }))).toThrow(
+      'must lie inside the arena',
+    );
+    expect(parseBoss(withArena({ platforms: [piece(100, 200, 100)] }))).toBeTruthy();
+    expect(parseBoss(withArena({ covers: [piece(1180, 200, 100)] }))).toBeTruthy();
+  });
+
+  it('allows at most 6 pieces per list', () => {
+    const six = [0, 1, 2, 3, 4, 5].map((i) => piece(100 + i * 150, 100, 100));
+    expect(parseBoss(withArena({ platforms: six })).arena!.platforms).toHaveLength(6);
+    expect(parseBoss(withArena({ covers: six })).arena!.covers).toHaveLength(6);
+    const seven = [...six, piece(1100, 100, 100)];
+    rejects(withArena({ platforms: seven }), 'boss.arena.platforms');
+    expect(() => parseBoss(withArena({ platforms: seven }))).toThrow('at most 6');
+    rejects(withArena({ covers: seven }), 'boss.arena.covers');
+    expect(() => parseBoss(withArena({ covers: seven }))).toThrow('at most 6');
+  });
+
+  it('rejects pieces of the same kind that overlap in x, but allows touching', () => {
+    rejects(
+      withArena({ platforms: [piece(300, 200, 100), piece(450, 200, 100)] }),
+      'boss.arena.platforms[1]',
+    );
+    rejects(
+      withArena({ covers: [piece(450, 200, 100), piece(300, 200, 100)] }),
+      'boss.arena.covers[1]',
+    );
+    expect(() =>
+      parseBoss(withArena({ platforms: [piece(300, 200, 100), piece(450, 200, 100)] })),
+    ).toThrow('must not overlap');
+    const touching = withArena({ platforms: [piece(300, 200, 100), piece(500, 200, 100)] });
+    expect(parseBoss(touching).arena!.platforms).toHaveLength(2);
+    const touchingCovers = withArena({ covers: [piece(500, 200, 100), piece(300, 200, 100)] });
+    expect(parseBoss(touchingCovers).arena!.covers).toHaveLength(2);
+  });
+
+  it('rejects a platform and a cover that overlap in x, naming the platform', () => {
+    const b = withArena({ platforms: [piece(300, 200, 100)], covers: [piece(420, 100, 100)] });
+    rejects(b, 'boss.arena.platforms[0]');
+    expect(() => parseBoss(b)).toThrow('must not overlap a cover');
+  });
+
+  it('allows a platform and a cover that only touch in x', () => {
+    // the platform spans [200, 400) and the cover spans [400, 500)
+    const touching = withArena({ platforms: [piece(300, 200, 100)], covers: [piece(450, 100, 100)] });
+    expect(parseBoss(touching).arena!.covers).toHaveLength(1);
+  });
+});
