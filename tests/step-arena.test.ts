@@ -3,7 +3,10 @@ import type { ArenaDef, BossDef } from '../src/bosses/schema';
 import { arenaSurfaces } from '../src/game/geometry';
 import { PLAYER, WORLD } from '../src/game/params';
 import { createInitialState, type GameState } from '../src/game/state';
-import { QUIET_BOSS, advance, run, withInput } from './helpers';
+import { solo, standAt, updatesWith, windupUpdates } from './boss-helpers';
+import { NO_INPUT } from '../src/engine/input-frame';
+import { DUELIST, QUIET_BOSS, advance, run, withInput } from './helpers';
+import { step, updatePlayer } from '../src/game/step';
 
 const PLATFORM = { x: 500, width: 200, height: 130 };
 const COVER = { x: 800, width: 60, height: 120 };
@@ -105,12 +108,18 @@ describe('cover', () => {
     expect(s.player.x).toBe(coverRight + HALF);
   });
 
-  it('stops a dash at the same place', () => {
-    const s = advance(placed(ARENA_BOSS, 640), 8, withInput({ dashPressed: true, moveX: 1 }), ARENA_BOSS);
-    expect(s.player.x).toBe(coverLeft - HALF);
-    expect(s.player.dashTick).toBeGreaterThanOrEqual(0);
+  it('stops a dash at the same place and lets the dash run its course', () => {
+    const states = run(placed(ARENA_BOSS, 640), 30, (n) => (n === 1 ? withInput({ dashPressed: true, moveX: 1 }) : withInput({})), ARENA_BOSS);
+    const arrived = states.findIndex((s) => s.player.x === coverLeft - HALF);
+    expect(arrived).toBeGreaterThan(0);
+    // The dash keeps counting while x is pinned: it is at tick 7 on update 8 and is over after its duration.
+    expect(states[7]!.player.dashTick).toBe(7);
+    expect(states[PLAYER.dash.duration]!.player.dashTick).toBe(-1);
+    expect(states[PLAYER.dash.duration]!.player.dashCooldown).toBe(PLAYER.dash.cooldown);
+    for (const s of states.slice(arrived)) expect(s.player.x).toBe(coverLeft - HALF);
     const t = advance(placed(ARENA_BOSS, 1000), 8, withInput({ dashPressed: true, moveX: -1 }), ARENA_BOSS);
     expect(t.player.x).toBe(coverRight + HALF);
+    expect(t.player.dashTick).toBe(7);
   });
 
   it('is not crossed by a full-speed dash even at the minimum width', () => {
@@ -148,6 +157,8 @@ describe('cover', () => {
 
   it('lets a player walk off either side of the cover top', () => {
     const on = run(placed(ARENA_BOSS, 720), 80, ontoCover, ARENA_BOSS)[79]!;
+    expect(on.player.y).toBe(coverY);
+    expect(on.player.onGround).toBe(true);
     const right = advance(on, 80, withInput({ moveX: 1 }), ARENA_BOSS);
     expect(right.player.y).toBe(WORLD.floorY);
     expect(right.player.x).toBeGreaterThan(coverRight + HALF);
@@ -226,5 +237,151 @@ describe('determinism', () => {
     const a = run(mid, 100, (n) => script(n + 25), ARENA_BOSS);
     const b = run(copy, 100, (n) => script(n + 25), ARENA_BOSS);
     expect(b).toEqual(a);
+  });
+});
+
+describe('landing tolerance', () => {
+  it('keeps a player standing still on a platform and on a cover top for 120 updates', () => {
+    for (const [x, y] of [
+      [PLATFORM.x, platformY],
+      [COVER.x, coverY],
+    ] as const) {
+      const states = run(placed(ARENA_BOSS, x, y), 120, () => withInput({}), ARENA_BOSS);
+      for (const s of states) {
+        expect(s.player.y).toBe(y);
+        expect(s.player.onGround).toBe(true);
+        expect(s.player.vy).toBe(0);
+      }
+    }
+  });
+
+  /** Steps the player directly (no state copies) through one scripted hop and reports how it went. */
+  const hop = (hold: number, arena: ArenaDef | undefined, top: number) => {
+    const p = placed(QUIET_BOSS, 500).player;
+    let peak = p.y;
+    let landedOnTop = false;
+    for (let n = 1; n <= 60; n++) {
+      updatePlayer(p, withInput({ jumpPressed: n === 1, jumpHeld: n <= hold }), [], arena);
+      peak = Math.min(peak, p.y);
+      if (p.y === top && p.onGround) landedOnTop = true;
+    }
+    return { peak, landedOnTop, endY: p.y };
+  };
+
+  it('never snaps a jump that stays below the top onto a platform (heights 40 to 300)', () => {
+    // Every integer height, every hold length; and, per hold length, the platform whose top is the first whole
+    // unit above that hop's apex (the closest a hop can come without reaching: the old +1 tolerance snapped these).
+    const heights = new Set<number>();
+    for (let height = 40; height <= 300; height++) heights.add(height);
+    for (let hold = 0; hold <= 40; hold++) {
+      const flatPeak = WORLD.floorY - hop(hold, undefined, 0).peak;
+      heights.add(Math.ceil(flatPeak));
+      heights.add(Math.ceil(flatPeak) + 1);
+    }
+    let close = 0;
+    for (const height of heights) {
+      if (height < 40 || height > 300) continue;
+      const arena: ArenaDef = { platforms: [{ x: 500, width: 200, height }], covers: [] };
+      const top = WORLD.floorY - height;
+      for (let hold = 0; hold <= 40; hold++) {
+        // The apex is measured without the platform (a snap onto the top would itself hide a too-low apex).
+        const peak = hop(hold, undefined, top).peak;
+        const { landedOnTop, endY } = hop(hold, arena, top);
+        if (peak > top) {
+          expect(landedOnTop, `height ${height}, hold ${hold}, peak ${WORLD.floorY - peak}`).toBe(false);
+          expect(endY).toBe(WORLD.floorY);
+          if (peak - top < 1) close++;
+        }
+      }
+    }
+    // The sweep really contains hops that end within a unit below a top.
+    expect(close).toBeGreaterThan(10);
+  });
+});
+
+describe('adjacent pieces of different heights', () => {
+  const LOW = { x: 350, width: 100, height: 60 };
+  const HIGH = { x: 450, width: 100, height: 150 };
+  const bridge = withArena({ platforms: [LOW, HIGH], covers: [] });
+  const lowY = WORLD.floorY - LOW.height;
+  const highY = WORLD.floorY - HIGH.height;
+
+  it('lands on the highest surface under the body when falling onto both', () => {
+    // Body 376..424 spans the low platform (to 400) and the high one (from 400).
+    const s = placed(bridge, 400, highY - 100);
+    s.player.onGround = false;
+    const states = run(s, 60, () => withInput({}), bridge);
+    const last = states[59]!;
+    expect(last.player.y).toBe(highY);
+    expect(last.player.onGround).toBe(true);
+  });
+
+  it('keeps a player who stands on the low piece there while the body also overlaps the high one', () => {
+    const states = run(placed(bridge, 400, lowY), 30, () => withInput({}), bridge);
+    for (const s of states) {
+      expect(s.player.y).toBe(lowY);
+      expect(s.player.onGround).toBe(true);
+    }
+  });
+
+  it('does not stick to the higher piece when stepping down onto the lower one', () => {
+    const states = run(placed(bridge, 470, highY), 40, (n) => withInput({ moveX: n <= 15 ? -1 : 0 }), bridge);
+    // While the body still overlaps the high piece the player stays on it; once clear, falls to the low one.
+    const clear = states.findIndex((s) => s.player.x + HALF <= 400);
+    expect(clear).toBeGreaterThan(0);
+    expect(states[clear - 1]!.player.y).toBe(highY);
+    expect(states[clear]!.player.onGround).toBe(false);
+    const last = states[39]!;
+    expect(last.player.y).toBe(lowY);
+    expect(last.player.onGround).toBe(true);
+  });
+});
+
+describe('a counter needs the swing to reach the boss vertically', () => {
+  const slam = DUELIST.attacks.find((a) => a.id === 'slam')!;
+  // The vertical rule applies to bosses with an arena; the far cover changes nothing else.
+  const boss: BossDef = { ...solo('slam'), arena: { platforms: [], covers: [{ x: 1100, width: 60, height: 120 }] } };
+  const first = windupUpdates(run(standAt(boss, 120), 60, () => NO_INPUT, boss))[0]!;
+  const windowStart = first + slam.windup - DUELIST.counter.window;
+
+  /** Runs to just before the counter window, puts the player at `playerRise` above the floor (and the boss at `lift`), then swings. */
+  const swingFrom = (playerRise: number, lift = 0): boolean => {
+    let s = standAt(boss, 120);
+    for (let n = 1; n < windowStart; n++) s = step(s, NO_INPUT, boss);
+    s.boss.lift = lift;
+    s.player.y = WORLD.floorY - playerRise;
+    s.player.prevY = s.player.y;
+    const next = step(s, withInput({ attackPressed: true }), boss);
+    return next.events.includes('counter');
+  };
+
+  it('works from the floor and from a normal jump low enough for the swing to reach the boss', () => {
+    expect(swingFrom(0)).toBe(true);
+    expect(swingFrom(100)).toBe(true);
+    expect(swingFrom(130)).toBe(true);
+  });
+
+  it('does not work from above the boss head (a tall platform)', () => {
+    // The swing spans the feet minus 88 to minus 8 and the player sinks about 1 in the update; the boss is 150 tall.
+    expect(swingFrom(141)).toBe(true);
+    expect(swingFrom(143)).toBe(false);
+    expect(swingFrom(200)).toBe(false);
+  });
+
+  it('goes through the boss box, so a lifted boss is handled', () => {
+    expect(swingFrom(200, 100)).toBe(true);
+    expect(swingFrom(0, 100)).toBe(false);
+  });
+
+  it('keeps the slam alive when a platform player above it swings', () => {
+    const arenaBoss: BossDef = { ...boss, arena: { platforms: [{ x: 200, width: 100, height: 200 }], covers: [] } };
+    let s = standAt(arenaBoss, 120);
+    for (let n = 1; n < windowStart; n++) s = step(s, NO_INPUT, arenaBoss);
+    s.player.y = WORLD.floorY - 200;
+    s.player.prevY = s.player.y;
+    const next = step(s, withInput({ attackPressed: true }), arenaBoss);
+    expect(next.events).not.toContain('counter');
+    expect(next.boss.mode).toBe('attack');
+    expect(updatesWith([next], 'counter')).toEqual([]);
   });
 });

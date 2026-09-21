@@ -60,6 +60,7 @@ Rules across pieces:
 - At most 6 pieces per list.
 - Pieces of the same kind must not overlap horizontally. Touching is allowed: a piece ending exactly where the next begins is fine.
 - A platform and a cover must not overlap horizontally at all (the error names the platform). Touching is allowed here too.
+- No cover may contain the player's start (x = 320): `left <= 320 < right` is rejected, so the player never begins the fight inside a wall. A platform over the start is fine.
 
 ### `counter`
 The counter is one setting for the whole boss and only works against attacks whose `class` is `counterable`.

@@ -1,4 +1,4 @@
-import { WORLD } from '../game/params';
+import { PLAYER, WORLD } from '../game/params';
 import type {
   ArenaDef,
   ArenaPiece,
@@ -248,6 +248,12 @@ function arena(value: unknown, path: string): ArenaDef {
   const o = object(value, path);
   const platforms = arenaPieces(o.platforms, `${path}.platforms`, 'platforms');
   const covers = arenaPieces(o.covers, `${path}.covers`, 'covers');
+  covers.forEach((c, i) => {
+    const [left, right] = span(c);
+    if (left <= PLAYER.startX && PLAYER.startX < right) {
+      fail(`${path}.covers[${i}]`, "must not contain the player's start");
+    }
+  });
   platforms.forEach((p, i) => {
     if (covers.some((c) => spansOverlap(p, c))) {
       fail(`${path}.platforms[${i}]`, 'must not overlap a cover');

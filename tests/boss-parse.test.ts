@@ -463,13 +463,29 @@ describe('the arena', () => {
     expect(() => parseBoss(withArena({ covers: seven }))).toThrow('at most 6');
   });
 
+  it("rejects a cover that contains the player's start", () => {
+    rejects(withArena({ covers: [piece(320, 100, 100)] }), 'boss.arena.covers[0]');
+    expect(() => parseBoss(withArena({ covers: [piece(320, 100, 100)] }))).toThrow(
+      "must not contain the player's start",
+    );
+    // left <= 320 < right fails; a cover starting exactly at 320 fails, one ending exactly at 320 is fine.
+    expect(() => parseBoss(withArena({ covers: [piece(370, 100, 100)] }))).toThrow(
+      "must not contain the player's start",
+    );
+    expect(parseBoss(withArena({ covers: [piece(270, 100, 100)] }))).toBeTruthy();
+    expect(parseBoss(withArena({ covers: [piece(400, 100, 100)] }))).toBeTruthy();
+    // A platform over the start is fine: the player runs under it.
+    expect(parseBoss(withArena({ platforms: [piece(320, 200, 100)] }))).toBeTruthy();
+    rejects(withArena({ covers: [piece(900, 100, 100), piece(320, 100, 100)] }), 'boss.arena.covers[1]');
+  });
+
   it('rejects pieces of the same kind that overlap in x, but allows touching', () => {
     rejects(
       withArena({ platforms: [piece(300, 200, 100), piece(450, 200, 100)] }),
       'boss.arena.platforms[1]',
     );
     rejects(
-      withArena({ covers: [piece(450, 200, 100), piece(300, 200, 100)] }),
+      withArena({ covers: [piece(650, 200, 100), piece(500, 200, 100)] }),
       'boss.arena.covers[1]',
     );
     expect(() =>
@@ -477,7 +493,7 @@ describe('the arena', () => {
     ).toThrow('must not overlap');
     const touching = withArena({ platforms: [piece(300, 200, 100), piece(500, 200, 100)] });
     expect(parseBoss(touching).arena!.platforms).toHaveLength(2);
-    const touchingCovers = withArena({ covers: [piece(500, 200, 100), piece(300, 200, 100)] });
+    const touchingCovers = withArena({ covers: [piece(700, 200, 100), piece(500, 200, 100)] });
     expect(parseBoss(touchingCovers).arena!.covers).toHaveLength(2);
   });
 

@@ -113,13 +113,14 @@ export function updatePlayer(
     else if (p.prevX - half >= c.right) p.x = c.right + half;
   }
 
-  // Landing: the highest surface the feet cross while falling (or resting). Platforms are one-way: a rising
+  // Landing: the highest surface the feet cross while falling (or resting). Only feet at or above the top count
+  // (prevY <= top), so a hop that ends just short of a top never snaps onto it. Platforms are one-way: a rising
   // player never lands. The floor lands the player whatever its speed, as before.
   let landing: number | null = p.y >= WORLD.floorY ? WORLD.floorY : null;
   if (p.vy >= 0) {
     for (const t of surfaces) {
       if (p.x + half <= t.left || p.x - half >= t.right) continue;
-      if (p.prevY > t.y + 1 || p.y < t.y) continue;
+      if (p.prevY > t.y || p.y < t.y) continue;
       if (landing === null || t.y < landing) landing = t.y;
     }
   }
@@ -157,6 +158,15 @@ function tryCounter(s: GameState, boss: BossDef, studying: boolean): void {
   if (attack.class !== 'counterable') return;
   if (b.attackTick < attack.windup - boss.counter.window || b.attackTick >= attack.windup) return;
   if (Math.abs(p.x - b.x) > boss.counter.range) return;
+  // With an arena, the swing must also be able to reach the boss vertically (a player high on a platform
+  // above a boss on the floor cannot counter it). Only the y ranges count: x stays governed by `counter.range`.
+  // A bare arena keeps the old rule (distance only), which the recorded duelist scenarios and the counter of a
+  // leaping boss from the floor rely on.
+  if (boss.arena !== undefined && (boss.arena.platforms.length > 0 || boss.arena.covers.length > 0)) {
+    const swing = attackBox(p);
+    const body = bossBox(b, boss);
+    if (swing.y >= body.y + body.h || body.y >= swing.y + swing.h) return;
+  }
   landBoss(b);
   b.mode = 'stagger';
   b.modeTick = 0;
