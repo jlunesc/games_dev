@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { BossDef } from '../src/bosses/schema';
+import type { AttackDef, BossDef } from '../src/bosses/schema';
 import {
   DIALS,
   NORMAL_DIALS,
@@ -190,5 +190,123 @@ describe('applyDials', () => {
     });
     const minimal = applyDials(DUELIST, only({ variety: 0.5 }));
     expect(minimal.phases.every((p) => p.attacks.length >= 1)).toBe(true);
+  });
+});
+
+/** Moving attacks: leaps of every target, a forward and a back slip and a plain attack, next to the Duelist's own. */
+const pounce: AttackDef = {
+  id: 'pounce',
+  name: 'Pounce',
+  pose: 'crouch',
+  class: 'mustDodge',
+  damage: 1,
+  windup: 30,
+  active: 30,
+  recovery: 30,
+  range: { min: 0, max: 1e9 },
+  leap: { from: 30, to: 52, height: 200, target: 'forward', distance: 300 },
+  hits: [{ from: 52, to: 58, x0: 0, x1: 200, bottom: 0, top: 60 }],
+};
+const seek: AttackDef = { ...pounce, id: 'seek', leap: { from: 30, to: 52, height: 200, target: 'player' } };
+const backHop: AttackDef = {
+  ...pounce,
+  id: 'backHop',
+  leap: { from: 30, to: 52, height: 200, target: 'back', distance: 300 },
+  hits: [],
+};
+const slip: AttackDef = {
+  id: 'slip',
+  name: 'Slip',
+  pose: 'crouch',
+  class: 'mustDodge',
+  damage: 1,
+  windup: 18,
+  active: 10,
+  recovery: 14,
+  range: { min: 0, max: 1e9 },
+  move: { from: 18, to: 28, speed: 1400 },
+  hits: [],
+};
+const slipBack: AttackDef = { ...slip, id: 'slipBack', move: { from: 18, to: 28, speed: 1400, dir: 'back' } };
+const movers = [pounce, seek, backHop, slip, slipBack];
+const MOVING: BossDef = { ...DUELIST, attacks: [...DUELIST.attacks, ...movers] };
+
+const attackOf = (boss: BossDef, id: string): AttackDef => boss.attacks.find((a) => a.id === id)!;
+
+function extremeDials(): Dials[] {
+  const list: Dials[] = [];
+  for (const dial of DIALS) for (const value of [dial.min, dial.max]) list.push(only({ [dial.id]: value }));
+  list.push(Object.fromEntries(DIALS.map((d) => [d.id, d.min])) as Dials);
+  list.push(Object.fromEntries(DIALS.map((d) => [d.id, d.max])) as Dials);
+  for (const preset of PRESETS) list.push(preset.dials);
+  for (let seed = 1; seed <= 200; seed++) list.push(randomDials(seed));
+  return list;
+}
+
+describe('applyDials with leaps and move directions', () => {
+  it('leaves the moving attacks exactly as written at the Normal dials', () => {
+    const adjusted = applyDials(MOVING, NORMAL_DIALS);
+    for (const attack of movers) expect(attackOf(adjusted, attack.id)).toEqual(attack);
+    expect(adjusted).toEqual(MOVING);
+  });
+
+  it('keeps the direction of a move under every preset and dial extreme', () => {
+    for (const dials of extremeDials()) {
+      const adjusted = applyDials(MOVING, dials);
+      expect(attackOf(adjusted, 'slipBack').move!.dir).toBe('back');
+      expect(attackOf(adjusted, 'slip').move!.dir).toBeUndefined();
+    }
+  });
+
+  it('shifts a leap by exactly the windup change and keeps its flight length', () => {
+    for (const readability of [0.7, 1.6]) {
+      const adjusted = applyDials(MOVING, only({ readability }));
+      for (const original of [pounce, seek, backHop]) {
+        const b = attackOf(adjusted, original.id);
+        const shift = b.windup - original.windup;
+        expect(shift).not.toBe(0);
+        expect(b.windup).toBe(Math.round(original.windup * readability));
+        expect(b.leap!.from).toBe(original.leap!.from + shift);
+        expect(b.leap!.to).toBe(original.leap!.to + shift);
+        expect(b.leap!.to - b.leap!.from).toBe(original.leap!.to - original.leap!.from);
+        expect(b.leap!.target).toBe(original.leap!.target);
+      }
+    }
+  });
+
+  it('scales the leap distance with the range dial and leaves the height and flight length alone', () => {
+    for (const range of [0.8, 1.2]) {
+      const adjusted = applyDials(MOVING, only({ range }));
+      for (const original of [pounce, backHop]) {
+        const b = attackOf(adjusted, original.id);
+        expect(b.leap!.distance).toBeCloseTo(original.leap!.distance! * range, 6);
+        expect(b.leap!.height).toBe(original.leap!.height);
+        expect(b.leap!.from).toBe(original.leap!.from);
+        expect(b.leap!.to).toBe(original.leap!.to);
+      }
+      const b = attackOf(adjusted, 'seek');
+      expect(b.leap!.distance).toBeUndefined();
+      expect(b.leap!.height).toBe(200);
+    }
+  });
+
+  it('leaves the flight length and height alone under every dial, and keeps leaps inside the active updates', () => {
+    for (const dials of extremeDials()) {
+      const adjusted = applyDials(MOVING, dials);
+      for (const original of [pounce, seek, backHop]) {
+        const b = attackOf(adjusted, original.id);
+        expect(b.leap!.to - b.leap!.from).toBe(original.leap!.to - original.leap!.from);
+        expect(b.leap!.height).toBe(original.leap!.height);
+        expect(b.leap!.from).toBeGreaterThanOrEqual(b.windup);
+        expect(b.leap!.to).toBeLessThanOrEqual(b.windup + b.active);
+      }
+    }
+  });
+
+  it('keeps a reposition-only attack valid at every dial setting', () => {
+    for (const dials of extremeDials()) {
+      const adjusted = applyDials(MOVING, dials);
+      for (const id of ['backHop', 'slip', 'slipBack']) expect(attackOf(adjusted, id).hits).toEqual([]);
+    }
   });
 });

@@ -178,11 +178,19 @@ function adjustAttack(attack: AttackDef, boss: BossDef, d: Dials): AttackDef {
     })),
   };
   if (attack.move !== undefined) {
+    // Spread first so the direction (`dir`) survives: a back-dash must never turn into a forward dash.
     next.move = {
+      ...attack.move,
       from: attack.move.from + shift,
       to: attack.move.to + shift,
       speed: attack.move.speed * d.speed,
     };
+  }
+  if (attack.leap !== undefined) {
+    // The flight length and height are not scaled by any dial: stretching the flight would move the landing
+    // (and its shockwave) in time. Only the timing shifts with the warning, and the range dial sets how far it lands.
+    next.leap = { ...attack.leap, from: attack.leap.from + shift, to: attack.leap.to + shift };
+    if (attack.leap.distance !== undefined) next.leap.distance = attack.leap.distance * d.range;
   }
   return next;
 }
