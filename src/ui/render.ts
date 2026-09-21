@@ -82,18 +82,44 @@ export function bossLook(b: BossState, boss: BossDef): BossLook {
   return { body: BOSS_COLORS.ember, glow: null };
 }
 
+/** Where a running leap will land and what its shockwave covers, as `landingRing` reports it. */
+export interface LandingRing {
+  /** The landing x. */
+  x: number;
+  /** The nearest and farthest reach of the shockwave from the landing x, towards the way the boss faces. */
+  x0: number;
+  x1: number;
+  facing: 1 | -1;
+  /** True when the attack has no hit windows: the landing hurts nobody and only a small marker is drawn. */
+  harmless: boolean;
+}
+
 /**
- * Where the running leap will land and how far its shockwave reaches each side (the largest `x1` of the attack's hit
- * windows, or the boss's width when it has none). Null when no leap is running.
+ * Where the running leap will land and which side and how far its shockwave reaches. The real shockwave is
+ * one-sided (the hit windows run from the landing spot towards the way the boss faces, and the boss does not turn
+ * during an attack), so this reports the smallest `x0` and the largest `x1` of the attack's hit windows and the
+ * facing. An attack with no hit windows is `harmless`. Null when no leap is running.
  */
-export function landingRing(b: BossState, boss: BossDef): { x: number; halfWidth: number } | null {
+export function landingRing(b: BossState, boss: BossDef): LandingRing | null {
   if (b.leapToX === null) return null;
   const attack = b.attackId === null ? undefined : boss.attacks.find((a) => a.id === b.attackId);
-  const reach =
-    attack !== undefined && attack.hits.length > 0
-      ? Math.max(...attack.hits.map((h) => h.x1))
-      : boss.width;
-  return { x: b.leapToX, halfWidth: reach };
+  if (attack === undefined || attack.hits.length === 0) {
+    return { x: b.leapToX, x0: 0, x1: boss.width / 2, facing: b.facing, harmless: true };
+  }
+  return {
+    x: b.leapToX,
+    x0: Math.min(...attack.hits.map((h) => h.x0)),
+    x1: Math.max(...attack.hits.map((h) => h.x1)),
+    facing: b.facing,
+    harmless: false,
+  };
+}
+
+/** The floor span `[left, right]` a landing ring covers: one-sided, towards the way the boss faces. */
+export function landingSpan(ring: LandingRing): { left: number; right: number } {
+  return ring.facing === 1
+    ? { left: ring.x + ring.x0, right: ring.x + ring.x1 }
+    : { left: ring.x - ring.x1, right: ring.x - ring.x0 };
 }
 
 const COLORS = {
@@ -127,15 +153,21 @@ function drawBoss(
       ? boss.attacks.find((a) => a.id === b.attackId)
       : undefined;
 
-  // Where a leap will land: a red ring on the floor, under the boss.
+  // Where a leap will land: a flat bar on the floor over the side and reach of the shockwave (one-sided, like the
+  // real hit), or a small dim marker when the landing hurts nobody.
   const ring = landingRing(b, boss);
   if (ring !== null) {
-    ctx.globalAlpha = pulse;
+    const span = landingSpan(ring);
+    ctx.save();
     ctx.fillStyle = BOSS_COLORS.red;
-    ctx.beginPath();
-    ctx.ellipse(ring.x, WORLD.floorY, ring.halfWidth, 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    if (ring.harmless) {
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(span.left, WORLD.floorY - 3, span.right - span.left, 3);
+    } else {
+      ctx.globalAlpha = pulse;
+      ctx.fillRect(span.left, WORLD.floorY - 6, span.right - span.left, 6);
+    }
+    ctx.restore();
   }
   // A soft shadow on the floor shows how high the airborne boss is.
   if (b.lift > 0) {
