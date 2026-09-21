@@ -2,7 +2,7 @@
  * The looks of the player and the bosses, as lists of simple shapes (rectangles, circles, polygons) in world
  * coordinates. Nothing here touches the canvas except `drawPrimitives`; the shapes are pure functions of the game
  * state, so they can be tested without a screen. Purely cosmetic: the hit boxes are unchanged and are not drawn here.
- * Every number that sets the feel lives in `tuning.ts`.
+ * The numbers and colours that set the feel live in `tuning.ts`; the proportions of each shape are constants here.
  *
  * World y grows downward and a figure stands with its feet at the given y (the player) or on the floor, `lift` up
  * (a boss). Shapes are listed back to front: the first is drawn first.
@@ -19,10 +19,12 @@ export type Primitive =
   | { kind: 'poly'; points: [number, number][]; color: string };
 
 const TAU = Math.PI * 2;
-/** The steel colour of a boss's blade when nothing glows. */
-const BLADE_STEEL = '#e6e9f2';
-/** How far the Hound's head thrusts forward while a sideways-pose attack (the bite) is active, world units. */
+/** How far the Hound's head lunges forward on top of the thrust while a sideways-pose attack (the bite) is active, world units. */
 const HOUND_LUNGE = 12;
+/** How far the Hound's head thrusts forward at the full pose of a bite, world units. */
+const HOUND_THRUST = 22;
+/** The length of each jaw wedge of a biting Hound, world units. */
+const HOUND_JAW_LENGTH = 28;
 /** How high a lifted step raises a foot, world units. */
 const STEP_LIFT = 5;
 
@@ -179,6 +181,12 @@ interface BossPose {
   attackTick: number;
   windup: number;
   active: number;
+  /** The running attack is in its windup or active part (not its recovery). */
+  posing: boolean;
+  /** How strongly the attack's pose shows, 0.4 at the start of the attack up to 1 when it is active. */
+  poseAmount: number;
+  /** A crouch-pose attack is still winding up on the floor (the drawn box is shorter). */
+  crouching: boolean;
 }
 
 function bossPose(state: GameState, boss: BossDef): BossPose {
@@ -188,6 +196,7 @@ function bossPose(state: GameState, boss: BossDef): BossPose {
     b.mode === 'attack' && b.attackId !== null ? boss.attacks.find((a) => a.id === b.attackId) : undefined;
   const windP = attack !== undefined ? clamp01(b.attackTick / Math.max(1, attack.windup)) : 0;
   const winding = attack !== undefined && b.attackTick < attack.windup;
+  const posing = attack !== undefined && b.attackTick < attack.windup + attack.active;
   const walking = b.mode === 'gap' || b.mode === 'approach';
   const t = state.tick;
   const rise = walking
@@ -213,6 +222,9 @@ function bossPose(state: GameState, boss: BossDef): BossPose {
     attackTick: b.attackTick,
     windup: attack?.windup ?? 0,
     active: attack?.active ?? 0,
+    posing,
+    poseAmount: !posing ? 0 : winding ? 0.4 + 0.6 * windP : 1,
+    crouching: box.crouching,
   };
 }
 
@@ -332,49 +344,84 @@ function duelistFigure(bp: BossPose, colors: { body: string; accent: string; glo
   out.push({ kind: 'circle', x: bp.cx + bp.f * headDx, y: headY, r: headR, color: colors.body });
   out.push(forwardRect(bp, headDx + headR * 0.2, headDx + headR * 0.7, headY - headR * 0.25, headR * 0.3, colors.glow ?? colors.accent));
 
-  out.push(...weaponArm(bp, colors.accent, colors.glow ?? BLADE_STEEL));
+  out.push(...weaponArm(bp, colors.accent, colors.glow ?? LOOK.bossBladeSteel));
   return out;
 }
 
-/** The Ashen Hound: a long, low beast on four legs with a snout, ears and a tail; the pounce's crouch lowers it. */
+/**
+ * The Ashen Hound: a long, low beast on four legs with a snout, ears and a tail. It has no arm, so during the windup
+ * and the active part of an attack the pose shows through the body instead: the bite (sideways) thrusts the head out
+ * with an open jaw, the rush and the slip (back) rear the front of the body up and pull the tail straight back, the
+ * pounce (crouch) drops the body to the floor on folded legs, raised throws the head up and down puts it to the floor.
+ */
 function houndFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
   const { w, h, top, feet, headR, rise } = bp;
   const out: Primitive[] = [];
-  const bodyTop = top + 0.22 * h - rise;
-  const bodyBottom = top + 0.62 * h;
+  // A crouch pose only shows while the body is actually low; after the jump it is just the airborne figure.
+  const pose: Pose | null = bp.posing && bp.attackPose !== null && (bp.attackPose !== 'crouch' || bp.crouching) ? bp.attackPose : null;
+  const amount = pose === null ? 0 : bp.poseAmount;
+  const crouched = pose === 'crouch';
+  const rears = pose === 'back';
   const phase = (TAU * bp.t) / LOOK.legCycleTicks;
-  // Legs walk while the boss walks, and after the windup of an attack that stays on the floor.
-  const attacking = bp.attackPose !== null && bp.windP === 0 && bp.attackTick >= bp.windup;
-  const gaiting = bp.walking || attacking;
+  // Legs walk while the boss walks, and while it recovers from an attack that stays on the floor.
+  const recovering = bp.attackPose !== null && !bp.posing;
+  const gaiting = bp.walking || recovering;
 
-  // Tail, behind the body, wagging.
+  let bodyBottom = top + 0.62 * h;
+  let bodyTop = top + 0.22 * h - rise;
+  if (crouched) {
+    bodyBottom = feet - 8;
+    bodyTop = bodyBottom - 0.32 * h - rise;
+  }
+  // How far the front of the body is raised when the boss rears up.
+  const raise = rears ? 0.26 * h * amount : 0;
+  const frontTop = bodyTop - raise;
+  const frontBottom = bodyBottom - raise * 0.7;
+
+  // Tail, behind the body: wagging up when idle, pulled straight back and down when rearing or crouching.
   const wag = Math.sin((TAU * bp.t) / 30) * 6;
   const rearDx = -0.5 * w;
-  const tailBase = top + 0.22 * h;
-  out.push(
-    forwardPoly(
-      bp,
-      [
-        [rearDx + 2, tailBase + 4],
-        [rearDx - LOOK.bossTailLength, tailBase - 10 + wag],
-        [rearDx - LOOK.bossTailLength * 0.8, tailBase - 2 + wag],
-        [rearDx + 2, tailBase + 14],
-      ],
-      colors.accent,
-    ),
-  );
+  const tailBase = crouched || rears ? bodyTop : top + 0.22 * h;
+  const tailPoints: [number, number][] =
+    crouched || rears
+      ? [
+          [rearDx + 2, tailBase + 4],
+          [rearDx - LOOK.bossTailLength, tailBase + 16],
+          [rearDx - LOOK.bossTailLength * 0.85, tailBase + 22],
+          [rearDx + 2, tailBase + 14],
+        ]
+      : [
+          [rearDx + 2, tailBase + 4],
+          [rearDx - LOOK.bossTailLength, tailBase - 10 + wag],
+          [rearDx - LOOK.bossTailLength * 0.8, tailBase - 2 + wag],
+          [rearDx + 2, tailBase + 14],
+        ];
+  out.push(forwardPoly(bp, tailPoints, colors.accent));
 
   // Four legs, diagonal pairs moving together: hind then front.
   const hips = [-0.42 * w, -0.28 * w, 0.08 * w, 0.2 * w];
   const phases = [0, Math.PI, Math.PI, 0];
   const half = 0.055 * w;
   hips.forEach((hipDx, i) => {
+    const front = i >= 2;
+    const hipY = (front ? frontBottom : bodyBottom) - 2;
     let footDx = hipDx;
     let footY = feet;
     if (bp.airborne) {
-      footDx = hipDx + (i >= 2 ? 0.06 * w : -0.06 * w);
+      footDx = hipDx + (front ? 0.06 * w : -0.06 * w);
       footY = feet - 0.12 * h;
-    } else if (gaiting) {
+    } else if (crouched) {
+      // Folded: the hind feet tucked under the haunches, the front paws splayed forward.
+      footDx = hipDx + (front ? 12 : -8);
+    } else if (rears) {
+      // Hind legs planted and braced; front paws drawn up against the chest.
+      if (front) {
+        footDx = hipDx + 14;
+        footY = Math.min(feet - 4, hipY + 18);
+      } else {
+        footDx = hipDx - 6 * amount;
+      }
+    } else if (gaiting && pose === null) {
       const ph = phase + phases[i]!;
       footDx = hipDx + LOOK.bossLegSwing * 0.7 * Math.sin(ph);
       footY = feet - STEP_LIFT * Math.max(0, Math.cos(ph));
@@ -383,8 +430,8 @@ function houndFigure(bp: BossPose, colors: { body: string; accent: string; glow:
       forwardPoly(
         bp,
         [
-          [hipDx - half, bodyBottom - 2],
-          [hipDx + half, bodyBottom - 2],
+          [hipDx - half, hipY],
+          [hipDx + half, hipY],
           [footDx + half, footY],
           [footDx - half, footY],
         ],
@@ -393,16 +440,91 @@ function houndFigure(bp: BossPose, colors: { body: string; accent: string; glow:
     );
   });
 
-  // Body.
-  out.push(forwardRect(bp, rearDx, 0.25 * w, bodyTop, bodyBottom - bodyTop, colors.body));
+  // Body: a level block, or a slanted one when the front is raised.
+  if (raise > 0) {
+    out.push(
+      forwardPoly(
+        bp,
+        [
+          [rearDx, bodyTop],
+          [0.25 * w, frontTop],
+          [0.25 * w, frontBottom],
+          [rearDx, bodyBottom],
+        ],
+        colors.body,
+      ),
+    );
+  } else {
+    out.push(forwardRect(bp, rearDx, 0.25 * w, bodyTop, bodyBottom - bodyTop, colors.body));
+  }
 
-  // Head, snout, ears and eye, thrust forward by the lean and by a biting lunge, dipped as the attack winds up.
-  const biting =
-    bp.attackPose === 'sideways' && bp.attackTick >= bp.windup && bp.attackTick < bp.windup + bp.active;
-  const headDx = 0.25 * w + headR * 0.4 + bp.lean + (biting ? HOUND_LUNGE : 0);
-  const headY = bodyTop + headR * 0.6 + bp.windP * 6;
+  // Where the head is: thrust forward for the bite, up for raised, to the floor for down, low when crouching.
+  const idleY = frontTop + headR * 0.6 + bp.windP * 6;
+  let headDx = 0.25 * w + headR * 0.4 + bp.lean;
+  let headY = idleY;
+  const biting = pose === 'sideways';
+  if (biting) {
+    const attackActive = bp.attackTick >= bp.windup;
+    headDx += HOUND_THRUST * amount + (attackActive ? HOUND_LUNGE : 0);
+    headY = bodyTop + headR * 0.6 + 2 * amount;
+  } else if (rears) {
+    headY = frontTop + headR * 0.6 - 2;
+  } else if (crouched) {
+    headY = bodyTop + headR * 0.6 + 4;
+  } else if (pose === 'raised') {
+    headY = idleY + (bodyTop + headR * 0.6 - 16 - idleY) * amount;
+  } else if (pose === 'down') {
+    headDx += 10 * amount;
+    headY = idleY + (feet - headR - 2 - idleY) * amount;
+  }
+
+  // A neck joins the head to the body whenever the pose moves the head away from its resting place.
+  if (pose !== null) {
+    const neckDx = 0.25 * w - 12;
+    out.push(
+      forwardPoly(
+        bp,
+        [
+          [neckDx, frontTop + 2],
+          [headDx, headY - headR * 0.6],
+          [headDx, headY + headR * 0.6],
+          [neckDx, frontBottom - 4],
+        ],
+        colors.body,
+      ),
+    );
+  }
+
+  // Head, snout (or jaws), ears and eye.
   out.push({ kind: 'circle', x: bp.cx + bp.f * headDx, y: headY, r: headR, color: colors.body });
-  out.push(forwardRect(bp, headDx + headR * 0.3, headDx + headR * 0.3 + LOOK.bossSnoutLength, headY - 2, headR * 0.55, colors.body));
+  if (biting) {
+    // Two wedges with a gap between them: the jaw opens wider as the bite comes closer.
+    const gap = 6 + 20 * amount;
+    const x0 = headDx + headR * 0.3;
+    const length = HOUND_JAW_LENGTH;
+    out.push(
+      forwardPoly(
+        bp,
+        [
+          [x0 - headR * 0.3, headY - headR * 0.7],
+          [x0 + length, headY - gap * 0.8],
+          [x0 - headR * 0.3, headY - 1],
+        ],
+        colors.body,
+      ),
+      forwardPoly(
+        bp,
+        [
+          [x0 - headR * 0.3, headY + 1],
+          [x0 + length * 0.9, headY + gap],
+          [x0 - headR * 0.3, headY + headR * 0.6],
+        ],
+        colors.body,
+      ),
+    );
+  } else {
+    out.push(forwardRect(bp, headDx + headR * 0.3, headDx + headR * 0.3 + LOOK.bossSnoutLength, headY - 2, headR * 0.55, colors.body));
+  }
   out.push(
     forwardPoly(
       bp,

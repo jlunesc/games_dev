@@ -8,6 +8,8 @@ import { bossFigure, drawPrimitives, playerFigure, type Primitive } from '../src
 import { LOOK } from '../src/ui/look/tuning';
 import { DUELIST } from './helpers';
 
+/** How far past its drawn box a boss figure may reach with its head, ears or a bit of slack, world units. */
+const FIGURE_MARGIN = 24;
 const PLAYER_COLORS = { body: '#e8e8f0', accent: '#7fd6ff' };
 const BOSS_COLORS = { body: '#c8642a', accent: '#e8965a', glow: null as string | null };
 
@@ -234,7 +236,7 @@ const ARM_REACH = 90;
 /** The box the figure may fill: what bossDrawBox reports plus room for the weapon, with the floor as the lower limit. */
 function weaponBounds(s: GameState, boss: BossDef): Bounds {
   const box = bossDrawBox(s.boss, boss);
-  const reach = ARM_REACH + LOOK.bossBladeLength + LOOK.bossFigureMargin;
+  const reach = ARM_REACH + LOOK.bossBladeLength + FIGURE_MARGIN;
   return {
     left: s.boss.x - boss.width / 2 - reach,
     right: s.boss.x + boss.width / 2 + reach,
@@ -246,11 +248,11 @@ function weaponBounds(s: GameState, boss: BossDef): Bounds {
 /** The tighter box for a beast: the drawn box plus room for the tail and the snout only. */
 function beastBounds(s: GameState, boss: BossDef): Bounds {
   const box = bossDrawBox(s.boss, boss);
-  const side = Math.max(LOOK.bossTailLength, LOOK.bossSnoutLength) + LOOK.bossFigureMargin;
+  const side = Math.max(LOOK.bossTailLength, LOOK.bossSnoutLength) + FIGURE_MARGIN;
   return {
     left: s.boss.x - boss.width / 2 - side,
     right: s.boss.x + boss.width / 2 + side,
-    top: box.top - LOOK.bossFigureMargin,
+    top: box.top - FIGURE_MARGIN,
     bottom: box.top + box.height,
   };
 }
@@ -269,7 +271,7 @@ describe('bossFigure: the Ember Duelist', () => {
       const box = bossDrawBox(s.boss, DUELIST);
       const body = bossFigure(s, DUELIST, BOSS_COLORS).filter((p) => p.kind === 'circle');
       const sp = spread(body);
-      expect(sp.top).toBeGreaterThanOrEqual(box.top - LOOK.bossFigureMargin);
+      expect(sp.top).toBeGreaterThanOrEqual(box.top - FIGURE_MARGIN);
       expect(sp.bottom).toBeLessThanOrEqual(box.top + box.height + 1e-6);
     }
   });
@@ -416,6 +418,164 @@ describe('bossFigure: the Ashen Hound', () => {
     const s = withBoss(base(ASHEN_HOUND), { mode: 'gap', x: 700 });
     const other: GameState = { ...s, seed: 8, rng: 2, endTicks: 1, boss: { ...s.boss, hp: 2, modeTick: 30, phase: 1 }, player: { ...s.player, health: 2, x: 5 } };
     expect(bossFigure(other, ASHEN_HOUND, BOSS_COLORS)).toEqual(bossFigure(s, ASHEN_HOUND, BOSS_COLORS));
+  });
+});
+
+describe('bossFigure: the Ashen Hound shows the attack pose through its body', () => {
+  const attack = (id: string) => ASHEN_HOUND.attacks.find((a) => a.id === id)!;
+  const idle = (facing: 1 | -1 = 1): GameState =>
+    at(withBoss(base(ASHEN_HOUND), { mode: 'attack', attackId: null, attackTick: 0, facing, x: 700, lift: 0 }), 12);
+  const during = (id: string, attackTick: number, facing: 1 | -1 = 1, lift = 0): GameState =>
+    at(withBoss(base(ASHEN_HOUND), { mode: 'attack', attackId: id, attackTick, facing, x: 700, lift }), 12);
+  const list = (s: GameState): Primitive[] => bossFigure(s, ASHEN_HOUND, BOSS_COLORS);
+  const json = (s: GameState): string => JSON.stringify(list(s));
+
+  // Mid-windup and active for each attack whose pose the running attack shows.
+  const moments = (id: string): GameState[] => {
+    const a = attack(id);
+    const active = a.windup + 1;
+    return [during(id, Math.floor(a.windup / 2)), during(id, a.windup - 1), during(id, active, 1, id === 'pounce' ? 100 : 0)];
+  };
+
+  it('uses the poses the design promises: bite sideways, rush and slip back, pounce crouch', () => {
+    expect(attack('bite').pose).toBe('sideways');
+    expect(attack('rush').pose).toBe('back');
+    expect(attack('slip').pose).toBe('back');
+    expect(attack('pounce').pose).toBe('crouch');
+  });
+
+  it('draws a different figure for the bite, the rush and the pounce, and for each of them against idle', () => {
+    const windup = (id: string): string => json(during(id, attack(id).windup - 1));
+    const shapes = [json(idle()), windup('bite'), windup('rush'), windup('pounce')];
+    expect(new Set(shapes).size).toBe(4);
+    const active = [json(idle()), json(during('bite', 23)), json(during('rush', 27)), json(during('pounce', 31, 1, 100))];
+    expect(new Set(active).size).toBe(4);
+    // Whichever moment of windup or active, no attack pose looks like idle or like another attack's pose.
+    for (const a of ['bite', 'rush', 'pounce']) {
+      for (const s of moments(a)) {
+        expect(json(s), a).not.toBe(json(idle()));
+        for (const other of ['bite', 'rush', 'pounce']) {
+          if (other === a) continue;
+          for (const t of moments(other)) expect(json(s), `${a} vs ${other}`).not.toBe(json(t));
+        }
+      }
+    }
+  });
+
+  it('shows the same pose for the rush and the slip (both are the back pose)', () => {
+    // Compared while both are fully active (their windups differ in length, so the ramp-up differs).
+    expect(json(during('rush', 30))).toBe(json(during('slip', 20)));
+  });
+
+  it('the bite thrusts the head forward with an open jaw', () => {
+    const still = spread(list(idle()));
+    const biting = list(during('bite', 22));
+    expect(spread(biting).right).toBeGreaterThan(still.right + 12);
+    // Two wedges form the jaw and there is a gap between them: the upper one ends above the lower one.
+    const wedges = biting.filter((p) => p.kind === 'poly' && p.points.length === 3 && spread([p]).left > 700 + 30);
+    expect(wedges.length).toBeGreaterThanOrEqual(2);
+    const [upper, lower] = wedges.map((w) => spread([w])).sort((p, q) => p.top - q.top);
+    expect(upper!.bottom).toBeLessThan(lower!.bottom);
+    expect(lower!.top).toBeGreaterThan(upper!.top);
+  });
+
+  it('the rush rears the front up, pulls the tail back and lifts the front paws', () => {
+    const still = spread(list(idle()));
+    const reared = spread(list(during('rush', 20)));
+    expect(reared.top).toBeLessThan(still.top - 12);
+    const head = (s: GameState): number => list(s).find((p) => p.kind === 'circle')!.y;
+    expect(head(during('rush', 20))).toBeLessThan(head(idle()) - 12);
+    // The front feet (the two legs nearest the head) are off the floor while the hind feet stand on it.
+    const feet = (s: GameState): number[] =>
+      list(s)
+        .filter((p) => p.kind === 'poly' && p.points.length === 4 && spread([p]).bottom > WORLD.floorY - 60 && spread([p]).top > WORLD.floorY - 90 && spread([p]).right - spread([p]).left < 40)
+        .map((p) => spread([p]).bottom);
+    expect(Math.max(...feet(during('rush', 20)))).toBeCloseTo(WORLD.floorY, 6);
+    expect(Math.min(...feet(during('rush', 20)))).toBeLessThan(WORLD.floorY - 12);
+  });
+
+  it('the pounce lowers the body close to the floor and folds the legs', () => {
+    const still = spread(list(idle()));
+    const crouched = spread(list(during('pounce', 10)));
+    expect(bossDrawBox(during('pounce', 10).boss, ASHEN_HOUND).crouching).toBe(true);
+    expect(crouched.top).toBeGreaterThan(still.top + 30);
+    // The body (the largest rectangle) sits low: its underside is within a few units of the floor.
+    const body = list(during('pounce', 10)).filter((p) => p.kind === 'rect').sort((p, q) => q.w * q.h - p.w * p.h)[0]!;
+    expect(body.kind === 'rect' && body.y + body.h).toBeGreaterThan(WORLD.floorY - 12);
+    // Legs are short stubs.
+    const legs = list(during('pounce', 10)).filter((p) => p.kind === 'poly' && p.points.length === 4 && spread([p]).bottom > WORLD.floorY - 1e-6);
+    expect(legs.length).toBe(4);
+    for (const leg of legs) {
+      const b = spread([leg]);
+      expect(b.bottom - b.top).toBeLessThan(16);
+    }
+  });
+
+  it('gives any other pose a sensible figure: the head goes up for raised and down for down', () => {
+    const boss: BossDef = {
+      ...ASHEN_HOUND,
+      attacks: [
+        { ...attack('bite'), id: 'up', pose: 'raised' },
+        { ...attack('bite'), id: 'dn', pose: 'down' },
+      ],
+    };
+    const st = (id: string | null): GameState =>
+      at(withBoss(base(boss), { mode: 'attack', attackId: id, attackTick: 11, x: 700, lift: 0 }), 12);
+    const head = (id: string | null): number => bossFigure(st(id), boss, BOSS_COLORS).find((p) => p.kind === 'circle')!.y;
+    expect(head('up')).toBeLessThan(head(null) - 8);
+    expect(head('dn')).toBeGreaterThan(head(null) + 8);
+    for (const id of ['up', 'dn']) {
+      expectInside(bossFigure(st(id), boss, BOSS_COLORS), beastBounds(st(id), boss));
+    }
+  });
+
+  it('keeps every pose inside the allowed box, in both facings, at every moment of the attack', () => {
+    for (const a of ASHEN_HOUND.attacks) {
+      for (const facing of [1, -1] as const) {
+        for (let tick = 0; tick <= a.windup + a.active + 4; tick += 1) {
+          for (const lift of [0, 100]) {
+            const s = during(a.id, tick, facing, lift);
+            expectInside(list(s), beastBounds(s, ASHEN_HOUND));
+          }
+        }
+      }
+    }
+  });
+
+  it('mirrors every pose with the facing', () => {
+    for (const a of ASHEN_HOUND.attacks) {
+      for (const tick of [0, Math.floor(a.windup / 2), a.windup - 1, a.windup, a.windup + a.active - 1]) {
+        const right = during(a.id, tick, 1);
+        expectSame(list(during(a.id, tick, -1)), mirrored(list(right), 700));
+      }
+    }
+  });
+
+  it('is pure: the pose reads only the boss, the tick and the given colours', () => {
+    const s = during('rush', 20);
+    const other: GameState = {
+      ...s,
+      seed: 9,
+      rng: 3,
+      boss: { ...s.boss, hp: 3, phase: 1 },
+      player: { ...s.player, x: 5, health: 1 },
+    };
+    expect(list(other)).toEqual(list(s));
+    const before = JSON.stringify(s);
+    list(s);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+
+  it('goes back to the idle figure after the active part (recovery)', () => {
+    const a = attack('rush');
+    const recovering = during('rush', a.windup + a.active + 2);
+    expect(spread(list(recovering)).top).toBeGreaterThan(spread(list(during('rush', 20))).top + 12);
+  });
+
+  it('idle and walking figures are unchanged by the pose code (no attack, no pose shapes)', () => {
+    // Idle keeps the original layout: a plain rectangle body and one snout rectangle, no jaw wedges or neck.
+    const shapes = list(idle());
+    expect(shapes.filter((p) => p.kind === 'poly' && p.points.length === 3).length).toBe(1);
   });
 });
 

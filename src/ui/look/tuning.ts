@@ -1,7 +1,16 @@
 /**
- * Every colour and number the looks use, in one place, so the owner can tweak the feel without hunting.
+ * The colours and numbers of the looks, in one place, so the owner can tweak the feel without hunting.
  * Purely cosmetic: nothing here changes how a fight plays. Times are in ticks (60 per second), lengths in
  * world units (the world is 16:9), speeds in world units per second unless a name says "PerTick".
+ *
+ * Colours in this file: the effects, the player's figure, the bosses' bodies and glows, the blade, and the plain
+ * floor, ledge and wall colours. Colours that are NOT in this file:
+ * - The backdrop of each boss (sky, background layers, embers, floor colours, the bright ledge edge) is in
+ *   `moods.ts`, one block per boss. Those floor and edge colours replace `floor`, `floorLine` and `platformGlow` here
+ *   whenever a mood is drawn (which is every fight); the ones here only serve the old plain drawing.
+ * - The health bars, the black bars round the screen, the arena fill, the white hit flash and the white slash box are
+ *   in `render.ts`.
+ * The shapes of the figures (proportions of the legs, the body and the head) are in `figures.ts`.
  */
 export const LOOK = {
   // ---- Impact effects: caps and how many of each thing a moment spawns ----
@@ -98,8 +107,10 @@ export const LOOK = {
   breatheTicks: 90,
   leanDash: 12,
   leanSwing: 8,
-  leanWindup: 10,
   playerBody: '#e8e8f0',
+  /** The body while dashing, and while flashing after a hit. */
+  playerDashBody: '#7fd6ff',
+  playerHurtBody: '#ff3b3b',
   playerAccent: '#7fd6ff',
   playerDashAccent: '#7fd6ff',
 
@@ -112,8 +123,16 @@ export const LOOK = {
   bossBobAmplitude: 4,
   bossBreatheAmplitude: 3,
   bossLeanWindup: 14,
-  bossCrouchDrop: 26,
-  bossFigureMargin: 24,
+  /** The body of the Ember Duelist (and of any boss without a mood of its own), and of the Ashen Hound. */
+  bossBodyEmber: '#c8642a',
+  bossBodyAsh: '#66788f',
+  /** The body while staggered (every boss), the glows: powering up, counterable attack, must-dodge attack. */
+  bossStaggerBody: '#7fd6ff',
+  bossPowerGlow: '#ffffff',
+  bossCounterGlow: '#f5c542',
+  bossDodgeGlow: '#e0403a',
+  /** The blade's steel when nothing glows. */
+  bossBladeSteel: '#e6e9f2',
 
   // ---- Floor, platforms and cover (copied from the old render.ts colours) ----
   floor: '#2a2a3a',

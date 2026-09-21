@@ -2,6 +2,8 @@
 import type { BossDef, Pose } from '../../bosses/schema';
 import { WORLD } from '../../game/params';
 import type { BossState } from '../../game/state';
+import { moodFor } from './moods';
+import { LOOK } from './tuning';
 
 export interface Rect {
   x: number;
@@ -33,11 +35,11 @@ export function armRect(pose: Pose, facing: 1 | -1, shoulderX: number, shoulderY
 }
 
 export const BOSS_COLORS = {
-  ember: '#c8642a',
-  stagger: '#7fd6ff',
-  power: '#ffffff',
-  gold: '#f5c542',
-  red: '#e0403a',
+  ember: LOOK.bossBodyEmber,
+  stagger: LOOK.bossStaggerBody,
+  power: LOOK.bossPowerGlow,
+  gold: LOOK.bossCounterGlow,
+  red: LOOK.bossDodgeGlow,
 };
 
 export interface BossLook {
@@ -51,18 +53,19 @@ export interface BossLook {
  * must-dodge one, blue when staggered, white while powering up between phases.
  */
 export function bossLook(b: BossState, boss: BossDef): BossLook {
-  if (b.mode === 'transition') return { body: BOSS_COLORS.ember, glow: BOSS_COLORS.power };
+  const base = moodFor(boss.id).bodyColor;
+  if (b.mode === 'transition') return { body: base, glow: BOSS_COLORS.power };
   if (b.mode === 'stagger') return { body: BOSS_COLORS.stagger, glow: null };
   if (b.mode === 'attack' && b.attackId !== null) {
     const attack = boss.attacks.find((a) => a.id === b.attackId);
     if (attack !== undefined && b.attackTick < attack.windup + attack.active) {
       return {
-        body: BOSS_COLORS.ember,
+        body: base,
         glow: attack.class === 'counterable' ? BOSS_COLORS.gold : BOSS_COLORS.red,
       };
     }
   }
-  return { body: BOSS_COLORS.ember, glow: null };
+  return { body: base, glow: null };
 }
 
 /**

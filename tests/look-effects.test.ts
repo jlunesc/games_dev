@@ -196,6 +196,76 @@ describe('spawnEffects: the events', () => {
     expect(spawnEffects(NO_EFFECTS, after, clone(after), DUELIST, true).rings).toEqual([]);
   });
 
+  it('the landing ring never grows past the reach of the attack that lands', () => {
+    const pounce = ASHEN_HOUND.attacks.find((a) => a.id === 'pounce')!;
+    const reach = Math.max(...pounce.hits.map((h) => h.x1));
+    const before = createInitialState(ASHEN_HOUND, 1);
+    before.boss.lift = 120;
+    before.boss.mode = 'attack';
+    before.boss.attackId = 'pounce';
+    const after = clone(before);
+    after.boss.lift = 0;
+    after.boss.x = 500;
+    const ring = spawnEffects(NO_EFFECTS, before, after, ASHEN_HOUND, true).rings[0]!;
+    expect(ring.growth).toBeLessThan(LOOK.shockwaveGrowthPerTick);
+    // Age it through its whole life: the widest it ever gets is the reach (and no wider).
+    let fx: EffectsState = { particles: [], rings: [ring], rng: 1 };
+    let widest = ring.radius;
+    for (let i = 0; i < LOOK.shockwaveLifeTicks && fx.rings.length > 0; i++) {
+      fx = stepEffects(fx);
+      for (const r of fx.rings) widest = Math.max(widest, r.radius);
+    }
+    expect(widest).toBeLessThanOrEqual(reach + 1e-9);
+    expect(widest).toBeGreaterThan(reach - LOOK.shockwaveGrowthPerTick);
+    // The uncapped ring would have grown well past it.
+    expect(LOOK.ringStartRadius + LOOK.shockwaveGrowthPerTick * (LOOK.shockwaveLifeTicks - 1)).toBeGreaterThan(reach + 50);
+  });
+
+  it('the landing ring keeps its normal growth when the attack has no hit window or the reach is larger', () => {
+    const noHits: BossDef = {
+      ...ASHEN_HOUND,
+      attacks: ASHEN_HOUND.attacks.map((a) => (a.id === 'pounce' ? { ...a, hits: [] } : a)),
+    };
+    const wide: BossDef = {
+      ...ASHEN_HOUND,
+      attacks: ASHEN_HOUND.attacks.map((a) =>
+        a.id === 'pounce' ? { ...a, hits: [{ ...a.hits[0]!, x1: 5000 }] } : a,
+      ),
+    };
+    for (const boss of [noHits, wide]) {
+      const before = createInitialState(boss, 1);
+      before.boss.lift = 120;
+      before.boss.mode = 'attack';
+      before.boss.attackId = 'pounce';
+      const after = clone(before);
+      after.boss.lift = 0;
+      expect(spawnEffects(NO_EFFECTS, before, after, boss, true).rings[0]!.growth).toBe(LOOK.shockwaveGrowthPerTick);
+    }
+    // No running attack at all (as in the older test): the normal growth too.
+    const before = createInitialState(ASHEN_HOUND, 1);
+    before.boss.lift = 120;
+    const after = clone(before);
+    after.boss.lift = 0;
+    expect(spawnEffects(NO_EFFECTS, before, after, ASHEN_HOUND, true).rings[0]!.growth).toBe(LOOK.shockwaveGrowthPerTick);
+  });
+
+  it('the landing ring takes the largest reach of a hit window list', () => {
+    const boss: BossDef = {
+      ...ASHEN_HOUND,
+      attacks: ASHEN_HOUND.attacks.map((a) =>
+        a.id === 'pounce' ? { ...a, hits: [{ ...a.hits[0]!, x1: 90 }, { ...a.hits[0]!, x1: 150 }, { ...a.hits[0]!, x1: 120 }] } : a,
+      ),
+    };
+    const before = createInitialState(boss, 1);
+    before.boss.lift = 120;
+    before.boss.mode = 'attack';
+    before.boss.attackId = 'pounce';
+    const after = clone(before);
+    after.boss.lift = 0;
+    const ring = spawnEffects(NO_EFFECTS, before, after, boss, true).rings[0]!;
+    expect(ring.radius + ring.growth * (LOOK.shockwaveLifeTicks - 1)).toBeCloseTo(150, 6);
+  });
+
   it('bossDefeated: a big ring and a burst at the centre of the boss', () => {
     const before = createInitialState(DUELIST, 1);
     const after = withEvents(['bossDefeated'], before);

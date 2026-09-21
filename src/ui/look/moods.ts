@@ -23,6 +23,8 @@ export interface Mood {
   floorLine: string;
   floorGlow: string;
   accent: string;
+  /** The boss's body colour when nothing changes it (a hit flash, a stagger). */
+  bodyColor: string;
 }
 
 const [FAR, MID, NEAR] = LOOK.layerSpeeds;
@@ -41,6 +43,7 @@ export const MOODS: Record<string, Mood> = {
     floorLine: LOOK.floorLine,
     floorGlow: '#8fa8ff',
     accent: '#8fa8ff',
+    bodyColor: LOOK.bossBodyEmber,
   },
   'ember-duelist': {
     id: 'ember-duelist',
@@ -56,6 +59,7 @@ export const MOODS: Record<string, Mood> = {
     floorLine: '#c8642a',
     floorGlow: '#ff7a2a',
     accent: '#ffb44a',
+    bodyColor: LOOK.bossBodyEmber,
   },
   'ashen-hound': {
     id: 'ashen-hound',
@@ -70,6 +74,7 @@ export const MOODS: Record<string, Mood> = {
     floorLine: '#8a9ab0',
     floorGlow: '#7fa0d0',
     accent: '#a8d0ff',
+    bodyColor: LOOK.bossBodyAsh,
   },
 };
 

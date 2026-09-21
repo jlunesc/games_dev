@@ -50,11 +50,11 @@ Order of the next steps (owner, 2026-09-21): the study phase (M5b, built), the a
 **Built in M5d** (awaiting the owner's look on the phone; `docs/SPEC.md` section 11, checklist and tweak guide in `docs/phone-testing.md`): a layered background with a mood per boss, impact effects and particles, animated figures for the player, the Ember Duelist and the Ashen Hound (and a generic one for any other boss), and the Effects switch in Settings. All numbers are in `src/ui/look/tuning.ts`.
 
 Look ideas that are **not built**, only listed:
-- **Clearer attack warnings**: a stronger, earlier or more distinct sign that an attack is coming (a ring pulse or a flash when a warning starts, a brighter ground marker, a sound cue), so the pose and glow are not the only telegraph. Not chosen by the owner for M5d. Related: the Hound has no arm any more, so its bite and rush look alike during the warning apart from the length; a distinct sign for each would help.
+- **Clearer attack warnings**: a stronger, earlier or more distinct sign that an attack is coming (a ring pulse or a flash when a warning starts, a brighter ground marker, a sound cue), so the pose and glow are not the only telegraph. Not chosen by the owner for M5d. Related: the Hound has no arm, so its body shows the attack pose (jaw open for the bite, rearing for the rush and the slip, crouch for the pounce); if these are hard to read, stronger versions or a separate sign would help.
 - **A HUD redesign**: the hearts and the boss health bar are still the plain rectangles from M1. Not chosen by the owner for M5d.
 - **Effects specific to each boss's attacks**: for example embers thrown by the Duelist's slam, a dust line along the floor for the Hound's rush, a trail behind the Duelist's lunge. M5d has only the general effects (sparks, rings, dust, dash trail, bursts).
 - **Sprite art later**: replacing the geometric shapes with pixel-art sprites (a possible upgrade kept open by the locked style, `docs/SPEC.md` section 8). Art is separate from fight logic, so this can be done without touching how a fight plays.
-- **Lean and animation refinements**: the figures only lean into the windup and swing; ideas are a follow-through after an attack, squash and stretch on landing, an anticipation pose for the player's dash, turning animations, and different body colours for each boss (both bosses are the same burnt orange today).
+- **Lean and animation refinements**: the figures only lean into the windup and swing; ideas are a follow-through after an attack, squash and stretch on landing, an anticipation pose for the player's dash, turning animations.
 - **Nicer arena pieces**: textures or patterns on the ledges and the wall beyond the outline and the edge glow.
 
 ### Original note

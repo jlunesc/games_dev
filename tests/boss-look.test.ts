@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BOSS_COLORS, armRect, bossLook } from '../src/ui/render';
+import { ASHEN_HOUND } from '../src/bosses';
 import { createInitialState } from '../src/game/state';
+import { moodFor } from '../src/ui/look/moods';
 import { DUELIST } from './helpers';
 
 describe('armRect', () => {
@@ -87,5 +89,60 @@ describe('bossLook', () => {
     const powering = createInitialState(DUELIST).boss;
     powering.mode = 'transition';
     expect(bossLook(powering, DUELIST).glow).toBe(BOSS_COLORS.power);
+  });
+});
+
+describe('bossLook: the body colour of each boss', () => {
+  const rgb = (hex: string): [number, number, number] => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+  const distance = (a: string, b: string): number => {
+    const [r1, g1, b1] = rgb(a);
+    const [r2, g2, b2] = rgb(b);
+    return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
+  };
+  const houndState = (over: Partial<ReturnType<typeof createInitialState>['boss']>) => {
+    const b = createInitialState(ASHEN_HOUND).boss;
+    Object.assign(b, over);
+    return b;
+  };
+
+  it('keeps the Duelist ember body and gives a boss without a mood the same ember body', () => {
+    const b = createInitialState(DUELIST).boss;
+    expect(bossLook(b, DUELIST).body).toBe(BOSS_COLORS.ember);
+    expect(bossLook(b, { ...DUELIST, id: 'made-up-boss' }).body).toBe(BOSS_COLORS.ember);
+    expect(bossLook(b, { ...DUELIST, id: 'toString' }).body).toBe(BOSS_COLORS.ember);
+  });
+
+  it('gives the Ashen Hound its own ash-blue body, from its mood', () => {
+    const body = bossLook(houndState({}), ASHEN_HOUND).body;
+    expect(body).toBe(moodFor('ashen-hound').bodyColor);
+    expect(body).not.toBe(BOSS_COLORS.ember);
+    expect(distance(body, BOSS_COLORS.ember)).toBeGreaterThan(100);
+  });
+
+  it('keeps the Hound body colour while it attacks, and glows as before', () => {
+    const attacking = bossLook(houndState({ mode: 'attack', attackId: 'bite', attackTick: 5 }), ASHEN_HOUND);
+    expect(attacking.body).toBe(moodFor('ashen-hound').bodyColor);
+    expect(attacking.glow).toBe(BOSS_COLORS.red);
+  });
+
+  it('shows a staggered Hound in the stagger colour, which the body colour cannot be mistaken for', () => {
+    const staggered = bossLook(houndState({ mode: 'stagger' }), ASHEN_HOUND);
+    expect(staggered).toEqual({ body: BOSS_COLORS.stagger, glow: null });
+    expect(distance(moodFor('ashen-hound').bodyColor, BOSS_COLORS.stagger)).toBeGreaterThan(100);
+  });
+
+  it('keeps the Hound body colour while it powers up between phases', () => {
+    const powering = bossLook(houndState({ mode: 'transition' }), ASHEN_HOUND);
+    expect(powering).toEqual({ body: moodFor('ashen-hound').bodyColor, glow: BOSS_COLORS.power });
+  });
+
+  it('stands out from the Hound backdrop', () => {
+    const mood = moodFor('ashen-hound');
+    for (const c of [mood.skyTop, mood.skyBottom, mood.floor]) expect(distance(mood.bodyColor, c)).toBeGreaterThan(70);
+    for (const layer of mood.layers) expect(distance(mood.bodyColor, layer.color)).toBeGreaterThan(70);
   });
 });

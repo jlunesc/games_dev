@@ -137,6 +137,21 @@ class Spawner {
   }
 }
 
+/**
+ * How fast the landing ring grows. The ring is decoration, so it must never suggest a danger zone bigger than the real
+ * one: its final radius is capped at the farthest reach (`x1`) of the hit windows of the attack that was running when the
+ * boss came down. An attack without hit windows keeps the normal growth, and so does a reach larger than the ring's own.
+ */
+function shockwaveGrowth(before: GameState, boss: BossDef): number {
+  const attack = before.boss.attackId === null ? undefined : boss.attacks.find((a) => a.id === before.boss.attackId);
+  if (attack === undefined || attack.hits.length === 0) return LOOK.shockwaveGrowthPerTick;
+  const reach = Math.max(...attack.hits.map((hit) => hit.x1));
+  // The ring is drawn for `shockwaveLifeTicks - 1` growth steps before it is removed.
+  const steps = Math.max(1, LOOK.shockwaveLifeTicks - 1);
+  const capped = Math.max(0, reach - LOOK.ringStartRadius) / steps;
+  return Math.min(LOOK.shockwaveGrowthPerTick, capped);
+}
+
 /** Keeps the newest `max` items (the list is oldest first). */
 const newest = <T>(items: T[], max: number): T[] => (items.length > max ? items.slice(items.length - max) : items);
 
@@ -203,7 +218,7 @@ export function spawnEffects(
   }
   if (before.boss.lift > 0 && after.boss.lift === 0) {
     out.dust(LOOK.dustOnLand * 2, after.boss.x, WORLD.floorY, boss.width);
-    out.ring(after.boss.x, WORLD.floorY, LOOK.shockwaveGrowthPerTick, LOOK.shockwaveLifeTicks, LOOK.ringWidth, LOOK.shockwave);
+    out.ring(after.boss.x, WORLD.floorY, shockwaveGrowth(before, boss), LOOK.shockwaveLifeTicks, LOOK.ringWidth, LOOK.shockwave);
   }
 
   if (out.particles.length === 0 && out.rings.length === 0) return fx;

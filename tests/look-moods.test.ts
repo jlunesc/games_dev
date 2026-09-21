@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { BOSSES } from '../src/bosses/index';
 import { LOOK } from '../src/ui/look/tuning';
@@ -39,7 +40,7 @@ describe('the moods', () => {
 
   it('use valid #rrggbb colours everywhere', () => {
     for (const mood of Object.values(MOODS)) {
-      for (const c of [mood.skyTop, mood.skyBottom, mood.ember, mood.floor, mood.floorLine, mood.floorGlow, mood.accent]) {
+      for (const c of [mood.skyTop, mood.skyBottom, mood.ember, mood.floor, mood.floorLine, mood.floorGlow, mood.accent, mood.bodyColor]) {
         expect(c, mood.id).toMatch(HEX);
       }
     }
@@ -64,5 +65,27 @@ describe('the look tuning', () => {
       expect(c).toMatch(HEX);
     }
     expect(LOOK.floor).toBe('#2a2a3a');
+  });
+});
+
+describe('the tuning file is honest', () => {
+  const dir = new URL('../src/ui/', import.meta.url);
+  const sources = (): string => {
+    const files: string[] = [];
+    const walk = (d: URL): void => {
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        const u = new URL(e.name + (e.isDirectory() ? '/' : ''), d);
+        if (e.isDirectory()) walk(u);
+        else if (e.name.endsWith('.ts') && e.name !== 'tuning.ts') files.push(readFileSync(u, 'utf8'));
+      }
+    };
+    walk(dir);
+    return files.join('\n');
+  };
+
+  it('has no field that nothing reads', () => {
+    const text = sources();
+    const unused = Object.keys(LOOK).filter((key) => !new RegExp(`\\bLOOK\\.${key}\\b`).test(text));
+    expect(unused).toEqual([]);
   });
 });
