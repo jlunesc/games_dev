@@ -31,7 +31,7 @@ describe('study hit feedback', () => {
   });
 
   it('flashes the player like a hit but does not shake or flash the boss', () => {
-    const fb = applyEvents(NO_FEEDBACK, ['studyHit']);
+    const fb = applyEvents(NO_FEEDBACK, ['studyHit'], { ...DEFAULT_SETTINGS, shake: true, flash: true });
     expect(fb.playerFlashTicks).toBe(FEEDBACK.playerFlashTicks);
     expect(fb.shakeTicks).toBe(0);
     expect(fb.bossFlashTicks).toBe(0);

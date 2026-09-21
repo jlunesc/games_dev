@@ -7,7 +7,7 @@ import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 import { summarize } from '../src/game/summary';
 import { advanceFlow, startFlow } from '../src/ui/fight-flow';
-import { actionOf, analyzeFight, analyzeRun, CLOSE_BELOW, MID_UP_TO, POSITION_EVERY } from '../src/stats/analyze';
+import { actionOf, analyzeFight, analyzeRecording, analyzeRun, CLOSE_BELOW, MID_UP_TO, POSITION_EVERY } from '../src/stats/analyze';
 import { decodeInputs } from '../src/stats/input-log';
 import { buildRecord, recordUpdate, startRecording, type FightMeta } from '../src/stats/record';
 import { solo, standAt, windupUpdates } from './boss-helpers';
@@ -714,5 +714,57 @@ describe('the study', () => {
     const plain = analyzeRun(boss, createInitialState(boss, 3), decodeInputs(record.input));
     expect(b).toEqual(plain);
     expect(b.study).toEqual({ rounds: 0, ticks: 0, attacks: 0, hits: 0 });
+  });
+});
+
+describe('analyzeRecording', () => {
+  const meta: FightMeta = {
+    bossId: DUELIST.id,
+    presetId: 'normal',
+    dials: { ...NORMAL_DIALS },
+    seed: 3,
+    study: 1,
+    playedAt: '2026-09-20T10:00:00.000Z',
+  };
+  const boss = applyDials(DUELIST, NORMAL_DIALS);
+  const player = (n: number): InputFrame =>
+    n <= 60
+      ? withInput({ moveX: 1 })
+      : withInput({ attackPressed: n % 40 === 0, dashPressed: n % 90 === 0, jumpPressed: n % 130 === 0 });
+
+  /** A real study-1 fight, recorded update by update as the app does. */
+  function record() {
+    let state = createInitialState(boss, meta.seed, meta.study);
+    let rec = startRecording(meta);
+    const inputs: InputFrame[] = [];
+    for (let n = 1; n <= 1500; n++) {
+      const frame = player(n);
+      inputs.push(frame);
+      state = step(state, frame, boss);
+      rec = recordUpdate(rec, frame);
+      if (state.phase !== 'fight') break;
+    }
+    return { rec, inputs };
+  }
+
+  it('replays the study from the recording meta and matches driving the run with the study state', () => {
+    const { rec, inputs } = record();
+    const expected = analyzeRun(boss, createInitialState(boss, meta.seed, 1), inputs, 1);
+    const a = analyzeRecording(rec);
+    expect(a).toEqual(expected);
+    expect(a.study.rounds).toBe(1);
+    expect(a.study.attacks).toBe(3);
+    expect(a.attacks.slice(0, 3).every((x) => x.study)).toBe(true);
+  });
+
+  it('would differ if the study were left out (the old call shape)', () => {
+    const { rec } = record();
+    const without = analyzeFight({
+      bossId: rec.meta.bossId,
+      dials: rec.meta.dials,
+      seed: rec.meta.seed,
+      input: rec.runs,
+    });
+    expect(without).not.toEqual(analyzeRecording(rec));
   });
 });

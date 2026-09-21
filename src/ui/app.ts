@@ -22,7 +22,7 @@ import { GAME } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
 import type { FightResult, FightSummary } from '../game/summary';
-import { analyzeFight } from '../stats/analyze';
+import { analyzeRecording } from '../stats/analyze';
 import { buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
 import { buildRecord, type Recording } from '../stats/record';
 import { openIndexedDbStore, type FightStore } from '../stats/store';
@@ -167,7 +167,7 @@ export function mountApp(root: HTMLElement): void {
 
   function setBanner(text: string | null): void {
     banner.hidden = text === null;
-    if (text !== null) banner.textContent = text;
+    if (text !== null && banner.textContent !== text) banner.textContent = text;
   }
 
   /** Hides the fight and its overlays; the next screen fills the panel. */
@@ -441,12 +441,7 @@ export function mountApp(root: HTMLElement): void {
         // Let the browser paint the summary or the end pause before the replay below runs (it can take a moment
         // on a long fight and would otherwise freeze the screen on the last fight frame).
         await new Promise<void>((resolve) => setTimeout(resolve, 0));
-        const analysis = analyzeFight({
-          bossId: recording.meta.bossId,
-          dials: recording.meta.dials,
-          seed: recording.meta.seed,
-          input: recording.runs,
-        });
+        const analysis = analyzeRecording(recording);
         await target.add(buildRecord(recording, result, saved + 1, analysis));
         line = `Fight saved (${saved + 1} on this device).`;
       }

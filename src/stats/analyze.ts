@@ -8,7 +8,7 @@ import { PLAYER, WORLD } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState, type PlayerState } from '../game/state';
 import { decodeInputs } from './input-log';
-import type { FightRecord } from './record';
+import type { FightRecord, Recording } from './record';
 
 /** Distance bands between player and boss, in world units. */
 export const CLOSE_BELOW = 160;
@@ -386,4 +386,15 @@ export function analyzeFight(
   const boss = applyDials(bossById(record.bossId), record.dials);
   const study = record.study ?? 0;
   return analyzeRun(boss, createInitialState(boss, record.seed, study), decodeInputs(record.input), study);
+}
+
+/** Analyzes a fight just recorded, taking everything (boss, dials, seed, study) from its meta, so none can be forgotten. */
+export function analyzeRecording(recording: Recording): Analysis {
+  return analyzeFight({
+    bossId: recording.meta.bossId,
+    dials: recording.meta.dials,
+    seed: recording.meta.seed,
+    input: recording.runs,
+    study: recording.meta.study,
+  });
 }
