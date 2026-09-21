@@ -44,8 +44,8 @@ export function armRect(pose: Pose, facing: 1 | -1, shoulderX: number, shoulderY
     case 'back':
       return { x: facing === 1 ? shoulderX - l : shoulderX, y: shoulderY - t / 2, w: l, h: t };
     case 'crouch':
-      // Placeholder until the crouch art exists: the arm hangs straight down beside the body.
-      return { x: shoulderX - t / 2, y: shoulderY, w: t, h: l };
+      // Hangs low in front of the boss, shorter than the 'down' arm, as if the boss is gathering itself to spring.
+      return { x: shoulderX + facing * 20 - t / 2, y: shoulderY + 30, w: t, h: l * 0.6 };
   }
 }
 
@@ -82,6 +82,20 @@ export function bossLook(b: BossState, boss: BossDef): BossLook {
   return { body: BOSS_COLORS.ember, glow: null };
 }
 
+/**
+ * Where the running leap will land and how far its shockwave reaches each side (the largest `x1` of the attack's hit
+ * windows, or the boss's width when it has none). Null when no leap is running.
+ */
+export function landingRing(b: BossState, boss: BossDef): { x: number; halfWidth: number } | null {
+  if (b.leapToX === null) return null;
+  const attack = b.attackId === null ? undefined : boss.attacks.find((a) => a.id === b.attackId);
+  const reach =
+    attack !== undefined && attack.hits.length > 0
+      ? Math.max(...attack.hits.map((h) => h.x1))
+      : boss.width;
+  return { x: b.leapToX, halfWidth: reach };
+}
+
 const COLORS = {
   bars: '#000000',
   arena: '#12121a',
@@ -107,25 +121,52 @@ function drawBoss(
 ): void {
   const b = state.boss;
   const look = bossLook(b, boss);
-  const left = b.x - boss.width / 2;
-  const top = WORLD.floorY - boss.height;
-
-  ctx.fillStyle = feedback.bossFlashTicks > 0 ? COLORS.flash : look.body;
-  ctx.fillRect(left, top, boss.width, boss.height);
-  if (look.glow !== null) {
-    ctx.globalAlpha = 0.55 + 0.35 * Math.sin(state.tick / 6);
-    ctx.strokeStyle = look.glow;
-    ctx.lineWidth = 8;
-    ctx.strokeRect(left - 4, top - 4, boss.width + 8, boss.height + 8);
-    ctx.globalAlpha = 1;
-  }
-
-  // The arm shows the pose of the attack being performed; when waiting it hangs at the side.
+  const pulse = 0.55 + 0.35 * Math.sin(state.tick / 6);
   const attack =
     b.mode === 'attack' && b.attackId !== null
       ? boss.attacks.find((a) => a.id === b.attackId)
       : undefined;
-  const shoulderY = top + boss.height * 0.3;
+
+  // Where a leap will land: a red ring on the floor, under the boss.
+  const ring = landingRing(b, boss);
+  if (ring !== null) {
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = BOSS_COLORS.red;
+    ctx.beginPath();
+    ctx.ellipse(ring.x, WORLD.floorY, ring.halfWidth, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  // A soft shadow on the floor shows how high the airborne boss is.
+  if (b.lift > 0) {
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = COLORS.bars;
+    ctx.beginPath();
+    const shrink = 1 - Math.min(0.5, b.lift / 600);
+    ctx.ellipse(b.x, WORLD.floorY, (boss.width / 2) * shrink, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Crouching to spring: 25% shorter while winding up on the floor. Otherwise the boss is drawn `lift` units above it.
+  const crouching =
+    attack !== undefined && attack.pose === 'crouch' && b.lift === 0 && b.attackTick < attack.windup;
+  const height = crouching ? boss.height * 0.75 : boss.height;
+  const left = b.x - boss.width / 2;
+  const top = WORLD.floorY - height - b.lift;
+
+  ctx.fillStyle = feedback.bossFlashTicks > 0 ? COLORS.flash : look.body;
+  ctx.fillRect(left, top, boss.width, height);
+  if (look.glow !== null) {
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = look.glow;
+    ctx.lineWidth = 8;
+    ctx.strokeRect(left - 4, top - 4, boss.width + 8, height + 8);
+    ctx.globalAlpha = 1;
+  }
+
+  // The arm shows the pose of the attack being performed; when waiting it hangs at the side.
+  const shoulderY = top + height * 0.3;
   const arm =
     attack !== undefined
       ? armRect(attack.pose, b.facing, b.x, shoulderY)
