@@ -20,7 +20,7 @@ export function playerBox(p: PlayerState): Box {
 export function bossBox(b: BossState, boss: BossDef): Box {
   return {
     x: b.x - boss.width / 2,
-    y: WORLD.floorY - boss.height,
+    y: WORLD.floorY - boss.height - b.lift,
     w: boss.width,
     h: boss.height,
   };

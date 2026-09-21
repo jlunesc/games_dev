@@ -1,7 +1,7 @@
 import type { BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { DT } from '../engine/time';
-import { attackById, beginTransition, updateBoss } from './boss';
+import { attackById, beginTransition, landBoss, updateBoss } from './boss';
 import {
   activeHitBoxes,
   attackActive,
@@ -128,6 +128,7 @@ function tryCounter(s: GameState, boss: BossDef): void {
   if (attack.class !== 'counterable') return;
   if (b.attackTick < attack.windup - boss.counter.window || b.attackTick >= attack.windup) return;
   if (Math.abs(p.x - b.x) > boss.counter.range) return;
+  landBoss(b);
   b.mode = 'stagger';
   b.modeTick = 0;
   b.attackId = null;

@@ -42,6 +42,11 @@ export type BossMode = 'gap' | 'approach' | 'attack' | 'stagger' | 'transition';
 export interface BossState {
   /** Horizontal centre, in world units; the boss always stands on the floor. */
   x: number;
+  /** Height of the boss's feet above the floor, in world units (0 on the floor; above 0 only during a leap). */
+  lift: number;
+  /** Where the running leap took off and where it will land (x); both null when no leap is running. */
+  leapFromX: number | null;
+  leapToX: number | null;
   facing: 1 | -1;
   hp: number;
   /** Index into the boss definition's phases. */
@@ -115,6 +120,9 @@ export function createInitialState(boss: BossDef, seed = 1): GameState {
     },
     boss: {
       x: boss.startX,
+      lift: 0,
+      leapFromX: null,
+      leapToX: null,
       facing: -1,
       hp: boss.maxHp,
       phase: 0,

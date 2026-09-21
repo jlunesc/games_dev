@@ -1,4 +1,4 @@
-import type { AttackDef, BossDef, PhaseDef } from '../bosses/schema';
+import type { AttackDef, BossDef, LeapDef, PhaseDef } from '../bosses/schema';
 import { DT } from '../engine/time';
 import { WORLD } from './params';
 import { nextRandom } from './rng';
@@ -21,7 +21,18 @@ function draw(s: GameState): number {
   return next.value;
 }
 
+/**
+ * Puts the boss back on the floor where it is and forgets the leap. Called whenever an attack ends or is
+ * cancelled (a counter, a phase change), so a cut-short leap never leaves the boss floating.
+ */
+export function landBoss(b: BossState): void {
+  b.lift = 0;
+  b.leapFromX = null;
+  b.leapToX = null;
+}
+
 function enterGap(b: BossState): void {
+  landBoss(b);
   b.mode = 'gap';
   b.modeTick = 0;
   b.attackId = null;
@@ -146,6 +157,8 @@ function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef): void {
 /** After an attack: straight into the next one of a chain, otherwise back to waiting. */
 function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   const b = s.boss;
+  // Defensive: a leap that did not reach its `to` before the attack ended must not leave the boss floating.
+  landBoss(b);
   if (b.chainLeft > 0) {
     const id = chooseAttack(s, boss, phase);
     if (id !== null) {
@@ -172,9 +185,46 @@ function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   b.attackTick += 1;
   const move = attack.move;
   if (move !== undefined && b.attackTick >= move.from && b.attackTick < move.to) {
-    moveBoss(b, boss, b.facing, move.speed);
+    // 'back' walks away from the way the boss faces.
+    const direction = move.dir === 'back' ? -b.facing : b.facing;
+    moveBoss(b, boss, direction as 1 | -1, move.speed);
   }
+  if (attack.leap !== undefined) updateLeap(s, boss, attack.leap);
   if (b.attackTick >= attackLength(attack)) finishAttack(s, boss, phase);
+}
+
+/** The x a leap will land on, fixed at take-off and kept inside the arena. */
+function leapLanding(s: GameState, boss: BossDef, leap: LeapDef): number {
+  const b = s.boss;
+  const half = boss.width / 2;
+  let x = s.player.x;
+  if (leap.target === 'forward') x = b.x + b.facing * (leap.distance ?? 0);
+  if (leap.target === 'back') x = b.x - b.facing * (leap.distance ?? 0);
+  return Math.min(Math.max(x, half), WORLD.width - half);
+}
+
+/**
+ * Moves the boss along its leap for the current attack time. It takes off at update `from` (the landing
+ * spot is fixed then, so the player can dodge by moving after take-off), flies until `to` and is on the
+ * floor at the landing x from update `to` on.
+ */
+function updateLeap(s: GameState, boss: BossDef, leap: LeapDef): void {
+  const b = s.boss;
+  const t = b.attackTick;
+  if (t >= leap.from && t < leap.to) {
+    if (b.leapFromX === null || b.leapToX === null) {
+      b.leapFromX = b.x;
+      b.leapToX = leapLanding(s, boss, leap);
+    }
+    // The flight has n = to - from updates; using n + 1 in the divisor keeps p strictly between 0 and 1,
+    // so the boss is already off the floor on the first update of the flight and still up on the last.
+    const p = (t - leap.from + 1) / (leap.to - leap.from + 1);
+    b.x = b.leapFromX + (b.leapToX - b.leapFromX) * p;
+    b.lift = 4 * leap.height * p * (1 - p);
+  } else if (t >= leap.to && b.leapToX !== null) {
+    b.x = b.leapToX;
+    landBoss(b);
+  }
 }
 
 /** After the powering-up pause the boss opens with the new phase's opening attack, if it has one. */
@@ -194,6 +244,7 @@ function finishTransition(s: GameState, phase: PhaseDef): void {
 export function beginTransition(s: GameState): void {
   const b = s.boss;
   b.phase += 1;
+  landBoss(b);
   b.mode = 'transition';
   b.modeTick = 0;
   b.attackId = null;
