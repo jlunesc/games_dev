@@ -165,9 +165,13 @@ export function mountApp(root: HTMLElement): void {
   let summaryUnlockAt = 0;
   const statusLine = el('p', 'status');
 
+  // The last banner text shown (null: hidden). runFight sets the banner every frame, so skip the DOM when nothing changed.
+  let bannerText: string | null = null;
   function setBanner(text: string | null): void {
+    if (text === bannerText) return;
+    bannerText = text;
     banner.hidden = text === null;
-    if (text !== null && banner.textContent !== text) banner.textContent = text;
+    if (text !== null) banner.textContent = text;
   }
 
   /** Hides the fight and its overlays; the next screen fills the panel. */

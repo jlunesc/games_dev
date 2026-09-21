@@ -7,8 +7,8 @@ import { applyDials, presetDials, type Dials, type PresetId } from '../src/game/
 import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 import type { FightResult, FightSummary } from '../src/game/summary';
-import { analyzeFight } from '../src/stats/analyze';
-import { buildRecord, replayFinalState, type FightRecord } from '../src/stats/record';
+import { analyzeFight, analyzeRecording } from '../src/stats/analyze';
+import { buildRecord, replayFinalState, type FightRecord, type Recording } from '../src/stats/record';
 import { freezeFor } from '../src/ui/feedback';
 import { advanceFlow, leaveRecording, leaveSummary, startFlow } from '../src/ui/fight-flow';
 import { DEFAULT_SETTINGS } from '../src/ui/settings';
@@ -75,6 +75,7 @@ interface Played {
   result: FightResult;
   summary: FightSummary;
   record: FightRecord;
+  recording: Recording;
   /** True when the ending update was not the last update of its frame. */
   endedMidFrame: boolean;
   frames: number;
@@ -171,6 +172,7 @@ function playLikeTheApp(options: PlayOptions): Played {
     result,
     summary,
     record: buildRecord(recording, result, 1, null),
+    recording,
     endedMidFrame,
     frames,
     framesWithoutUpdate,
@@ -346,6 +348,8 @@ describe('the update loop of the app with a study, replayed', () => {
     expect(played.framesWithoutUpdate).toBeGreaterThan(0);
     expect(played.record.study).toBe(c.study);
     expectFaithful(played);
+    // The path saveFight uses (from the recording) gives the same analysis as the stored record's.
+    expect(analyzeRecording(played.recording)).toEqual(analyzeFight(played.record));
 
     // The study really ran and ended before the fight was left.
     expect(played.finalState.study.active).toBe(false);

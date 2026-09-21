@@ -132,7 +132,7 @@ function planStudy(boss: BossDef, rng: number, rounds: number): { queue: string[
 
 export function createInitialState(boss: BossDef, seed = 1, studyRounds = 0): GameState {
   const start = seed >>> 0;
-  const rounds = Math.floor(Math.max(0, studyRounds));
+  const rounds = Math.min(2, Math.floor(Math.max(0, studyRounds)));
   const study = rounds > 0 ? planStudy(boss, start, rounds) : { queue: [], rng: start };
   return {
     tick: 0,

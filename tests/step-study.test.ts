@@ -431,6 +431,14 @@ describe('the number of study rounds', () => {
     expect(createInitialState(DUELIST, 1, 1.5).study.queue).toHaveLength(3);
   });
 
+  it('is never more than two: five and a huge number both give two rounds, without hanging', () => {
+    const two = createInitialState(DUELIST, 3, 2).study.queue;
+    expect(two).toHaveLength(6);
+    expect(createInitialState(DUELIST, 3, 5).study.queue).toEqual(two);
+    expect(createInitialState(DUELIST, 3, 1e9).study.queue).toEqual(two);
+    expect(createInitialState(DUELIST, 3, Infinity).study.queue).toEqual(two);
+  });
+
   it('is never negative: no study and no random draw', () => {
     const s = createInitialState(DUELIST, 8, -1);
     expect(s.study).toEqual({ active: false, queue: [], endTick: 0 });
