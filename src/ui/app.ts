@@ -100,7 +100,10 @@ export function mountApp(root: HTMLElement): void {
   banner.hidden = true;
   const leaveHint = el('p', 'banner leave', 'Keep holding to leave the fight…');
   leaveHint.hidden = true;
-  root.replaceChildren(canvas, panel, banner, leaveHint);
+  // The study note sits near the top, small and see-through, so it never covers the action or blocks a tap.
+  const studyNote = el('p', 'note');
+  studyNote.hidden = true;
+  root.replaceChildren(canvas, panel, banner, leaveHint, studyNote);
 
   // The fight store opens once, in the background. It resolves to null when the device cannot store stats (the
   // game plays on) and never rejects. Anything that needs the store awaits this.
@@ -174,6 +177,15 @@ export function mountApp(root: HTMLElement): void {
     if (text !== null) banner.textContent = text;
   }
 
+  // The last study note shown (null: hidden). Same idea as setBanner: skip the DOM when nothing changed.
+  let studyNoteText: string | null = null;
+  function setStudyNote(text: string | null): void {
+    if (text === studyNoteText) return;
+    studyNoteText = text;
+    studyNote.hidden = text === null;
+    if (text !== null) studyNote.textContent = text;
+  }
+
   /** Hides the fight and its overlays; the next screen fills the panel. */
   function leaveFightScreen(): void {
     exitHoldMs = 0;
@@ -181,6 +193,7 @@ export function mountApp(root: HTMLElement): void {
     canvas.hidden = true;
     panel.hidden = false;
     setBanner(null);
+    setStudyNote(null);
   }
 
   function updatePrefs(next: Prefs): void {
@@ -503,6 +516,7 @@ export function mountApp(root: HTMLElement): void {
     panel.hidden = true;
     canvas.hidden = false;
     setBanner(null);
+    setStudyNote(null);
     sound.unlock();
   }
 
@@ -581,8 +595,8 @@ export function mountApp(root: HTMLElement): void {
       if (freezeLeft > 0) hitStopView = true;
       sound.play(state.events);
     }
-    // The study line has the lowest priority: the paused-controller banner returned above and never reaches here.
-    setBanner(studyBanner(state.study, state.tick));
+    // The study note is separate from the bottom banner (which the paused-controller message uses).
+    setStudyNote(studyBanner(state.study, state.tick));
     // During a hit-stop nothing moves, so blend at 1 instead of the sweeping leftover (that would make the player judder).
     draw(hitStopView ? 1 : plan.alpha);
   }

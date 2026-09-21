@@ -137,11 +137,11 @@ In the menu, **Study** sits between **Difficulty** and **Tweak difficulty**. Lef
 - **Twice**: it shows the whole set two times, each time in a new random order.
 
 ### What happens in the study
-- The fight starts in the study. A line on the screen says "Study: watch what it can do. Nothing can hurt you." and the boss's name at the top right has "STUDY" in front of it.
+- The fight starts in the study. For about one second a small note near the top of the screen says "Study: watch what it can do. Nothing can hurt you." (it does not cover the action and it never blocks a tap), and then it goes away. The boss's name at the top right has "STUDY" in front of it for the whole study, as the reminder.
 - The boss shows the attacks of its **first phase** only, one after another, in random order. Each one has its normal warning, its normal speed and its normal pause before the next one. For the Ember Duelist that is the slam, the sweep and the lunge (not the ground burst, which only comes in phase 2, so you meet it for the first time in the real fight). For the Ashen Hound it is the bite, the rush, the slip and the pounce. Each attack is shown as the boss would use it: it walks towards you first if you are far away.
 - You can move, jump and dash as much as you like, to practise dodging. **Nothing can hurt you**: your hearts stay full. You **cannot hurt the boss** either: your swing does nothing to it, and the counter does not work.
 - When an attack would have hit you, you get the usual red flash and a soft, low sound, and you lose nothing. (The flash follows the Flashes switch in Settings and the sound follows the Sound switch. There is no freeze and no screen shake in the study.)
-- When the last attack has been shown, the line changes to "The fight begins!" for about two seconds. From then on it is the real fight: the boss is at full health and waits its normal pause before its first real attack, and every hit that lands hurts you as usual. You stay where you were.
+- When the last attack has been shown, the same small note at the top shows "The fight begins!" for about one second. From then on it is the real fight: the boss is at full health and waits its normal pause before its first real attack, and every hit that lands hurts you as usual. You stay where you were.
 - On **Easy**, the preset leaves some attacks out of the fight (the Duelist's lunge, the Hound's slip). The study shows only the attacks that are in that fight, so on Easy you will not see those either. Tweaking Variety does the same.
 - How long it is: with Once, roughly 6 to 9 seconds; with Twice, roughly 12 to 17 seconds.
 
@@ -157,7 +157,7 @@ The summary's **Time** counts the real fight only; a **Study time** line under i
 - [ ] With **Once** on the Ember Duelist, the boss shows exactly the slam, the sweep and the lunge, each one time, in a random order, and never the ground burst. Try a few fights: the order changes.
 - [ ] With **Once** on the Ashen Hound, the boss shows exactly the bite, the rush, the slip and the pounce, each one time. On Easy the Hound has no slip, and the Duelist has no lunge, so you see only the attacks that are in the fight.
 - [ ] With **Twice**, each attack is shown two times, and the two rounds are each in a random order (now and then both rounds may happen to be in the same order, that is chance).
-- [ ] The study line "Study: watch what it can do. Nothing can hurt you." shows during the study, and "The fight begins!" shows for about two seconds after it, then goes away.
+- [ ] The study note "Study: watch what it can do. Nothing can hurt you." appears small at the top of the screen (below the health bar), does not cover the action, and disappears after about one second. "STUDY" and the boss's name stay at the top right during the whole study. "The fight begins!" then shows in the same place for about one second when the study ends, and goes away.
 - [ ] In the study your hearts stay full. Standing in an attack gives the red flash and a soft low sound, and costs nothing.
 - [ ] In the study your swing does nothing to the boss (no hit flash, no damage), even in the window of the gold slam (the counter does nothing).
 - [ ] After "The fight begins!" the real fight hurts you normally, and your swing hurts the boss again. The boss has full health.
@@ -170,7 +170,7 @@ The summary's **Time** counts the real fight only; a **Study time** line under i
 - Does the study help you learn the attacks?
 - Is it too long or too short? How many seconds does it feel like with Once and with Twice?
 - Should the boss be hittable in the study, so you can practise your punishes too?
-- Can you read the study line, and "The fight begins!"? Do they get in the way?
+- Can you read the study note, and "The fight begins!", in the short time they show? Do they get in the way?
 - Is the soft low sound audible? Is it annoying?
 - Is the red flash enough to tell you an attack would have hit you?
 
