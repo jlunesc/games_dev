@@ -214,11 +214,11 @@ closing `} as const;` (after the existing `fairnessSkilledCapTicks` line):
   arenaPieceCountMin: 1,
   arenaPieceCountMax: 3,
   /** Minimum height gap required between any two pieces in the same arena (the Ashen Hound's own
-   * gap, 10, is what read as "crowded" — this is deliberately much larger). */
+   * gap, 10, is what read as "crowded" — this is deliberately much larger). Every generated arena's
+   * heights are spaced exactly this far apart by construction (see `assignHeights` in arena.ts) —
+   * there is no slack to spare in the tightest case (three platforms), so raising this number without
+   * also raising `arenaPlatformHeightMax`/`arenaCoverHeightMax` would make placement infeasible. */
   arenaMinHeightGap: 90,
-  /** Redraws tried before falling back to the farthest-apart candidate found so far — bounded, never
-   * an infinite loop. */
-  arenaHeightRetries: 20,
   arenaZoneJitterMax: 40,
   arenaPlatformWidthMin: 140,
   arenaPlatformWidthMax: 260,
@@ -293,34 +293,61 @@ function pickZones(state: number, count: number): Draw<Zone[]> {
 }
 
 /**
- * Draws a height in `[min, max]` at least `GEN.arenaMinHeightGap` away from every height in
- * `taken`. Tries up to `GEN.arenaHeightRetries` times; if none clears the gap, keeps whichever
- * candidate came closest (the largest minimum distance to any taken height) instead — bounded,
- * never an infinite loop.
+ * Assigns a height to each entry of `isPlatform` (same order), guaranteeing every pair ends up at
+ * least `GEN.arenaMinHeightGap` apart — by construction, not by retrying. Every cover ranks below
+ * every platform (covers get the lowest heights, platforms the highest); ranks are spaced exactly
+ * `GEN.arenaMinHeightGap` apart starting at the shared minimum (`GEN.arenaPlatformHeightMin`, equal
+ * to `GEN.arenaCoverHeightMin`, both 40), then shifted by one shared random offset `d` — kept small
+ * enough that the highest-ranked cover still fits under `GEN.arenaCoverHeightMax` and the
+ * highest-ranked platform still fits under `GEN.arenaPlatformHeightMax`. This is always satisfiable
+ * for 1 to 3 pieces with 0 to 2 of them cover (every combination the three zones can produce) —
+ * checked by hand, not assumed; see the design doc. Which piece (among same-type pieces) lands on
+ * which rank is itself shuffled, so the layout still varies.
  */
-function drawSpreadHeight(
-  state: number,
-  min: number,
-  max: number,
-  taken: readonly number[],
-): Draw<number> {
+function assignHeights(state: number, isPlatform: readonly boolean[]): Draw<number[]> {
+  const gap = GEN.arenaMinHeightGap;
+  const base = GEN.arenaPlatformHeightMin; // === GEN.arenaCoverHeightMin
+  const coverIndices: number[] = [];
+  const platformIndices: number[] = [];
+  isPlatform.forEach((p, i) => (p ? platformIndices : coverIndices).push(i));
+
   let s = state;
-  let best: { value: number; gap: number } | null = null;
-  for (let i = 0; i < GEN.arenaHeightRetries; i++) {
-    const draw = uniform(s, min, max);
-    s = draw.state;
-    const gap = taken.length === 0 ? Infinity : Math.min(...taken.map((h) => Math.abs(h - draw.value)));
-    if (gap >= GEN.arenaMinHeightGap) return { value: draw.value, state: s };
-    if (best === null || gap > best.gap) best = { value: draw.value, gap };
+  function shuffle(indices: readonly number[]): number[] {
+    const arr = [...indices];
+    for (let i = arr.length - 1; i >= 1; i--) {
+      const draw = nextRandom(s);
+      s = draw.state;
+      const j = Math.floor(draw.value * (i + 1));
+      [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+    }
+    return arr;
   }
-  return { value: best!.value, state: s };
+  const rankOrder = [...shuffle(coverIndices), ...shuffle(platformIndices)];
+
+  const total = isPlatform.length;
+  let dMax = Infinity;
+  if (coverIndices.length > 0) {
+    dMax = Math.min(dMax, GEN.arenaCoverHeightMax - base - (coverIndices.length - 1) * gap);
+  }
+  if (platformIndices.length > 0) {
+    dMax = Math.min(dMax, GEN.arenaPlatformHeightMax - base - (total - 1) * gap);
+  }
+  const dDraw = uniform(s, 0, Math.max(0, dMax));
+  s = dDraw.state;
+
+  const heights = new Array<number>(total);
+  rankOrder.forEach((originalIndex, rank) => {
+    heights[originalIndex] = base + rank * gap + dDraw.value;
+  });
+
+  return { value: heights, state: s };
 }
 
 /**
  * Draws a whole arena for a generated boss from `state`, deterministic in `state` alone: bare
  * (`undefined`) with chance `GEN.arenaBareChance`, otherwise 1 to 3 pieces at up to three fixed x
- * zones, spread apart in height by at least `GEN.arenaMinHeightGap`. Never touches a gameplay
- * `rng`, exactly like `generateAttack` and the rest of `generateBoss`.
+ * zones, heights spread apart by `assignHeights` above. Never touches a gameplay `rng`, exactly like
+ * `generateAttack` and the rest of `generateBoss`.
  */
 export function generateArena(state: number): Draw<ArenaDef | undefined> {
   const bareDraw = nextRandom(state);
@@ -330,40 +357,40 @@ export function generateArena(state: number): Draw<ArenaDef | undefined> {
   const zonesDraw = pickZones(countDraw.state, countDraw.value);
 
   let s = zonesDraw.state;
-  const platforms: ArenaPiece[] = [];
-  const covers: ArenaPiece[] = [];
-  const heights: number[] = [];
+  const isPlatform: boolean[] = [];
+  const xs: number[] = [];
+  const widths: number[] = [];
 
   for (const zone of zonesDraw.value) {
     const typeDraw = zone.allowCover
       ? pick(s, ['platform', 'cover'] as const)
       : { value: 'platform' as const, state: s };
     s = typeDraw.state;
-    const isPlatform = typeDraw.value === 'platform';
+    const platform = typeDraw.value === 'platform';
+    isPlatform.push(platform);
 
     const jitterDraw = uniform(s, -GEN.arenaZoneJitterMax, GEN.arenaZoneJitterMax);
     s = jitterDraw.state;
-    const x = zone.x + jitterDraw.value;
+    xs.push(zone.x + jitterDraw.value);
 
     const widthDraw = uniform(
       s,
-      isPlatform ? GEN.arenaPlatformWidthMin : GEN.arenaCoverWidthMin,
-      isPlatform ? GEN.arenaPlatformWidthMax : GEN.arenaCoverWidthMax,
+      platform ? GEN.arenaPlatformWidthMin : GEN.arenaCoverWidthMin,
+      platform ? GEN.arenaPlatformWidthMax : GEN.arenaCoverWidthMax,
     );
     s = widthDraw.state;
-
-    const heightDraw = drawSpreadHeight(
-      s,
-      isPlatform ? GEN.arenaPlatformHeightMin : GEN.arenaCoverHeightMin,
-      isPlatform ? GEN.arenaPlatformHeightMax : GEN.arenaCoverHeightMax,
-      heights,
-    );
-    s = heightDraw.state;
-    heights.push(heightDraw.value);
-
-    const piece: ArenaPiece = { x, width: widthDraw.value, height: heightDraw.value };
-    (isPlatform ? platforms : covers).push(piece);
+    widths.push(widthDraw.value);
   }
+
+  const heightsDraw = assignHeights(s, isPlatform);
+  s = heightsDraw.state;
+
+  const platforms: ArenaPiece[] = [];
+  const covers: ArenaPiece[] = [];
+  isPlatform.forEach((platform, i) => {
+    const piece: ArenaPiece = { x: xs[i]!, width: widths[i]!, height: heightsDraw.value[i]! };
+    (platform ? platforms : covers).push(piece);
+  });
 
   return { value: { platforms, covers }, state: s };
 }
@@ -919,7 +946,7 @@ git commit -m "docs: document generated arenas and the camp-safety check (M6a)"
 **Spec coverage:**
 - "Chance of staying bare" (0.4) → Task 1 (`arenaBareChance`).
 - "1 to 3 pieces, three placement zones, left zone platform-only" → Task 1 (`generateArena`).
-- "Heights spread apart by construction" → Task 1 (`drawSpreadHeight`, `arenaMinHeightGap`).
+- "Heights spread apart by construction" → Task 1 (`assignHeights`, `arenaMinHeightGap`).
 - "Cap cover height so it stays jumpable" → Task 1 (`arenaCoverHeightMax`).
 - "New camp-safety check, generic, checked against the Ashen Hound as a real finding" → Task 2.
 - "Wiring: `generateBoss` gains `arena`, no change to `resolveBoss`" → Task 3, Steps 1-4.

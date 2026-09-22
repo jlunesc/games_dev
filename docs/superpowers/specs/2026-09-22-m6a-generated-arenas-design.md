@@ -47,15 +47,28 @@ generator).
    - Within its zone, a piece's x is jittered by up to ±40, and its width is drawn per type:
      platforms 140–260, covers 50–110 (both comfortably inside the format's own 40–600 bound, and
      close to the Hound's 200/60).
-4. **Heights spread apart, by construction.** Each piece's height is drawn from its type's valid
-   range — platforms 40–260, covers 40–160 (the format allows more, but this design caps covers at a
-   height the player can still jump over — see "Why cap cover height" below) — then checked against
-   every other already-placed piece's height. A candidate closer than `GEN.arenaMinHeightGap`
-   (default **90** units — the Hound's real gap was 10, so this is deliberately generous) to any
-   existing piece is redrawn, up to 20 tries; if all 20 fail, the candidate farthest from every
-   existing height is kept instead (bounded, never an infinite loop, same discipline as the fairness
-   checker's own retry budget). With only up to 3 pieces and a 90-unit minimum gap inside a
-   40–260/160 range, this essentially always succeeds well within the 20 tries.
+4. **Heights spread apart, guaranteed by construction (revised during implementation — see below).**
+   Every piece's height is `40 + rank * GEN.arenaMinHeightGap + d`, where `rank` is the piece's
+   position in a fixed order (every cover ranked below every platform — covers get the lowest
+   heights, platforms the highest) and `d` is a single random offset shared by the whole arena,
+   drawn just wide enough that the highest-ranked piece of each type present still fits under that
+   type's own max height (platforms 40–260, covers 40–160 — the format allows more for cover, but
+   this design caps it at a height the player can still jump over; see "Why cap cover height"
+   below). Because platforms and covers share the same minimum (40), and covers only ever occupy the
+   *low* ranks while platforms occupy the *high* ones, this is provably always satisfiable for every
+   piece-count/type combination the three zones can produce (1 to 3 pieces, 0 to 2 of them cover) —
+   checked by hand for each case, not assumed. Which zone's piece lands on which rank, among pieces
+   of the same type, is itself randomized, so the layout still varies fight to fight; only the exact
+   gap between adjacent heights is fixed at exactly `GEN.arenaMinHeightGap`, with no slack to spare
+   in the tightest case (three platforms).
+
+   *(Original plan: draw each height randomly, retry up to 20 times if it landed within the minimum
+   gap of an existing piece, and fall back to the closest miss otherwise. Implementation found this
+   retry approach could still violate the gap for real — for two pieces of cover, whose valid range
+   is only 120 units wide, the first cover's height leaves no valid window for the second roughly
+   half the time, regardless of how many retries are allowed. The owner chose to fix this by
+   guaranteeing the gap by construction, as described above, rather than loosen the numbers or accept
+   an occasional violation.)*
 
 **Why cap cover height (40–160, not the format's full 20–400):** a cover taller than about 163 units
 becomes a real wall the player cannot jump over (`docs/bosses.md`, "Cover is a wall below its top").
