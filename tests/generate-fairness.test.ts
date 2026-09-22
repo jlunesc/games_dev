@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMBER_DUELIST } from '../src/bosses';
+import { ASHEN_HOUND, EMBER_DUELIST, TRAINEE } from '../src/bosses';
 import { checkFairness } from '../src/bosses/generate/fairness';
 import type { BossDef } from '../src/bosses/schema';
 
@@ -54,6 +54,18 @@ describe('checkFairness', () => {
     expect(result.fair).toBe(true);
   });
 
+  it('passes the real Ashen Hound, with no reasons', () => {
+    const result = checkFairness(ASHEN_HOUND);
+    expect(result.reasons).toEqual([]);
+    expect(result.fair).toBe(true);
+  });
+
+  it('passes the real Trainee, with no reasons', () => {
+    const result = checkFairness(TRAINEE);
+    expect(result.reasons).toEqual([]);
+    expect(result.fair).toBe(true);
+  });
+
   it('is fast enough on the real Ember Duelist (smoke check, not a strict budget)', () => {
     const start = performance.now();
     checkFairness(EMBER_DUELIST);
@@ -99,9 +111,10 @@ describe('checkFairness', () => {
     expect(result.reasons.some((r) => /skilled|cap/i.test(r))).toBe(true);
   });
 
-  it('fails a boss whose attack is unreadable (windup far under the readability floor)', () => {
-    // The Duelist's sweep, but with a windup of 5: far too short for the skilled bot's
-    // dash/jump timings (tuned for the readability floor) to react in time.
+  it('fails a boss whose attack is unreadable (a hit window wider and longer than a dash can escape)', () => {
+    // A hit box that reaches 400 units either side of the boss (farther than a full dash, ~266
+    // units, can carry the player) and stays active for 40 updates (far longer than the dash's
+    // 11-update invulnerability): no dash timing can escape or outlast it.
     const boss = baseBoss({
       attacks: [
         {
@@ -111,10 +124,10 @@ describe('checkFairness', () => {
           class: 'mustDodge',
           damage: 1,
           windup: 5,
-          active: 8,
+          active: 40,
           recovery: 24,
           range: { min: 110, max: 200 },
-          hits: [{ from: 5, to: 13, x0: 0, x1: 250, bottom: 0, top: 100 }],
+          hits: [{ from: 5, to: 45, x0: -400, x1: 400, bottom: 0, top: 150 }],
         },
       ],
       phases: [

@@ -12,11 +12,6 @@ export interface FairnessResult {
 
 const withInput = (over: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...over });
 
-const ATTACK_TOTAL = PLAYER.attack.startup + PLAYER.attack.active + PLAYER.attack.recovery;
-
-/** Below this height a plain hit window is treated as low enough to dash through rather than jump over. */
-const DASH_THROUGH_TOP = 90;
-
 /**
  * Runs the idle bot (no input, ever) for one seed, up to `GEN.fairnessCapTicks` updates or until
  * the fight leaves `'fight'`. An idle player must always lose: true only when the run ends defeated.
@@ -47,10 +42,13 @@ function skilledInput(s: GameState, boss: BossDef): InputFrame {
 
     if (attack.leap !== undefined) {
       // Hold still until the landing spot is known (fixed at take-off), then move away from it;
-      // dash away instead if still close by the time it actually lands.
+      // dash away instead if still close by the time it actually lands. The shockwave extends from
+      // the landing spot in the direction the boss faces, so escape the opposite way — `p.x` cannot
+      // tell us that, since it equals `leapToX` exactly at take-off (the leap targets the player's
+      // own position then).
       if (b.leapToX === null) return NO_INPUT;
-      const away: 1 | -1 = p.x < b.leapToX ? -1 : 1;
-      const landed = t > attack.leap.to;
+      const away: 1 | -1 = b.facing === 1 ? -1 : 1;
+      const landed = t >= attack.leap.to;
       const close = Math.abs(p.x - b.leapToX) < 150;
       if (landed && close) return withInput({ dashPressed: true, moveX: away });
       return withInput({ moveX: away });
@@ -65,30 +63,29 @@ function skilledInput(s: GameState, boss: BossDef): InputFrame {
       return t === at ? withInput({ dashPressed: true, moveX: towardBoss }) : NO_INPUT;
     }
 
-    // A plain hit-window attack: land a counter on a counterable one, otherwise dash through a
-    // low window or jump over a high one (the jump apex, ~163, clears anything the dash cannot).
+    // A counterable attack: land a real counter, pressing attack once inside the counter window
+    // while close enough (the boss's own `counter.range` and `counter.window`).
     if (attack.class === 'counterable') {
-      const at = attack.windup - 6;
-      return t === at ? withInput({ dashPressed: true, moveX: towardBoss }) : NO_INPUT;
+      const inWindow = t >= attack.windup - boss.counter.window && t <= attack.windup - 1;
+      const inRange = Math.abs(p.x - b.x) <= boss.counter.range;
+      return inWindow && inRange ? withInput({ attackPressed: true }) : NO_INPUT;
     }
-    const minTop = Math.min(...attack.hits.map((hit) => hit.top));
-    if (minTop <= DASH_THROUGH_TOP) {
-      const at = attack.windup - 6;
-      return t === at ? withInput({ dashPressed: true, moveX: towardBoss }) : NO_INPUT;
-    }
-    const jumpAt = attack.windup - 10;
-    if (t === jumpAt) return withInput({ jumpPressed: true, jumpHeld: true });
-    if (t > jumpAt && t < jumpAt + 20) return withInput({ jumpHeld: true });
-    return NO_INPUT;
+
+    // A plain hit-window attack: dash through it. The dash grants full invulnerability for its
+    // whole 11-update duration regardless of position, so time the press to make that window start
+    // right as the hit itself starts (hits begin at `windup`); a hit window longer than the dash's
+    // duration leaves an unavoidable gap near the end, which is fine.
+    const at = attack.windup;
+    return t === at ? withInput({ dashPressed: true, moveX: towardBoss }) : NO_INPUT;
   }
 
   // No attack running: walk toward the boss and, once close enough for the player's own swing to
-  // reach it, press attack on a cadence no faster than a swing's own length.
+  // reach it, swing again as soon as the previous swing/recovery has finished.
   const distance = Math.abs(dx);
   const closeEnough = distance < PLAYER.attack.reach;
   return withInput({
     moveX: closeEnough ? 0 : towardBoss,
-    attackPressed: closeEnough && s.tick % ATTACK_TOTAL === 0,
+    attackPressed: closeEnough && p.attackTick < 0,
   });
 }
 
