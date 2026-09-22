@@ -100,6 +100,24 @@ bolt-on (in keeping with M5e's "reusable, general enough for later steps" princi
   enforced before. If the Hound fails it, that is a genuine, separate finding to bring to the owner —
   not something this design pre-judges.
 
+## Every boss can reach its own arena (added during implementation)
+
+Wiring arenas into real fights revealed a real interaction the earlier design missed: a platform can
+be generated taller (up to `GEN.arenaPlatformHeightMax`, 260) than any generated attack's hit window
+can ever reach (`GEN.hitTopMax`, 190) — and for an arena with all three zones drawn as platforms, the
+tallest platform's height is *guaranteed* to exceed 190 by the height-spacing rule above, not just
+possible. Measured effect: the fallback-to-Trainee rate rose from the pre-arena baseline of ~2% to
+31% once this was actually wired in and checked for real.
+
+**Owner's fix (2026-09-22): give every generated boss "reach" up to its own arena, guaranteed.**
+After a boss's attacks and arena are both generated, if the tallest arena piece is taller than every
+one of this boss's own attacks' hit windows, the tallest hit window's `top` is raised to clear it (plus
+a small margin). This is a deterministic, construction-time adjustment in `generateBoss` — not a new
+random draw, and not a change to the arena or attack generators themselves — matching the owner's own
+framing: bosses should be able to "jump, reaching all platforms by design," so no platform is ever
+placed out of a boss's own reach in the first place, closing the gap the camp-safety check (above)
+exists to catch, before it ever gets the chance to reject a candidate.
+
 ## Wiring
 
 - `generateBoss(seed)` gains an `arena` field on the `BossDef` it returns, built by the rules above

@@ -791,6 +791,38 @@ git add src/bosses/generate/boss.ts tests/generate-boss.test.ts src/stats/record
 git commit -m "feat: give generated bosses an arena, bump GAME_VERSION to 0.5.0"
 ```
 
+**Addendum, added after this task was first implemented (see the ledger and the design doc's "Every
+boss can reach its own arena" section):** wiring the arena in for real revealed the fallback rate rose
+to 31% (from a ~2% baseline), because a platform can be generated taller than any attack's hit window
+can reach. Owner's fix: guarantee every boss can reach its own arena, deterministically. Add this to
+`generateBoss` in `src/bosses/generate/boss.ts`, right after the `arenaDraw` line (`const arenaDraw =
+generateArena(s); s = arenaDraw.state;`) and before `const boss = {`:
+
+```typescript
+  // Bosses ignore the arena physically (M5c simplification), so a piece taller than every attack's
+  // hit window would be a permanent safe spot. Guarantee at least one attack can always reach the
+  // tallest piece, rather than leaving it to chance — deterministic, no new random draw.
+  const pieces = arenaDraw.value === undefined
+    ? []
+    : [...arenaDraw.value.platforms, ...arenaDraw.value.covers];
+  const tallestPiece = pieces.length === 0 ? 0 : Math.max(...pieces.map((p) => p.height));
+  if (tallestPiece > 0) {
+    let tallestHit = attacks[0]!.hits[0]!;
+    for (const a of attacks) {
+      for (const h of a.hits) {
+        if (h.top > tallestHit.top) tallestHit = h;
+      }
+    }
+    if (tallestHit.top <= tallestPiece) {
+      tallestHit.top = tallestPiece + 10;
+    }
+  }
+```
+
+After adding this, re-run Task 3's Step 8 fallback-rate measurement again (seeds 1-100) and report the
+new real number — it should land much closer to the ~2% baseline, but report the actual measured value,
+not an assumption. Re-run `npm test` in full afterward to confirm nothing regressed.
+
 ---
 
 ### Task 4: Docs
