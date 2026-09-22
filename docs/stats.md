@@ -207,7 +207,7 @@ How to read a study fight:
 To rebuild a fight exactly (this is what `replayFinalState` and `analyzeFight` do):
 
 1. Use the same game: the record's `gameVersion` must equal the game's `GAME_VERSION`. Attack timings and player numbers live in the code and the boss file, so a different version may replay differently.
-2. `boss = applyDials(bossById(record.bossId), record.dials)`.
+2. `boss = applyDials(resolveBoss(record.bossId, record.seed), record.dials)`. Use `resolveBoss`, not `bossById`: a `'generated'` record needs the seed to rebuild the same boss (section 9's M5e note); `bossById` alone would silently fall back to the Ember Duelist.
 3. `state = createInitialState(boss, record.seed, record.study ?? 0)`. The third argument is the number of study rounds (a value is clamped to 0 to 2 and a fraction is rounded down; the game only uses 0, 1 and 2). A record of schema version 1 has no `study`, so it replays with 0.
 4. Expand `input` (section 6) into one frame per update. For each frame, `state = step(state, frame, boss)`. The frame's other fields (`moveY`, `confirm`, `alt`) are set to neutral.
 
