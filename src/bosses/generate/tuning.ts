@@ -79,4 +79,11 @@ export const GEN = {
 
   bodyMin: 60,
   bodyMax: 110,
+
+  /** Two fixed seeds for the fairness checker's own bots, never derived from the boss being checked. */
+  fairnessSeeds: [11, 97],
+  /** Update cap for the idle bot's run. */
+  fairnessCapTicks: 3000,
+  /** Update cap for the skilled bot's run. */
+  fairnessSkilledCapTicks: 4000,
 } as const;
