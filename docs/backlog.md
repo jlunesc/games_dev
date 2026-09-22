@@ -16,7 +16,7 @@ Things happening in the background of the arena that can hurt the player, on top
 - **Hazards**: falling objects and moving hazards with their own timing.
 - **Moving or destroyable pieces**: platforms that move, cover that breaks.
 - **A narrower foot test for ledges**: today any overlap of the 48-wide body lands the player on a ledge, so a body can hang over an edge with up to 47 units off it. A test on the feet only (or the body's centre) would fix that.
-- **Arena pieces chosen at random** (the generator, M5e).
+- **Arena pieces chosen at random for a generated boss**: the generator (M5e, built) does not build an arena at all yet; see below.
 
 ## Random variation of enemies (raised 2026-09-20)
 Randomly tweak an enemy's properties within set ranges, so a fight does not feel exactly the same every time (for example attack speed or the gap between attacks varies a little on each attempt).
@@ -44,7 +44,7 @@ Ideas that are **not built**, only listed:
 - **Split the behaviour stats by study**: the swings, dashes, jumps, distance bands and positions cover the whole session, with the study part given only for the distance bands (`study.ticks`, `behavior.studyUpdatesClose/Mid/Far`); a full split (swings, dashes and jumps per part, a separate positions timeline) could be added with a schema bump if the analysis needs it.
 - **Hittable boss in the study**: let the player practise punishes in the study (asked in the play-test questions).
 
-Order of the next steps (owner, 2026-09-21): the study phase (M5b, built), the arena (M5c, built), the visual pass (M5d, built), then the generator (M5e, next).
+Order of the next steps (owner, 2026-09-21): the study phase (M5b, built), the arena (M5c, built), the visual pass (M5d, built), the generator (M5e, built). All four now await the owner's play test.
 
 ## Nicer visuals within the geometric style (raised 2026-09-21, built as M5d)
 **Built in M5d** (awaiting the owner's look on the phone; `docs/SPEC.md` section 11, checklist and tweak guide in `docs/phone-testing.md`): a layered background with a mood per boss, impact effects and particles, animated figures for the player, the Ember Duelist and the Ashen Hound (and a generic one for any other boss), and the Effects switch in Settings. All numbers are in `src/ui/look/tuning.ts`.
@@ -63,6 +63,16 @@ The owner wants nicer visuals, **within the locked geometric style** (`docs/SPEC
 Notes for the design:
 - Art is kept separate from fight logic (SPEC section 8) and everything drawn lives in `src/ui/render.ts` and `src/ui/look/`, so a visual pass should not change how a fight plays; the Ember Duelist golden test (`tests/duelist-golden.test.ts`) would show it if it did.
 - The readability of telegraphs (pose, glow, the landing bar of a leap) comes first; anything decorative must not hide them. The owner's play test of the Ashen Hound will say whether the red landing bar is readable enough.
+
+## The boss generator (raised 2026-09-22, built as M5e)
+**Built in M5e** (awaiting the owner's play test on the phone; `docs/SPEC.md` section 11, mechanism and format in `docs/bosses.md` section 3b, checklist in `docs/phone-testing.md`): a "Generated" entry in the Boss row that assembles a boss at random from the same hit/move/leap primitives a hand-written boss file uses, checked for fairness before every fight and rebuilt fresh from that fight's seed each time.
+
+Ideas that are **not built**, only listed:
+- **Generated arenas**: a generated boss has no `arena` at all yet (a bare floor, like the Ember Duelist); the M5c arena's own placement rules (no safe camping spot, cover that actually blocks something) would need to be generalized to arbitrary generated attacks first.
+- **A second phase**: a generated boss is one phase only.
+- **A saved roster of generated bosses**: today a generated boss only exists for the fight it was built for (rebuilt from the seed); there is no way to keep one and fight it again on purpose, or to name and share one.
+- **Using play stats to steer generation**: picking tuned ranges, or which primitives to draw from, based on what the exported stats say about the player (for example leaning the generator towards attack shapes that read badly for the owner). Today generation is uniform random inside fixed ranges (`src/bosses/generate/tuning.ts`), with no memory of past fights.
+- **Exposing the Trainee (the fallback boss) on its own**: today it only appears when the fairness check fails three times in a row for a seed (measured at about 2% of seeds); it is not offered anywhere in the menu by itself.
 
 ## Performance measurement (raised 2026-09-22)
 No performance data is saved today: the stats record gameplay (inputs, hits, dodges, timing), never frame time, dropped frames, memory or CPU/GPU cost. The owner asked after playing M5d whether the looks were expensive on the phone; the only answer available was the design-time estimate from M5d's review (well under 1% of a 60Hz frame budget, extrapolated from Node micro-benchmarks, not measured on the device).
