@@ -74,7 +74,7 @@ function drawSpreadHeight(
     if (gap >= GEN.arenaMinHeightGap) return { value: draw.value, state: s };
     if (best === null || gap > best.gap) best = { value: draw.value, gap };
   }
-  // Only return a value if it satisfies the constraint, otherwise return undefined
+  // Fall back to best candidate only if it satisfies the constraint, otherwise skip this piece
   return best !== null && best.gap >= GEN.arenaMinHeightGap ? { value: best.value, state: s } : { value: undefined, state: s };
 }
 
