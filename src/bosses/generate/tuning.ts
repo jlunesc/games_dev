@@ -93,9 +93,6 @@ export const GEN = {
   /** Minimum height gap required between any two pieces in the same arena (the Ashen Hound's own
    * gap, 10, is what read as "crowded" — this is deliberately much larger). */
   arenaMinHeightGap: 90,
-  /** Redraws tried before falling back to the farthest-apart candidate found so far — bounded, never
-   * an infinite loop. */
-  arenaHeightRetries: 20,
   arenaZoneJitterMax: 40,
   arenaPlatformWidthMin: 140,
   arenaPlatformWidthMax: 260,
