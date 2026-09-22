@@ -100,11 +100,20 @@ function skilledInput(s: GameState, boss: BossDef): InputFrame {
   }
 
   // No attack running: walk toward the boss and, once close enough for the player's own swing to
-  // reach it, swing again as soon as the previous swing/recovery has finished.
+  // reach it, swing again as soon as the previous swing/recovery has finished. If cover pins the
+  // walk (no horizontal progress since the last update despite actually trying to move), jump
+  // over it — every generated cover stays under the jump apex by construction, so this always
+  // clears it. `p.vx !== 0` is required alongside the unmoved position: the same "no progress"
+  // position reading also happens harmlessly right after holding still to react to a boss attack
+  // (moveX was 0, so vx was already 0 — nothing to jump over), and would otherwise misfire a jump
+  // on essentially every attack cycle.
   const distance = Math.abs(dx);
   const closeEnough = distance < PLAYER.attack.reach;
+  const stuck = s.tick > 0 && !closeEnough && p.x === p.prevX && p.vx !== 0;
   return withInput({
     moveX: closeEnough ? 0 : towardBoss,
+    jumpPressed: stuck && p.onGround,
+    jumpHeld: stuck || !p.onGround,
     attackPressed: closeEnough && p.attackTick < 0,
   });
 }

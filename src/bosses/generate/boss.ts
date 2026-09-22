@@ -96,13 +96,23 @@ export function generateBoss(seed: number): BossDef {
   const tallestPiece = pieces.length === 0 ? 0 : Math.max(...pieces.map((p) => p.height));
   if (tallestPiece > 0) {
     let tallestHit = attacks[0]!.hits[0]!;
+    let tallestHitAttack = attacks[0]!;
     for (const a of attacks) {
       for (const h of a.hits) {
-        if (h.top > tallestHit.top) tallestHit = h;
+        if (h.top > tallestHit.top) {
+          tallestHit = h;
+          tallestHitAttack = a;
+        }
       }
     }
     if (tallestHit.top <= tallestPiece) {
       tallestHit.top = tallestPiece + 10;
+    }
+    // Also guarantee the same hit box reaches all the way across its own attack's trigger range,
+    // not just up: a camping player is stationary, so the boss can trigger this attack from
+    // anywhere up to range.max away, and the hit box needs to actually reach that far.
+    if (tallestHit.x1 < tallestHitAttack.range.max + 60) {
+      tallestHit.x1 = tallestHitAttack.range.max + 60;
     }
   }
 

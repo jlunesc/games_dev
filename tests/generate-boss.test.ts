@@ -136,3 +136,49 @@ describe("a generated boss's arena", () => {
     expect(withArena).toBeLessThan(total);
   });
 });
+
+describe('the tallest-piece hit-box guarantee', () => {
+  /** The tallest attack hit (by `top`), matching how `generateBoss` picks the one it boosts. */
+  function tallestHit(boss: ReturnType<typeof generateBoss>) {
+    let best = boss.attacks[0]!.hits[0]!;
+    let bestAttack = boss.attacks[0]!;
+    for (const a of boss.attacks) {
+      for (const h of a.hits) {
+        if (h.top > best.top) {
+          best = h;
+          bestAttack = a;
+        }
+      }
+    }
+    return { hit: best, attack: bestAttack };
+  }
+
+  it("reaches the tallest piece's height, and its own attack's full trigger range, for a sweep of seeds", () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const boss = generateBoss(seed);
+      const pieces = [...(boss.arena?.platforms ?? []), ...(boss.arena?.covers ?? [])];
+      if (pieces.length === 0) continue;
+      const tallestPiece = Math.max(...pieces.map((p) => p.height));
+      if (tallestPiece <= 0) continue;
+      const { hit, attack } = tallestHit(boss);
+      expect(hit.top).toBeGreaterThan(tallestPiece);
+      // The boss can trigger this attack from anywhere up to range.max away (a camping player is
+      // stationary), so the hit box's far edge must reach at least that far.
+      expect(hit.x1).toBeGreaterThanOrEqual(attack.range.max);
+    }
+  });
+
+  it('regression: example A from the diagnosis (generateBoss(1831565817)) now reaches its ' +
+    'platform both vertically and horizontally', () => {
+    // Before the fix, this seed's tallest-qualifying hit (attack-0, top ~162.8 vs. the platform's
+    // ~146.7) had x1 ~85.7 while its own range.max was ~279 — about 55-80 units short of the
+    // platform at x~297.7, exactly the shortfall the diagnosis measured tick-by-tick.
+    const boss = generateBoss(1831565817);
+    const pieces = [...(boss.arena?.platforms ?? []), ...(boss.arena?.covers ?? [])];
+    expect(pieces.length).toBeGreaterThan(0);
+    const tallestPiece = Math.max(...pieces.map((p) => p.height));
+    const { hit, attack } = tallestHit(boss);
+    expect(hit.top).toBeGreaterThan(tallestPiece);
+    expect(hit.x1).toBeGreaterThanOrEqual(attack.range.max + 60);
+  });
+});

@@ -176,3 +176,22 @@ describe('the camp-safety check', () => {
     expect(checkFairness(ASHEN_HOUND).fair).toBe(true);
   });
 });
+
+describe('the skilled bot against a cover in its walking path', () => {
+  // Modeled on the diagnosis's example C (`generateBoss(97)`): a cover sits between the player's
+  // start (x=320) and the boss's start (x=960), low enough to jump over (well under the ~163
+  // jump apex) but tall enough to wall the bot off while it just walks. The one attack's hit
+  // window (8 ticks) is comfortably inside the dash's 11-tick invulnerability, so before the fix
+  // the only way this fixture could fail is the bot never closing distance at all: pinned at the
+  // cover's face (x=320..960 walk blocked around x=536), it can never get within `PLAYER.attack.reach`
+  // (90) of a boss that stays 150-250 away (the fixture's default spacing) and so never swings back.
+  const boss = baseBoss({
+    arena: { platforms: [], covers: [{ x: 600, width: 80, height: 40 }] },
+  });
+
+  it('no longer pins the bot: the skilled bot finishes and wins cleanly', () => {
+    const result = checkFairness(boss);
+    expect(result.reasons).toEqual([]);
+    expect(result.fair).toBe(true);
+  });
+});
