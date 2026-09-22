@@ -13,15 +13,16 @@ const row = (model: TweakModel, id: string) => tweakRows(model).findIndex((r) =>
 const at = (index: number, model = createTweak(DEFAULT_PREFS)): TweakModel => ({ ...model, focus: index });
 
 describe('the tweak rows', () => {
-  it('list every dial and then the reset row, with values and help', () => {
+  it('list every dial, then reset, then back, with values and help', () => {
     const rows = tweakRows(createTweak(DEFAULT_PREFS));
-    expect(rows.map((r) => r.id)).toEqual([...DIALS.map((d) => d.id), 'reset']);
+    expect(rows.map((r) => r.id)).toEqual([...DIALS.map((d) => d.id), 'reset', 'back']);
     for (const r of rows) {
       expect(r.label.length).toBeGreaterThan(0);
       expect(r.help.length).toBeGreaterThan(0);
     }
     expect(rows[row(createTweak(DEFAULT_PREFS), 'speed')]!.value).toBe('100%');
     expect(rows[row(createTweak(DEFAULT_PREFS), 'damage')]!.value).toBe('1 hit');
+    expect(rows[row(createTweak(DEFAULT_PREFS), 'back')]!.value).toBeUndefined();
   });
 
   it('formats dial values as percentages, and damage as hits', () => {
@@ -33,8 +34,8 @@ describe('the tweak rows', () => {
 });
 
 describe('the tweak screen', () => {
-  it('up and down move the focus and wrap over the rows including reset', () => {
-    const count = DIALS.length + 1;
+  it('up and down move the focus and wrap over the rows including reset and back', () => {
+    const count = DIALS.length + 2;
     const start = createTweak(DEFAULT_PREFS);
     expect(tweakStep(start, 'up').model.focus).toBe(count - 1);
     expect(tweakStep(at(count - 1), 'down').model.focus).toBe(0);
@@ -84,5 +85,12 @@ describe('the tweak screen', () => {
     expect(tweakStep(resetRow, 'right')).toEqual({ model: resetRow, outcome: 'stay' });
     expect(tweakStep(createTweak(DEFAULT_PREFS), 'back').outcome).toBe('back');
     expect(tweakStep(createTweak(DEFAULT_PREFS), 'down').outcome).toBe('stay');
+  });
+
+  it('confirm on the Back row leaves; left and right do nothing there', () => {
+    const backRow = at(DIALS.length + 1);
+    expect(tweakStep(backRow, 'confirm').outcome).toBe('back');
+    expect(tweakStep(backRow, 'left')).toEqual({ model: backRow, outcome: 'stay' });
+    expect(tweakStep(backRow, 'right')).toEqual({ model: backRow, outcome: 'stay' });
   });
 });

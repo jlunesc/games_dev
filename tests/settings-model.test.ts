@@ -10,22 +10,26 @@ import {
 const at = (focus: number): SettingsModel => ({ ...createSettingsModel(DEFAULT_SETTINGS), focus });
 
 describe('the settings rows', () => {
-  it('list the five switches with On or Off and a help line', () => {
+  it('list the five switches, then Back, with On or Off and a help line', () => {
     const rows = settingsRows(createSettingsModel(DEFAULT_SETTINGS));
-    expect(rows.map((r) => r.id)).toEqual(['freeze', 'shake', 'flash', 'effects', 'sound']);
+    expect(rows.map((r) => r.id)).toEqual(['freeze', 'shake', 'flash', 'effects', 'sound', 'back']);
     const effects = rows.find((r) => r.id === 'effects')!;
     expect(effects.label).toBe('Effects');
     expect(effects.help).toBe('Particles, drifting embers and moving background layers.');
-    expect(rows.every((r) => r.value === 'On' && r.help.length > 0)).toBe(true);
+    expect(rows.slice(0, 5).every((r) => r.value === 'On' && r.help.length > 0)).toBe(true);
     const off = settingsRows(createSettingsModel({ ...DEFAULT_SETTINGS, shake: false }));
     expect(off.find((r) => r.id === 'shake')!.value).toBe('Off');
+    const back = rows.find((r) => r.id === 'back')!;
+    expect(back.label).toBe('Back');
+    expect(back.value).toBeUndefined();
+    expect(back.help).toBe('Return to the menu.');
   });
 });
 
 describe('the settings screen', () => {
-  it('up and down move the focus and wrap', () => {
-    expect(settingsStep(createSettingsModel(DEFAULT_SETTINGS), 'up').model.focus).toBe(4);
-    expect(settingsStep(at(4), 'down').model.focus).toBe(0);
+  it('up and down move the focus and wrap over the switches and Back', () => {
+    expect(settingsStep(createSettingsModel(DEFAULT_SETTINGS), 'up').model.focus).toBe(5);
+    expect(settingsStep(at(5), 'down').model.focus).toBe(0);
   });
 
   it('left, right and confirm toggle the focused switch', () => {
@@ -47,6 +51,13 @@ describe('the settings screen', () => {
   it('back leaves and nothing else does', () => {
     expect(settingsStep(at(0), 'back').outcome).toBe('back');
     expect(settingsStep(at(0), 'confirm').outcome).toBe('stay');
+  });
+
+  it('confirm on the Back row leaves; left and right do nothing there', () => {
+    const backRow = at(5);
+    expect(settingsStep(backRow, 'confirm').outcome).toBe('back');
+    expect(settingsStep(backRow, 'left')).toEqual({ model: backRow, outcome: 'stay' });
+    expect(settingsStep(backRow, 'right')).toEqual({ model: backRow, outcome: 'stay' });
   });
 
   it('does not change the model it is given', () => {

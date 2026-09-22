@@ -9,9 +9,9 @@ export interface TweakModel {
 }
 
 export interface TweakRow {
-  id: DialId | 'reset';
+  id: DialId | 'reset' | 'back';
   label: string;
-  value: string;
+  value?: string;
   help: string;
 }
 
@@ -37,6 +37,7 @@ export function tweakRows(model: TweakModel): TweakRow[] {
     value: preset,
     help: 'Go back to the values of the preset you started from.',
   });
+  rows.push({ id: 'back', label: 'Back', help: 'Return to the menu.' });
   return rows;
 }
 
@@ -46,15 +47,19 @@ export function tweakStep(
   action: MenuAction,
 ): { model: TweakModel; outcome: 'stay' | 'back' } {
   if (action === 'back') return { model, outcome: 'back' };
-  const count = DIALS.length + 1;
+  const count = DIALS.length + 2;
   if (action === 'up' || action === 'down') {
     return { model: { ...model, focus: wrap(model.focus, action === 'up' ? -1 : 1, count) }, outcome: 'stay' };
   }
   const dial = DIALS[model.focus];
   if (dial === undefined) {
-    // The reset row.
-    if (action === 'confirm') return { model: { ...model, prefs: resetDials(model.prefs) }, outcome: 'stay' };
-    return { model, outcome: 'stay' };
+    if (model.focus === DIALS.length) {
+      // The reset row.
+      if (action === 'confirm') return { model: { ...model, prefs: resetDials(model.prefs) }, outcome: 'stay' };
+      return { model, outcome: 'stay' };
+    }
+    // The back row.
+    return { model, outcome: action === 'confirm' ? 'back' : 'stay' };
   }
   if (action === 'left') return { model: { ...model, prefs: nudgeDial(model.prefs, dial.id, -1) }, outcome: 'stay' };
   if (action === 'right') return { model: { ...model, prefs: nudgeDial(model.prefs, dial.id, 1) }, outcome: 'stay' };
