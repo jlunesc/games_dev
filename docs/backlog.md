@@ -63,3 +63,8 @@ The owner wants nicer visuals, **within the locked geometric style** (`docs/SPEC
 Notes for the design:
 - Art is kept separate from fight logic (SPEC section 8) and everything drawn lives in `src/ui/render.ts` and `src/ui/look/`, so a visual pass should not change how a fight plays; the Ember Duelist golden test (`tests/duelist-golden.test.ts`) would show it if it did.
 - The readability of telegraphs (pose, glow, the landing bar of a leap) comes first; anything decorative must not hide them. The owner's play test of the Ashen Hound will say whether the red landing bar is readable enough.
+
+## Performance measurement (raised 2026-09-22)
+No performance data is saved today: the stats record gameplay (inputs, hits, dodges, timing), never frame time, dropped frames, memory or CPU/GPU cost. The owner asked after playing M5d whether the looks were expensive on the phone; the only answer available was the design-time estimate from M5d's review (well under 1% of a 60Hz frame budget, extrapolated from Node micro-benchmarks, not measured on the device).
+
+Idea: sample real performance during a fight, either shown live (a small debug overlay: frame time, dropped frames) or included in the exported stats (so it can be studied alongside the gameplay data, e.g. correlated with the number of active particles or which boss/arena was in play). Not designed yet: what to sample, at what cost to sample it (the measurement must not itself slow the game), and whether it needs its own settings switch.
