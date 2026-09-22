@@ -282,7 +282,7 @@ describe('the update loop of the app, replayed', () => {
 
   it('a Generated boss: a long fight through the app loop replays and analyzes faithfully', () => {
     const seed = 30;
-    const generated = resolveBoss('generated', seed);
+    const generated = resolveBoss('generated', seed).boss;
     const played = playLikeTheApp({
       presetId: 'normal',
       dials: presetDials('normal'),
@@ -298,7 +298,7 @@ describe('the update loop of the app, replayed', () => {
 
   it('a Generated boss with an arena: a long fight through the app loop replays and analyzes faithfully', () => {
     const seed = 5; // resolveBoss('generated', seed) at this seed has an arena (found by sweeping seeds 1-30)
-    const generated = resolveBoss('generated', seed);
+    const generated = resolveBoss('generated', seed).boss;
     expect(generated.arena).toBeDefined();
     const played = playLikeTheApp({
       presetId: 'normal',

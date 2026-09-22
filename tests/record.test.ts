@@ -205,7 +205,7 @@ describe('replay guarantee for a generated boss', () => {
     () => {
       const seed = 42;
       const meta = metaOf({ bossId: 'generated', seed });
-      const boss = applyDials(resolveBoss('generated', seed), meta.dials);
+      const boss = applyDials(resolveBoss('generated', seed).boss, meta.dials);
       let state = createInitialState(boss, seed, meta.study);
       let rec = startRecording(meta);
       for (let n = 1; n <= 1200; n++) {

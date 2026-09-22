@@ -110,7 +110,7 @@ export function replayFinalState(record: {
   study?: 0 | 1 | 2;
   input: readonly InputRun[];
 }): GameState {
-  const boss = applyDials(resolveBoss(record.bossId, record.seed), record.dials);
+  const boss = applyDials(resolveBoss(record.bossId, record.seed).boss, record.dials);
   let state = createInitialState(boss, record.seed, record.study ?? 0);
   for (const frame of decodeInputs(record.input)) state = step(state, frame, boss);
   return state;

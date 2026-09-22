@@ -548,7 +548,7 @@ describe('the replay path for a generated boss', () => {
   })();
 
   it('equals analyzing the resolved boss and the decoded input', () => {
-    const boss = applyDials(resolveBoss('generated', seed), record.dials);
+    const boss = applyDials(resolveBoss('generated', seed).boss, record.dials);
     expect(analyzeFight(record)).toEqual(
       analyzeRun(boss, createInitialState(boss, record.seed), decodeInputs(record.input)),
     );

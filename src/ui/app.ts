@@ -138,7 +138,9 @@ export function mountApp(root: HTMLElement): void {
   let held: HeldButtons = NOTHING_HELD;
   let pending: PendingPresses = NO_PRESSES;
   // The boss as adjusted by the dials for the current fight.
-  let boss: BossDef = resolveBoss(prefs.bossId, 1);
+  let boss: BossDef = resolveBoss(prefs.bossId, 1).boss;
+  // True when `boss` is a generated boss that couldn't be verified as fair (shown as a banner).
+  let bossUnfair = false;
   let state: GameState = createInitialState(boss);
   // The summary tracker and, once the fight ends (win or loss), its result: the summary shows when the end pause is over.
   // This first flow is only a placeholder (seed 1 is the default of createInitialState); startFight makes the real one.
@@ -502,7 +504,9 @@ export function mountApp(root: HTMLElement): void {
     saveLine = null;
     shownSummary = null;
     const seed = newSeed();
-    boss = applyDials(resolveBoss(prefs.bossId, seed), prefs.dials);
+    const resolved = resolveBoss(prefs.bossId, seed);
+    boss = applyDials(resolved.boss, prefs.dials);
+    bossUnfair = resolved.unfair;
     state = createInitialState(boss, seed, prefs.study);
     flow = startFlow({
       bossId: boss.id,
@@ -623,7 +627,7 @@ export function mountApp(root: HTMLElement): void {
       sound.play(state.events);
     }
     // The study note is separate from the bottom banner (which the paused-controller message uses).
-    setStudyNote(studyBanner(state.study, state.tick));
+    setStudyNote(studyBanner(state.study, state.tick, bossUnfair));
     // During a hit-stop nothing moves, so blend at 1 instead of the sweeping leftover (that would make the player judder).
     draw(hitStopView ? 1 : plan.alpha);
   }

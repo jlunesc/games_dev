@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ASHEN_HOUND, EMBER_DUELIST, TRAINEE } from '../src/bosses';
+import { generateBoss } from '../src/bosses/generate/boss';
 import { checkFairness } from '../src/bosses/generate/fairness';
 import type { FairnessResult } from '../src/bosses/generate/fairness';
 import { resolveBoss } from '../src/bosses/resolve';
@@ -7,12 +8,12 @@ import type { BossDef } from '../src/bosses/schema';
 
 describe('resolveBoss', () => {
   it('returns the named boss unchanged for a known id', () => {
-    expect(resolveBoss('ember-duelist', 1)).toEqual(EMBER_DUELIST);
-    expect(resolveBoss('ashen-hound', 1)).toEqual(ASHEN_HOUND);
+    expect(resolveBoss('ember-duelist', 1)).toEqual({ boss: EMBER_DUELIST, unfair: false });
+    expect(resolveBoss('ashen-hound', 1)).toEqual({ boss: ASHEN_HOUND, unfair: false });
   });
 
   it('falls back to bossById default (EMBER_DUELIST) for an unknown id', () => {
-    expect(resolveBoss('some-unknown-id', 1)).toEqual(EMBER_DUELIST);
+    expect(resolveBoss('some-unknown-id', 1)).toEqual({ boss: EMBER_DUELIST, unfair: false });
   });
 
   it('is deterministic for "generated": same seed gives a deep-equal boss', () => {
@@ -22,20 +23,15 @@ describe('resolveBoss', () => {
   });
 
   it(
-    'over a 100-seed sweep, every "generated" result is fair or equals TRAINEE',
+    'over a 100-seed sweep, every "generated" result is fair, or is the first candidate marked unfair',
     () => {
-      let fallbackSeenInSweep = false;
       for (let seed = 1; seed <= 100; seed++) {
-        const boss = resolveBoss('generated', seed);
-        if (boss === TRAINEE || boss.id === TRAINEE.id) {
-          fallbackSeenInSweep = true;
+        const { boss, unfair } = resolveBoss('generated', seed);
+        if (unfair) {
           continue;
         }
         expect(checkFairness(boss).fair).toBe(true);
       }
-      // Not asserted true or false: the brief only asks us to note whether the sweep hits the
-      // fallback naturally. See the focused injection test below for a deterministic proof.
-      void fallbackSeenInSweep;
     },
     // M6a: generated bosses can now draw an arena, and checkFairness's camp-safety simulation
     // over an arena is noticeably slower per candidate than the bare-boss case; a 100-seed sweep
@@ -61,7 +57,7 @@ describe('resolveBoss', () => {
     20000,
   );
 
-  it('falls back to TRAINEE deterministically after exactly 3 failed candidates (injected checker)', () => {
+  it('uses the first candidate anyway after exactly 3 failed candidates, marked unfair (injected checker)', () => {
     const seed = 999;
     const alwaysFail = (): FairnessResult => ({ fair: false, reasons: ['forced fail for test'] });
     let calls = 0;
@@ -70,14 +66,15 @@ describe('resolveBoss', () => {
       return alwaysFail();
     };
     const result = resolveBoss('generated', seed, countingAlwaysFail);
-    expect(result).toEqual(TRAINEE);
+    expect(result.unfair).toBe(true);
+    expect(result.boss).toEqual(generateBoss(seed));
     expect(calls).toBe(3);
   });
 
   it('returns the first candidate that passes an injected always-pass checker', () => {
     const alwaysPass = (): FairnessResult => ({ fair: true, reasons: [] });
     const result = resolveBoss('generated', 42, alwaysPass);
-    expect(result).not.toEqual(TRAINEE);
-    expect(result.id).toBe('generated');
+    expect(result.unfair).toBe(false);
+    expect(result.boss.id).toBe('generated');
   });
 });
