@@ -90,6 +90,17 @@ design (`docs/superpowers/specs/2026-09-22-m6a-generated-arenas-design.md`), whi
   check (M6a) from a yes/no question into a timing question, which is a materially harder thing to
   verify is fair, not just harder to build.
 
+## Fairness checker cost for arenas (raised 2026-09-22, M6a)
+Adding the camp-safety check (one extra idle-bot run per arena piece per fairness seed) made
+`checkFairness` cost about 200-250ms per call, up from near-instant, once arenas were wired into
+`generateBoss`. `resolveBoss` calls it up to 3 times per fight start (its retry-then-fallback loop),
+so picking "Generated" and pressing Fight could add up to roughly 750ms of delay in the worst case.
+Not addressed as part of M6a (owner's call: fix the correctness problem it was measuring, leave this
+for later). Ideas not explored yet: cache/reuse partial results across the three retry attempts, lower
+`GEN.fairnessCapTicks` specifically for the camp-safety sub-check (it likely resolves much faster than
+a full fight once the boss can reach the piece), or run the check lazily/async so it doesn't block the
+menu.
+
 ## Performance measurement (raised 2026-09-22)
 No performance data is saved today: the stats record gameplay (inputs, hits, dodges, timing), never frame time, dropped frames, memory or CPU/GPU cost. The owner asked after playing M5d whether the looks were expensive on the phone; the only answer available was the design-time estimate from M5d's review (well under 1% of a 60Hz frame budget, extrapolated from Node micro-benchmarks, not measured on the device).
 
