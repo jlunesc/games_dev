@@ -43,4 +43,40 @@ export const GEN = {
   rangeMinMax: 240,
   rangeSpanMin: 120,
   rangeSpanMax: 260,
+
+  maxHpMin: 20,
+  maxHpMax: 40,
+
+  spacingMinMin: 100,
+  spacingMinMax: 200,
+  spacingSpan: 100,
+
+  walkSpeedMin: 260,
+  walkSpeedMax: 420,
+
+  gapMin: 35,
+  gapMax: 60,
+
+  maxChainMin: 1,
+  maxChainMax: 2,
+  chainChanceMax: 0.3,
+
+  predictabilityMin: 0.1,
+  predictabilityMax: 0.3,
+
+  approachTimeoutMin: 40,
+  approachTimeoutMax: 50,
+
+  attackCountMin: 3,
+  attackCountMax: 5,
+
+  counterWindowMin: 8,
+  counterWindowMax: 14,
+  counterRangeMin: 160,
+  counterRangeMax: 220,
+  staggerTicksMin: 70,
+  staggerTicksMax: 100,
+
+  bodyMin: 60,
+  bodyMax: 110,
 } as const;
