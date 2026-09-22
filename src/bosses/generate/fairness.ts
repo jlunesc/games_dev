@@ -1,8 +1,8 @@
 import { NO_INPUT, type InputFrame } from '../../engine/input-frame';
-import { PLAYER } from '../../game/params';
+import { PLAYER, WORLD } from '../../game/params';
 import { createInitialState, type GameState } from '../../game/state';
 import { step } from '../../game/step';
-import type { AttackDef, BossDef } from '../schema';
+import type { ArenaPiece, AttackDef, BossDef } from '../schema';
 import { GEN } from './tuning';
 
 export interface FairnessResult {
@@ -18,6 +18,26 @@ const withInput = (over: Partial<InputFrame>): InputFrame => ({ ...NO_INPUT, ...
  */
 function idleLoses(boss: BossDef, seed: number): boolean {
   let s = createInitialState(boss, seed);
+  for (let n = 0; n < GEN.fairnessCapTicks && s.phase === 'fight'; n++) {
+    s = step(s, NO_INPUT, boss);
+  }
+  return s.phase === 'defeated';
+}
+
+/**
+ * Runs the idle bot (no input, ever) starting already perched at the centre of one arena piece's
+ * top, instead of the floor — the camp-safety check. Closes a risk `docs/bosses.md` names but never
+ * tests: a platform or cover tall enough could give the player a permanent safe spot. The centre is
+ * the position most likely to be out of every attack's reach, so it stands in for the worst case
+ * rather than an exhaustive search of every position on the piece.
+ */
+function idleLosesFromPerch(boss: BossDef, seed: number, piece: ArenaPiece): boolean {
+  const perchY = WORLD.floorY - piece.height;
+  let s = createInitialState(boss, seed);
+  s = {
+    ...s,
+    player: { ...s.player, x: piece.x, prevX: piece.x, y: perchY, prevY: perchY, onGround: true },
+  };
   for (let n = 0; n < GEN.fairnessCapTicks && s.phase === 'fight'; n++) {
     s = step(s, NO_INPUT, boss);
   }
@@ -124,6 +144,17 @@ export function checkFairness(boss: BossDef): FairnessResult {
   for (const seed of GEN.fairnessSeeds) {
     if (!idleLoses(boss, seed)) {
       reasons.push(`idle player did not lose at seed ${seed}`);
+    }
+  }
+
+  const pieces: ArenaPiece[] = [...(boss.arena?.platforms ?? []), ...(boss.arena?.covers ?? [])];
+  for (const piece of pieces) {
+    for (const seed of GEN.fairnessSeeds) {
+      if (!idleLosesFromPerch(boss, seed, piece)) {
+        reasons.push(
+          `idle player camping on a piece at x=${piece.x} height=${piece.height} did not lose at seed ${seed}`,
+        );
+      }
     }
   }
 

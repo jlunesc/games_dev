@@ -147,3 +147,32 @@ describe('checkFairness', () => {
     expect(result.fair).toBe(false);
   });
 });
+
+describe('the camp-safety check', () => {
+  it("fails a boss whose platform sits above every attack's reach", () => {
+    const boss = baseBoss({
+      arena: { platforms: [{ x: 900, width: 200, height: 220 }], covers: [] },
+    });
+    // The fixture's one attack has hit window top: 100 — well under 220, so nothing on the
+    // platform can ever be hit.
+    const result = checkFairness(boss);
+    expect(result.fair).toBe(false);
+    expect(result.reasons.some((r) => r.includes('camping'))).toBe(true);
+  });
+
+  it("passes a boss whose platform stays inside the attack's reach", () => {
+    const boss = baseBoss({
+      arena: { platforms: [{ x: 900, width: 200, height: 60 }], covers: [] },
+    });
+    // Height 60 is under the fixture's hit window top of 100, so the platform is reachable.
+    expect(checkFairness(boss).fair).toBe(true);
+  });
+
+  it('is unaffected by a boss with no arena', () => {
+    expect(checkFairness(EMBER_DUELIST).fair).toBe(true);
+  });
+
+  it('the Ashen Hound passes the camp-safety check on its own shipped arena', () => {
+    expect(checkFairness(ASHEN_HOUND).fair).toBe(true);
+  });
+});
