@@ -86,4 +86,25 @@ export const GEN = {
   fairnessCapTicks: 3000,
   /** Update cap for the skilled bot's run. */
   fairnessSkilledCapTicks: 4000,
+  /** Chance a generated boss's arena is bare (no pieces at all), like the Ember Duelist. */
+  arenaBareChance: 0.4,
+  arenaPieceCountMin: 1,
+  arenaPieceCountMax: 3,
+  /** Minimum height gap required between any two pieces in the same arena (the Ashen Hound's own
+   * gap, 10, is what read as "crowded" — this is deliberately much larger). */
+  arenaMinHeightGap: 90,
+  /** Redraws tried before falling back to the farthest-apart candidate found so far — bounded, never
+   * an infinite loop. */
+  arenaHeightRetries: 20,
+  arenaZoneJitterMax: 40,
+  arenaPlatformWidthMin: 140,
+  arenaPlatformWidthMax: 260,
+  arenaCoverWidthMin: 50,
+  arenaCoverWidthMax: 110,
+  arenaPlatformHeightMin: 40,
+  arenaPlatformHeightMax: 260,
+  /** Capped below the ~163-unit jump height (docs/bosses.md, "Cover is a wall below its top") so a
+   * generated cover is always jumpable, never a true wall. */
+  arenaCoverHeightMin: 40,
+  arenaCoverHeightMax: 160,
 } as const;
