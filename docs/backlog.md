@@ -90,6 +90,19 @@ design (`docs/superpowers/specs/2026-09-22-m6a-generated-arenas-design.md`), whi
   check (M6a) from a yes/no question into a timing question, which is a materially harder thing to
   verify is fair, not just harder to build.
 
+## Dash duration can't cover the longest generated hit window (raised 2026-09-22, found while diagnosing M6a's fallback rate)
+A generated attack's active hit window can last up to `GEN.activeMax` (20 updates), but the player's
+dash grants only 11 updates of invulnerability (`src/game/params.ts`). A single scripted dash timed to
+the start of the window (the fairness checker's skilled-bot evasion, and the same idea a real player
+would use) cannot survive the full window regardless of position or timing — it's a genuine gap
+between two tuning numbers, not new to M6a. It stayed hidden before M6a because the skilled bot (and a
+real player) could usually reposition between attacks on a bare arena; it surfaced while diagnosing the
+M6a arena fallback rate because cover can pin the bot somewhere it can't otherwise avoid triggering a
+long window. Not fixed as part of M6a (owner's call, 2026-09-22: this predates arenas and deserves its
+own look). Ideas not evaluated yet: lower `GEN.activeMax` to fit inside the dash's 11 updates, raise the
+dash's invulnerability duration, or give the skilled bot (and real players, implicitly) a way to survive
+a long window other than a single dash (e.g. two dashes in sequence, or backing out of range first).
+
 ## Fairness checker cost for arenas (raised 2026-09-22, M6a)
 Adding the camp-safety check (one extra idle-bot run per arena piece per fairness seed) made
 `checkFairness` cost about 200-250ms per call, up from near-instant, once arenas were wired into
