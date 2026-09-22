@@ -1,0 +1,27 @@
+{
+  "id": "trainee",
+  "name": "Trainee",
+  "width": 80,
+  "height": 100,
+  "startX": 960,
+  "maxHp": 24,
+  "spacing": { "min": 150, "max": 300 },
+  "approachTimeout": 45,
+  "predictability": 0.2,
+  "counter": { "window": 10, "range": 180, "staggerTicks": 80, "damageMultiplier": 2 },
+  "transitionTicks": 60,
+  "attacks": [
+    { "id": "swipe", "name": "Swipe", "pose": "sideways", "class": "mustDodge",
+      "windup": 30, "active": 8, "recovery": 26, "range": { "min": 60, "max": 220 },
+      "hits": [ { "from": 30, "to": 38, "x0": 0, "x1": 200, "bottom": 0, "top": 110 } ] },
+    { "id": "charge", "name": "Charge", "pose": "back", "class": "mustDodge",
+      "windup": 32, "active": 12, "recovery": 30, "range": { "min": 220, "max": 400 },
+      "move": { "from": 32, "to": 44, "speed": 1200 },
+      "hits": [ { "from": 32, "to": 44, "x0": 0, "x1": 100, "bottom": 0, "top": 100 } ] }
+  ],
+  "phases": [
+    { "name": "Only phase", "startsAtHpFraction": 1,
+      "attacks": [ { "id": "swipe", "weight": 1 }, { "id": "charge", "weight": 1 } ],
+      "gap": 50, "maxChain": 1, "chainChance": 0, "walkSpeed": 240, "retreatSpeed": 190 }
+  ]
+}
