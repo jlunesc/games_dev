@@ -74,6 +74,22 @@ Ideas that are **not built**, only listed:
 - **Using play stats to steer generation**: picking tuned ranges, or which primitives to draw from, based on what the exported stats say about the player (for example leaning the generator towards attack shapes that read badly for the owner). Today generation is uniform random inside fixed ranges (`src/bosses/generate/tuning.ts`), with no memory of past fights.
 - **Exposing the Trainee (the fallback boss) on its own**: today it only appears when the fairness check fails three times in a row for a seed (measured at about 2% of seeds); it is not offered anywhere in the menu by itself.
 
+## Dynamic arena pieces (raised 2026-09-22)
+Platforms or cover that are not just static: appearing/disappearing, appearing in reaction to a
+specific incoming attack, or constantly moving. Raised while reviewing the M6a generated-arenas
+design (`docs/superpowers/specs/2026-09-22-m6a-generated-arenas-design.md`), which stays static-only.
+
+- **A piece tied to a specific attack** (e.g. cover that rises just before an explosion, so reaching
+  it in time is the skill): not really an arena feature on its own — it is closer to an attack
+  feature, since the terrain and the attack's timing are the same design. Owner's call (2026-09-22):
+  fold this into the next design instead, the new attack primitives (M6, item 3), rather than build it
+  as part of arenas.
+- **Constantly moving platforms**: held back, not folded anywhere yet. Bigger and riskier than the
+  above: the physics today assumes a surface does not move (a player just lands on a fixed top), so
+  this needs the player to move with the platform, and it would turn the new camp-safety fairness
+  check (M6a) from a yes/no question into a timing question, which is a materially harder thing to
+  verify is fair, not just harder to build.
+
 ## Performance measurement (raised 2026-09-22)
 No performance data is saved today: the stats record gameplay (inputs, hits, dodges, timing), never frame time, dropped frames, memory or CPU/GPU cost. The owner asked after playing M5d whether the looks were expensive on the phone; the only answer available was the design-time estimate from M5d's review (well under 1% of a 60Hz frame budget, extrapolated from Node micro-benchmarks, not measured on the device).
 
