@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ASHEN_HOUND, EMBER_DUELIST } from '../src/bosses';
+import { resolveBoss } from '../src/bosses/resolve';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, NO_PRESSES, addPresses, applyPresses, type InputFrame } from '../src/engine/input-frame';
 import { planUpdates } from '../src/engine/loop';
@@ -277,6 +278,22 @@ describe('the update loop of the app, replayed', () => {
       expect(ids.size).toBeGreaterThan(1);
       expectFaithful(played);
     }
+  });
+
+  it('a Generated boss: a long fight through the app loop replays and analyzes faithfully', () => {
+    const seed = 30;
+    const generated = resolveBoss('generated', seed);
+    const played = playLikeTheApp({
+      presetId: 'normal',
+      dials: presetDials('normal'),
+      seed,
+      deltas: messyDeltas(seed),
+      bossDef: generated,
+      leaveAfterFrames: 2400,
+    });
+    expect(played.boss.id).toBe('generated');
+    expect(played.record.bossId).toBe('generated');
+    expectFaithful(played);
   });
 
   it('the Ashen Hound: a fight that ends by defeat replays and analyzes faithfully', () => {

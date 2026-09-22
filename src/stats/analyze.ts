@@ -1,4 +1,4 @@
-import { bossById } from '../bosses';
+import { resolveBoss } from '../bosses/resolve';
 import type { BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { TICK_RATE } from '../engine/time';
@@ -452,7 +452,7 @@ export function analyzeFight(
   // `study` is missing in records of schema version 1: those analyse as a fight without a study.
   record: Pick<FightRecord, 'bossId' | 'dials' | 'seed' | 'input'> & { study?: FightRecord['study'] },
 ): Analysis {
-  const boss = applyDials(bossById(record.bossId), record.dials);
+  const boss = applyDials(resolveBoss(record.bossId, record.seed), record.dials);
   const study = record.study ?? 0;
   return analyzeRun(boss, createInitialState(boss, record.seed, study), decodeInputs(record.input), study);
 }

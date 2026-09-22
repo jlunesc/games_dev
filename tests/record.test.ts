@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bossById } from '../src/bosses';
+import { resolveBoss } from '../src/bosses/resolve';
 import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { applyDials, changedDials, NORMAL_DIALS, presetDials, type Dials } from '../src/game/difficulty';
 import { PLAYER } from '../src/game/params';
@@ -195,6 +196,27 @@ describe('replay guarantee', () => {
     const recordA = buildRecord(a.rec, 'left', 1, null);
     const recordB = buildRecord(b.rec, 'left', 1, null);
     expect(replayFinalState(recordA).boss).not.toEqual(replayFinalState(recordB).boss);
+  });
+});
+
+describe('replay guarantee for a generated boss', () => {
+  it('replays a Generated fight to the identical final state', () => {
+    const seed = 42;
+    const meta = metaOf({ bossId: 'generated', seed });
+    const boss = applyDials(resolveBoss('generated', seed), meta.dials);
+    let state = createInitialState(boss, seed, meta.study);
+    let rec = startRecording(meta);
+    for (let n = 1; n <= 1200; n++) {
+      const frame = scripted(n);
+      state = step(state, frame, boss);
+      rec = recordUpdate(rec, frame);
+      if (state.phase !== 'fight') break;
+    }
+    const record = buildRecord(rec, 'left', 1, null);
+    expect(record.bossId).toBe('generated');
+    expect(didSomething(state, boss.maxHp)).toBe(true);
+    expect(replayFinalState(record)).toEqual(state);
+    expect(replayFinalState(record)).toEqual(replayFinalState(record));
   });
 });
 

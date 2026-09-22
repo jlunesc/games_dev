@@ -1,4 +1,4 @@
-import { bossById } from '../bosses';
+import { resolveBoss } from '../bosses/resolve';
 import type { InputFrame } from '../engine/input-frame';
 import {
   applyDials,
@@ -107,7 +107,7 @@ export function replayFinalState(record: {
   study?: 0 | 1 | 2;
   input: readonly InputRun[];
 }): GameState {
-  const boss = applyDials(bossById(record.bossId), record.dials);
+  const boss = applyDials(resolveBoss(record.bossId, record.seed), record.dials);
   let state = createInitialState(boss, record.seed, record.study ?? 0);
   for (const frame of decodeInputs(record.input)) state = step(state, frame, boss);
   return state;

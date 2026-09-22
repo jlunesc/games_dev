@@ -1,4 +1,4 @@
-import { bossById } from '../bosses';
+import { resolveBoss } from '../bosses/resolve';
 import type { BossDef } from '../bosses/schema';
 import {
   NO_INPUT,
@@ -138,7 +138,7 @@ export function mountApp(root: HTMLElement): void {
   let held: HeldButtons = NOTHING_HELD;
   let pending: PendingPresses = NO_PRESSES;
   // The boss as adjusted by the dials for the current fight.
-  let boss: BossDef = bossById(prefs.bossId);
+  let boss: BossDef = resolveBoss(prefs.bossId, 1);
   let state: GameState = createInitialState(boss);
   // The summary tracker and, once the fight ends (win or loss), its result: the summary shows when the end pause is over.
   // This first flow is only a placeholder (seed 1 is the default of createInitialState); startFight makes the real one.
@@ -501,8 +501,8 @@ export function mountApp(root: HTMLElement): void {
     saveEpoch += 1;
     saveLine = null;
     shownSummary = null;
-    boss = applyDials(bossById(prefs.bossId), prefs.dials);
     const seed = newSeed();
+    boss = applyDials(resolveBoss(prefs.bossId, seed), prefs.dials);
     state = createInitialState(boss, seed, prefs.study);
     flow = startFlow({
       bossId: boss.id,

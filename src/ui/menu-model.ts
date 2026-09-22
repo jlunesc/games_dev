@@ -1,4 +1,4 @@
-import { BOSSES, bossById } from '../bosses';
+import { BOSS_CHOICES, bossChoiceName } from '../bosses';
 import { PRESETS } from '../game/difficulty';
 import { wrap, type NavAction } from './nav';
 import { isCustom, nextStudy, selectPreset, studyLabel, type Prefs } from './prefs';
@@ -46,7 +46,7 @@ export function difficultyLabel(prefs: Prefs): string {
 export function menuRows(model: MenuModel): MenuRow[] {
   return [
     { id: 'fight', label: 'Fight' },
-    { id: 'boss', label: 'Boss', value: bossById(model.prefs.bossId).name },
+    { id: 'boss', label: 'Boss', value: bossChoiceName(model.prefs.bossId) },
     { id: 'difficulty', label: 'Difficulty', value: difficultyLabel(model.prefs) },
     { id: 'study', label: 'Study', value: studyLabel(model.prefs.study) },
     { id: 'tweak', label: 'Tweak difficulty' },
@@ -90,8 +90,8 @@ export function menuStep(
     return stay({ ...model, prefs: selectPreset(model.prefs, next.id) });
   }
   if (item === 'boss') {
-    const current = BOSSES.findIndex((b) => b.id === model.prefs.bossId);
-    const next = BOSSES[wrap(Math.max(0, current), direction, BOSSES.length)];
+    const current = BOSS_CHOICES.findIndex((c) => c.id === model.prefs.bossId);
+    const next = BOSS_CHOICES[wrap(Math.max(0, current), direction, BOSS_CHOICES.length)];
     if (next === undefined) return stay(model);
     return stay({ ...model, prefs: { ...model.prefs, bossId: next.id } });
   }

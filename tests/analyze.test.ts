@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bossById } from '../src/bosses';
+import { resolveBoss } from '../src/bosses/resolve';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { applyDials, NORMAL_DIALS, presetDials } from '../src/game/difficulty';
@@ -527,6 +528,36 @@ describe('the replay path', () => {
     expect(JSON.stringify(analyzeFight(record))).toBe(JSON.stringify(a));
     expect(JSON.parse(JSON.stringify(a))).toEqual(a);
     expect(a.ticks).toBe(900);
+  });
+});
+
+describe('the replay path for a generated boss', () => {
+  const seed = 42;
+  const meta: FightMeta = {
+    bossId: 'generated',
+    presetId: 'hard',
+    dials: presetDials('hard'),
+    seed,
+    study: 0,
+    playedAt: '2026-09-20T10:00:00.000Z',
+  };
+  const record = (() => {
+    let rec = startRecording(meta);
+    for (let n = 1; n <= 900; n++) rec = recordUpdate(rec, scripted(n));
+    return buildRecord(rec, 'left', 1, null);
+  })();
+
+  it('equals analyzing the resolved boss and the decoded input', () => {
+    const boss = applyDials(resolveBoss('generated', seed), record.dials);
+    expect(analyzeFight(record)).toEqual(
+      analyzeRun(boss, createInitialState(boss, record.seed), decodeInputs(record.input)),
+    );
+  });
+
+  it('agrees with analyzeRecording built from the same meta', () => {
+    let rec = startRecording(meta);
+    for (let n = 1; n <= 900; n++) rec = recordUpdate(rec, scripted(n));
+    expect(analyzeRecording(rec)).toEqual(analyzeFight(record));
   });
 });
 
