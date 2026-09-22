@@ -185,12 +185,16 @@ export function playerBlinking(state: GameState): boolean {
   return p.invulnerableTicks > 0 && p.dashTick < 0 && Math.floor(state.tick / 3) % 2 === 1;
 }
 
-/** The x of the faint vertical lines that suggest floor tiles, across the world and the shake margin. */
-export function floorTileXs(): number[] {
+/**
+ * The x of the faint vertical lines that suggest floor tiles, across the world and the shake margin. Built once:
+ * `WORLD.width` and `LOOK.floorTileSpacing` never change while the game runs, so recomputing this every frame
+ * would only waste time.
+ */
+export const FLOOR_TILE_XS: number[] = (() => {
   const xs: number[] = [];
   for (let x = 0; x <= WORLD.width; x += LOOK.floorTileSpacing) xs.push(x);
   return xs;
-}
+})();
 
 function drawBoss(
   ctx: CanvasRenderingContext2D,
@@ -325,7 +329,7 @@ function drawFloor(ctx: CanvasRenderingContext2D, mood: Mood): void {
   }
   ctx.globalAlpha = LOOK.floorTileAlpha;
   ctx.fillStyle = COLORS.bars;
-  for (const x of floorTileXs()) ctx.fillRect(x - 1, top + 3, 2, WORLD.height - top + 5);
+  for (const x of FLOOR_TILE_XS) ctx.fillRect(x - 1, top + 3, 2, WORLD.height - top + 5);
   ctx.fillRect(-8, top + LOOK.floorTileRow, WORLD.width + 16, 2);
   ctx.restore();
   ctx.fillStyle = mood.floorLine;

@@ -12,7 +12,7 @@ import * as render from '../src/ui/render';
 import {
   bossBodyColor,
   drawFrame,
-  floorTileXs,
+  FLOOR_TILE_XS,
   playerBlinking,
   playerBodyColor,
   type FrameLook,
@@ -100,7 +100,7 @@ describe('colour and blink decisions', () => {
   });
 
   it('places the floor tile lines evenly across the whole world', () => {
-    const xs = floorTileXs();
+    const xs = FLOOR_TILE_XS;
     expect(xs[0]).toBe(0);
     expect(xs.every((x, i) => x === i * LOOK.floorTileSpacing)).toBe(true);
     expect(xs[xs.length - 1]! + LOOK.floorTileSpacing).toBeGreaterThan(WORLD.width);

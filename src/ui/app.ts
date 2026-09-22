@@ -154,6 +154,9 @@ export function mountApp(root: HTMLElement): void {
   // The looks: particles and the pre-drawn background. Cosmetic only, never read by the simulation.
   let fx: EffectsState = NO_EFFECTS;
   let background: BackgroundCache | null = null;
+  // One BackgroundCache per mood, built the first time that mood is needed and reused after (there are only a
+  // few moods, so this caps memory rather than growing it, and retrying the same boss costs no re-render).
+  const backgroundCache = new Map<string, BackgroundCache | null>();
   let leftoverMs = 0;
   let freezeLeft = 0;
   // True from the start of a hit-stop until the next real update: the picture stays on the newest state.
@@ -514,8 +517,14 @@ export function mountApp(root: HTMLElement): void {
     leaveHint.hidden = true;
     feedback = NO_FEEDBACK;
     fx = NO_EFFECTS;
-    // Built once per fight for this boss's mood (null when no canvas can be made: the plain gradient is drawn instead).
-    background = createBackground(moodFor(boss.id));
+    // Built once per mood and reused after (null when no canvas can be made: the plain gradient is drawn instead).
+    const mood = moodFor(boss.id);
+    let cached = backgroundCache.get(mood.id);
+    if (cached === undefined) {
+      cached = createBackground(mood);
+      backgroundCache.set(mood.id, cached);
+    }
+    background = cached;
     leftoverMs = 0;
     freezeLeft = 0;
     hitStopView = false;

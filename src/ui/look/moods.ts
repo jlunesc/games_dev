@@ -35,8 +35,8 @@ export const MOODS: Record<string, Mood> = {
     skyTop: '#0d0d16',
     skyBottom: '#1c1c2c',
     layers: [
-      { shape: 'ridge', color: '#171724', speed: FAR, heightFraction: 0.45, seed: 11 },
-      { shape: 'pillars', color: '#1f1f30', speed: NEAR, heightFraction: 0.6, seed: 12 },
+      { shape: 'ridge', color: '#1f1f30', speed: FAR, heightFraction: 0.45, seed: 11 },
+      { shape: 'pillars', color: '#171724', speed: NEAR, heightFraction: 0.6, seed: 12 },
     ],
     ember: '#8fa8ff',
     floor: LOOK.floor,

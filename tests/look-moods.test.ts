@@ -49,6 +49,18 @@ describe('the moods', () => {
   it('keep each mood stored under its own id', () => {
     for (const [key, mood] of Object.entries(MOODS)) expect(mood.id).toBe(key);
   });
+
+  it('gets lighter from the farthest layer to the nearest, as the depth rule intends', () => {
+    // layers[] is stored far to near (the far layer first); brightness (sum of RGB) should fall as it goes.
+    const brightness = (hex: string): number =>
+      [0, 2, 4].reduce((sum, i) => sum + parseInt(hex.slice(1 + i, 3 + i), 16), 0);
+    for (const mood of Object.values(MOODS)) {
+      const levels = mood.layers.map((l) => brightness(l.color));
+      for (let i = 1; i < levels.length; i++) {
+        expect(levels[i]!, `${mood.id} layer ${i}`).toBeLessThan(levels[i - 1]!);
+      }
+    }
+  });
 });
 
 describe('the look tuning', () => {

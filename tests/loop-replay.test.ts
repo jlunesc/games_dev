@@ -12,6 +12,8 @@ import { analyzeFight, analyzeRecording } from '../src/stats/analyze';
 import { buildRecord, replayFinalState, type FightRecord, type Recording } from '../src/stats/record';
 import { freezeFor } from '../src/ui/feedback';
 import { advanceFlow, leaveRecording, leaveSummary, startFlow } from '../src/ui/fight-flow';
+import { NO_EFFECTS, spawnEffects, stepEffects, type EffectsState } from '../src/ui/look/effects';
+import { LOOK } from '../src/ui/look/tuning';
 import { DEFAULT_SETTINGS } from '../src/ui/settings';
 import { withInput } from './helpers';
 
@@ -77,6 +79,8 @@ interface Played {
   summary: FightSummary;
   record: FightRecord;
   recording: Recording;
+  /** The looks' particles and rings, threaded through the same as app.ts, at the end of the emulated loop. */
+  fx: EffectsState;
   /** True when the ending update was not the last update of its frame. */
   endedMidFrame: boolean;
   frames: number;
@@ -104,6 +108,9 @@ function playLikeTheApp(options: PlayOptions): Played {
   let pending = NO_PRESSES;
   let leftoverMs = 0;
   let freezeLeft = 0;
+  // Threaded exactly as in app.ts, so a change to where stepEffects/spawnEffects run relative to the freeze
+  // check or the update would be caught here, even though this test never draws anything.
+  let fx: EffectsState = NO_EFFECTS;
 
   let finalState: GameState | null = null;
   let finishedRecording: { recording: typeof flow.recording; result: 'victory' | 'defeat' } | null = null;
@@ -128,6 +135,7 @@ function playLikeTheApp(options: PlayOptions): Played {
     if (plan.updates === 0) framesWithoutUpdate += 1;
 
     for (let i = 0; i < plan.updates; i++) {
+      fx = stepEffects(fx);
       if (freezeLeft > 0) {
         freezeLeft -= 1;
         updatesSkippedByHitStop += 1;
@@ -158,6 +166,7 @@ function playLikeTheApp(options: PlayOptions): Played {
         shown = true;
         break;
       }
+      fx = spawnEffects(fx, before, state, boss, DEFAULT_SETTINGS.effects);
       freezeLeft = Math.max(freezeLeft, freezeFor(state.events, DEFAULT_SETTINGS));
     }
   }
@@ -182,6 +191,7 @@ function playLikeTheApp(options: PlayOptions): Played {
     summary,
     record: buildRecord(recording, result, 1, null),
     recording,
+    fx,
     endedMidFrame,
     frames,
     framesWithoutUpdate,
@@ -219,6 +229,9 @@ function expectFaithful(played: Played): void {
   expect(analysis.behavior.studyUpdatesClose + analysis.behavior.studyUpdatesMid + analysis.behavior.studyUpdatesFar).toBe(
     live.studyUpdates,
   );
+  // The effects bookkeeping never grows past what the looks are capped at, same as the real app.
+  expect(played.fx.particles.length).toBeLessThanOrEqual(LOOK.maxParticles);
+  expect(played.fx.rings.length).toBeLessThanOrEqual(LOOK.maxRings);
 }
 
 const CASES: Array<{ name: string; presetId: PresetId; dials: Dials }> = [

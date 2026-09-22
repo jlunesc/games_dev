@@ -154,7 +154,6 @@ export function playerFigure(
 
 /** What every boss style needs to know about the boss right now, worked out once. */
 interface BossPose {
-  boss: BossDef;
   /** Centre x, the facing (1 right, -1 left), and the current tick. */
   cx: number;
   f: 1 | -1;
@@ -204,7 +203,6 @@ function bossPose(state: GameState, boss: BossDef): BossPose {
     : breathe(t, LOOK.bossBreatheAmplitude);
   const lean = b.mode === 'stagger' ? -LOOK.bossLeanWindup * 0.5 : winding ? windP * LOOK.bossLeanWindup : 0;
   return {
-    boss,
     cx: b.x,
     f: b.facing,
     t,
