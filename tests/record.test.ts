@@ -122,12 +122,12 @@ describe('buildRecord', () => {
 
   it('carries the study rounds and is schema version 3', () => {
     expect(STATS_SCHEMA_VERSION).toBe(3);
-    expect(GAME_VERSION).toBe('0.4.0');
+    expect(GAME_VERSION).toBe('0.5.0');
     for (const study of [0, 1, 2] as const) {
       const record = buildRecord(startRecording(metaOf({ study })), 'left', 1, null);
       expect(record.study).toBe(study);
       expect(record.schemaVersion).toBe(3);
-      expect(record.gameVersion).toBe('0.4.0');
+      expect(record.gameVersion).toBe('0.5.0');
     }
   });
 
@@ -200,24 +200,31 @@ describe('replay guarantee', () => {
 });
 
 describe('replay guarantee for a generated boss', () => {
-  it('replays a Generated fight to the identical final state', () => {
-    const seed = 42;
-    const meta = metaOf({ bossId: 'generated', seed });
-    const boss = applyDials(resolveBoss('generated', seed), meta.dials);
-    let state = createInitialState(boss, seed, meta.study);
-    let rec = startRecording(meta);
-    for (let n = 1; n <= 1200; n++) {
-      const frame = scripted(n);
-      state = step(state, frame, boss);
-      rec = recordUpdate(rec, frame);
-      if (state.phase !== 'fight') break;
-    }
-    const record = buildRecord(rec, 'left', 1, null);
-    expect(record.bossId).toBe('generated');
-    expect(didSomething(state, boss.maxHp)).toBe(true);
-    expect(replayFinalState(record)).toEqual(state);
-    expect(replayFinalState(record)).toEqual(replayFinalState(record));
-  });
+  it(
+    'replays a Generated fight to the identical final state',
+    () => {
+      const seed = 42;
+      const meta = metaOf({ bossId: 'generated', seed });
+      const boss = applyDials(resolveBoss('generated', seed), meta.dials);
+      let state = createInitialState(boss, seed, meta.study);
+      let rec = startRecording(meta);
+      for (let n = 1; n <= 1200; n++) {
+        const frame = scripted(n);
+        state = step(state, frame, boss);
+        rec = recordUpdate(rec, frame);
+        if (state.phase !== 'fight') break;
+      }
+      const record = buildRecord(rec, 'left', 1, null);
+      expect(record.bossId).toBe('generated');
+      expect(didSomething(state, boss.maxHp)).toBe(true);
+      expect(replayFinalState(record)).toEqual(state);
+      expect(replayFinalState(record)).toEqual(replayFinalState(record));
+    },
+    // M6a: resolveBoss('generated', ...) can now run checkFairness's camp-safety simulation over
+    // an arena for up to 3 candidates, which is slower than the pre-arena baseline the old
+    // default 5s timeout assumed.
+    20000,
+  );
 });
 
 describe('replay guarantee with a study', () => {

@@ -296,6 +296,23 @@ describe('the update loop of the app, replayed', () => {
     expectFaithful(played);
   });
 
+  it('a Generated boss with an arena: a long fight through the app loop replays and analyzes faithfully', () => {
+    const seed = 5; // resolveBoss('generated', seed) at this seed has an arena (found by sweeping seeds 1-30)
+    const generated = resolveBoss('generated', seed);
+    expect(generated.arena).toBeDefined();
+    const played = playLikeTheApp({
+      presetId: 'normal',
+      dials: presetDials('normal'),
+      seed,
+      deltas: messyDeltas(seed),
+      bossDef: generated,
+      leaveAfterFrames: 2400,
+    });
+    expect(played.boss.id).toBe('generated');
+    expect(played.record.bossId).toBe('generated');
+    expectFaithful(played);
+  });
+
   it('the Ashen Hound: a fight that ends by defeat replays and analyzes faithfully', () => {
     const played = playLikeTheApp({
       presetId: 'normal',

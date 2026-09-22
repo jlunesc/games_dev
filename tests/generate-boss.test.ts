@@ -124,3 +124,15 @@ describe('generateBoss', () => {
     }
   });
 });
+
+describe("a generated boss's arena", () => {
+  it('sometimes has one and sometimes does not, over a sweep of seeds', () => {
+    let withArena = 0;
+    const total = 300;
+    for (let seed = 1; seed <= total; seed++) {
+      if (generateBoss(seed).arena !== undefined) withArena++;
+    }
+    expect(withArena).toBeGreaterThan(0);
+    expect(withArena).toBeLessThan(total);
+  });
+});

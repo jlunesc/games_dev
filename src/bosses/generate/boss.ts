@@ -1,6 +1,7 @@
 import { nextRandom } from '../../game/rng';
 import { parseBoss } from '../parse';
 import type { AttackDef, BossDef, PhaseAttack } from '../schema';
+import { generateArena } from './arena';
 import { generateAttack } from './attack';
 import { GEN } from './tuning';
 
@@ -83,6 +84,28 @@ export function generateBoss(seed: number): BossDef {
 
   const phaseAttacks: PhaseAttack[] = attacks.map((a) => ({ id: a.id, weight: 1 }));
 
+  const arenaDraw = generateArena(s);
+  s = arenaDraw.state;
+
+  // Bosses ignore the arena physically (M5c simplification), so a piece taller than every attack's
+  // hit window would be a permanent safe spot. Guarantee at least one attack can always reach the
+  // tallest piece, rather than leaving it to chance — deterministic, no new random draw.
+  const pieces = arenaDraw.value === undefined
+    ? []
+    : [...arenaDraw.value.platforms, ...arenaDraw.value.covers];
+  const tallestPiece = pieces.length === 0 ? 0 : Math.max(...pieces.map((p) => p.height));
+  if (tallestPiece > 0) {
+    let tallestHit = attacks[0]!.hits[0]!;
+    for (const a of attacks) {
+      for (const h of a.hits) {
+        if (h.top > tallestHit.top) tallestHit = h;
+      }
+    }
+    if (tallestHit.top <= tallestPiece) {
+      tallestHit.top = tallestPiece + 10;
+    }
+  }
+
   const boss = {
     id: 'generated',
     name: 'Generated Boss',
@@ -113,6 +136,7 @@ export function generateBoss(seed: number): BossDef {
         retreatSpeed: retreatSpeedDraw.value,
       },
     ],
+    ...(arenaDraw.value === undefined ? {} : { arena: arenaDraw.value }),
   };
 
   return parseBoss(boss);

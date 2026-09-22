@@ -19,8 +19,11 @@ export const STATS_SCHEMA_VERSION = 3;
  * Bump when a change to the game numbers or a boss file changes how a recorded fight replays.
  * 0.4.0: arenas (platforms and cover). Giving the Ashen Hound an arena changes how Hound fights replay, so
  * records made by 0.3.0 no longer replay exactly for the Hound; Ember Duelist records (no arena) still do.
+ * 0.5.0: generated arenas (M6a). Drawing an arena is one more random choice the generator makes, so it
+ * reorders the whole random stream: a "generated" record made by 0.4.0 no longer reproduces the same boss
+ * (arena included) from its seed. Named-boss records (Ember Duelist, Ashen Hound) are unaffected.
  */
-export const GAME_VERSION = '0.4.0';
+export const GAME_VERSION = '0.5.0';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {

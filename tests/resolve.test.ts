@@ -37,20 +37,29 @@ describe('resolveBoss', () => {
       // fallback naturally. See the focused injection test below for a deterministic proof.
       void fallbackSeenInSweep;
     },
-    30000,
+    // M6a: generated bosses can now draw an arena, and checkFairness's camp-safety simulation
+    // over an arena is noticeably slower per candidate than the bare-boss case; a 100-seed sweep
+    // (up to 3 candidates each) no longer reliably finishes within the old 30s budget.
+    60000,
   );
 
-  it('does not mutate BOSSES or TRAINEE', () => {
-    const bossesSnapshot = JSON.stringify(EMBER_DUELIST);
-    const traineeSnapshot = JSON.stringify(TRAINEE);
-    for (let seed = 1; seed <= 20; seed++) {
-      resolveBoss('generated', seed);
-      resolveBoss('ember-duelist', seed);
-      resolveBoss('ashen-hound', seed);
-    }
-    expect(JSON.stringify(EMBER_DUELIST)).toBe(bossesSnapshot);
-    expect(JSON.stringify(TRAINEE)).toBe(traineeSnapshot);
-  });
+  it(
+    'does not mutate BOSSES or TRAINEE',
+    () => {
+      const bossesSnapshot = JSON.stringify(EMBER_DUELIST);
+      const traineeSnapshot = JSON.stringify(TRAINEE);
+      for (let seed = 1; seed <= 20; seed++) {
+        resolveBoss('generated', seed);
+        resolveBoss('ember-duelist', seed);
+        resolveBoss('ashen-hound', seed);
+      }
+      expect(JSON.stringify(EMBER_DUELIST)).toBe(bossesSnapshot);
+      expect(JSON.stringify(TRAINEE)).toBe(traineeSnapshot);
+    },
+    // Same reason as the sweep above: resolving 20 generated seeds now runs checkFairness over
+    // arenas, which is slower than the pre-arena baseline the old default 5s timeout assumed.
+    20000,
+  );
 
   it('falls back to TRAINEE deterministically after exactly 3 failed candidates (injected checker)', () => {
     const seed = 999;
