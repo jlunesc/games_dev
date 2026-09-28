@@ -110,6 +110,8 @@ describe('creating a fight without a study', () => {
       events: [],
       rng: 5,
       seed: 5,
+      shots: [],
+      shotHits: [],
     });
   });
 });

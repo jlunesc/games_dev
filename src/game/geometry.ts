@@ -1,6 +1,6 @@
 import type { ArenaDef, BossDef } from '../bosses/schema';
-import { PLAYER, WORLD } from './params';
-import type { BossState, PlayerState } from './state';
+import { PLAYER, SHOT, WORLD } from './params';
+import type { BossState, PlayerState, ShotState } from './state';
 
 /** Top-left corner plus size, in world units (y grows downward). */
 export interface Box {
@@ -78,6 +78,20 @@ export function activeHitBoxes(b: BossState, boss: BossDef, options: { ignoreCov
     if (covers.length === 0 || w > 0) boxes.push({ x, y: WORLD.floorY - hit.top, w, h: hit.top - hit.bottom });
   }
   return boxes;
+}
+
+/** The box of a shot that can hurt right now: a bolt's square, or an arc's landing burst; null for an arc still in the air. */
+export function shotBox(shot: ShotState): Box | null {
+  if (shot.kind === 'bolt') {
+    return { x: shot.x - shot.size / 2, y: WORLD.floorY - shot.lift - shot.size, w: shot.size, h: shot.size };
+  }
+  if (shot.age < shot.flight) return null;
+  return {
+    x: shot.toX - shot.radius,
+    y: WORLD.floorY - SHOT.arcBurstHeight,
+    w: shot.radius * 2,
+    h: SHOT.arcBurstHeight,
+  };
 }
 
 /** A top surface the player can stand on: `y` is the world y of its top (WORLD.floorY - height). */

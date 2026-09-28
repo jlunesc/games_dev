@@ -68,6 +68,41 @@ export interface BossState {
   cycleIndex: number;
 }
 
+interface ShotBase {
+  /** The attack that fired the shot, and the update on which that attack began (one attack occurrence). */
+  attackId: string;
+  originTick: number;
+  /** Horizontal centre. */
+  x: number;
+  /** Height of the shot's bottom edge above the floor. */
+  lift: number;
+}
+
+/** A straight bolt in flight. */
+export interface BoltState extends ShotBase {
+  kind: 'bolt';
+  dir: 1 | -1;
+  /** Where it appeared, so a cover behind the boss cannot stop it. */
+  originX: number;
+  size: number;
+  speed: number;
+}
+
+/** A lobbed arc: in flight until `age` reaches `flight`, then a landing burst for `burst` updates. */
+export interface ArcState extends ShotBase {
+  kind: 'arc';
+  age: number;
+  flight: number;
+  fromX: number;
+  toX: number;
+  launchLift: number;
+  peak: number;
+  radius: number;
+  burst: number;
+}
+
+export type ShotState = BoltState | ArcState;
+
 export type GameEvent =
   | 'bossHit'
   | 'playerHit'
@@ -107,6 +142,10 @@ export interface GameState {
   /** The seed this fight started from, kept so it can be replayed and recorded. */
   seed: number;
   study: StudyState;
+  /** Shots in flight. They outlive the attack that fired them; a phase change or the end of the fight clears them. */
+  shots: ShotState[];
+  /** The shots that hurt the player on the last update (removed at once), so the stats know which attack hurt. */
+  shotHits: { attackId: string; originTick: number }[];
 }
 
 /**
@@ -178,5 +217,7 @@ export function createInitialState(boss: BossDef, seed = 1, studyRounds = 0): Ga
     rng: study.rng,
     seed: start,
     study: { active: study.queue.length > 0, queue: study.queue, endTick: 0 },
+    shots: [],
+    shotHits: [],
   };
 }

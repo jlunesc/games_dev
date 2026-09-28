@@ -2,6 +2,7 @@ import type { AttackDef, BossDef, LeapDef, PhaseDef } from '../bosses/schema';
 import { DT } from '../engine/time';
 import { WORLD } from './params';
 import { nextRandom } from './rng';
+import { spawnShots } from './shots';
 import type { BossState, GameState } from './state';
 
 export function attackById(boss: BossDef, id: string): AttackDef {
@@ -131,6 +132,8 @@ function updateGap(s: GameState, boss: BossDef, phase: PhaseDef): void {
     // During the study the attacks come from the planned queue: no random draws, no chains.
     let id: string | null;
     if (s.study.active) {
+      // Everything has been shown but its shots are still in the air: the study is not over yet.
+      if (s.study.queue.length === 0 && s.shots.length > 0) return;
       id = s.study.queue.shift() ?? null;
       // Nothing left to show (cannot happen): end the study and let the fight go on as a normal one.
       if (id === null) endStudy(s);
@@ -177,7 +180,8 @@ function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   // Defensive: a leap that did not reach its `to` before the attack ended must not leave the boss floating.
   landBoss(b);
   if (s.study.active) {
-    if (s.study.queue.length === 0) endStudy(s);
+    // The last demonstration's shots may still be flying: the study lasts until they are gone (see updateGap).
+    if (s.study.queue.length === 0 && s.shots.length === 0) endStudy(s);
     enterGap(b);
     return;
   }
@@ -212,6 +216,7 @@ function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
     moveBoss(b, boss, direction, move.speed);
   }
   if (attack.leap !== undefined) updateLeap(s, boss, attack.leap);
+  spawnShots(s, boss, attack);
   if (b.attackTick >= attackLength(attack)) finishAttack(s, boss, phase);
 }
 
@@ -277,6 +282,7 @@ export function beginTransition(s: GameState): void {
   b.attackTick = 0;
   b.pendingAttackId = null;
   b.chainLeft = 0;
+  s.shots = [];
   s.events.push('phaseChange');
 }
 

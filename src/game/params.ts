@@ -38,3 +38,6 @@ export const FEEDBACK = {
   bossFlashTicks: 6,
   playerFlashTicks: 12,
 };
+
+/** Shots: how tall an arc's landing burst is (from the floor up), world units. */
+export const SHOT = { arcBurstHeight: 90 };

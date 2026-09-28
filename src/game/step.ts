@@ -11,9 +11,11 @@ import {
   isInvulnerable,
   overlaps,
   playerBox,
+  shotBox,
 } from './geometry';
 import { GAME, PLAYER, WORLD } from './params';
 import { nextRandom } from './rng';
+import { moveShots } from './shots';
 import {
   createInitialState,
   type GameEvent,
@@ -212,10 +214,35 @@ function resolveBossHits(s: GameState, boss: BossDef, studying: boolean): void {
   hurtPlayer(s, attack?.damage ?? 1);
 }
 
+/**
+ * Shots that reach a player who is not untouchable hurt them once, for the largest damage among the shots that
+ * landed, and are used up. A dash lets them pass. In the study they reach the player and hurt nobody.
+ */
+function resolveShotHits(s: GameState, boss: BossDef, studying: boolean): void {
+  const p = s.player;
+  if (isInvulnerable(p) || s.shots.length === 0) return;
+  const box = playerBox(p);
+  const hit = s.shots.filter((shot) => {
+    const area = shotBox(shot);
+    return area !== null && overlaps(area, box);
+  });
+  if (hit.length === 0) return;
+  s.shots = s.shots.filter((shot) => !hit.includes(shot));
+  s.shotHits = hit.map((shot) => ({ attackId: shot.attackId, originTick: shot.originTick }));
+  if (studying) {
+    p.invulnerableTicks = PLAYER.hitInvulnerability;
+    s.events.push('studyHit');
+    return;
+  }
+  const damage = Math.max(...hit.map((shot) => boss.attacks.find((a) => a.id === shot.attackId)?.damage ?? 1));
+  hurtPlayer(s, damage);
+}
+
 /** Advances the game by one update. Pure: returns a new state and never touches the one it is given. */
 export function step(prev: GameState, input: InputFrame, boss: BossDef): GameState {
   const s = structuredClone(prev);
   s.events = [];
+  s.shotHits = [];
   s.tick += 1;
 
   if (s.phase !== 'fight') {
@@ -232,11 +259,17 @@ export function step(prev: GameState, input: InputFrame, boss: BossDef): GameSta
   // still counts as study (nothing hurts anyone on it), and the real fight starts on the next one.
   const studying = s.study.active;
   updatePlayer(s.player, input, s.events, boss.arena);
+  // Shots already in the air move first: a shot fired on this update appears at the boss and first moves on the next.
+  moveShots(s, boss);
   updateBoss(s, boss);
   tryCounter(s, boss, studying);
   resolvePlayerAttack(s, boss, studying);
   if (s.phase === 'fight') resolveBossHits(s, boss, studying);
-  // The fight is over: a boss that was mid-leap must not hang in the air for the whole end countdown.
-  if (s.phase !== 'fight') landBoss(s.boss);
+  if (s.phase === 'fight') resolveShotHits(s, boss, studying);
+  // The fight is over: a boss that was mid-leap must not hang in the air for the whole end countdown, and no shot lingers.
+  if (s.phase !== 'fight') {
+    landBoss(s.boss);
+    s.shots = [];
+  }
   return s;
 }
