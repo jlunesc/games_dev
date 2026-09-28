@@ -1,0 +1,67 @@
+{
+  "id": "cinder-golem",
+  "name": "Cinder Golem",
+  "width": 110,
+  "height": 170,
+  "startX": 960,
+  "maxHp": 28,
+  "spacing": { "min": 150, "max": 260 },
+  "approachTimeout": 45,
+  "predictability": 0.2,
+  "counter": { "window": 12, "range": 200, "staggerTicks": 90, "damageMultiplier": 2 },
+  "transitionTicks": 60,
+  "attacks": [
+    {
+      "id": "crag-slam",
+      "name": "Crag Slam",
+      "pose": "raised",
+      "class": "mustDodge",
+      "damage": 2,
+      "windup": 42,
+      "active": 8,
+      "recovery": 38,
+      "range": { "min": 100, "max": 160 },
+      "hits": [{ "from": 42, "to": 50, "x0": 0, "x1": 170, "bottom": 0, "top": 190 }]
+    },
+    {
+      "id": "ground-charge",
+      "name": "Ground Charge",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 40,
+      "active": 12,
+      "recovery": 34,
+      "range": { "min": 180, "max": 250 },
+      "move": { "from": 40, "to": 50, "speed": 950 },
+      "hits": [{ "from": 40, "to": 50, "x0": 0, "x1": 100, "bottom": 0, "top": 140 }]
+    },
+    {
+      "id": "fault-slam",
+      "name": "Fault Slam",
+      "pose": "down",
+      "class": "counterable",
+      "damage": 2,
+      "windup": 40,
+      "active": 8,
+      "recovery": 36,
+      "range": { "min": 100, "max": 160 },
+      "hits": [{ "from": 40, "to": 48, "x0": 0, "x1": 170, "bottom": 0, "top": 180 }]
+    }
+  ],
+  "phases": [
+    {
+      "name": "Only phase",
+      "startsAtHpFraction": 1,
+      "attacks": [
+        { "id": "crag-slam", "weight": 3 },
+        { "id": "ground-charge", "weight": 2 },
+        { "id": "fault-slam", "weight": 2 }
+      ],
+      "gap": 60,
+      "maxChain": 1,
+      "chainChance": 0,
+      "walkSpeed": 220,
+      "retreatSpeed": 200
+    }
+  ]
+}
