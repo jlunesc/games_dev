@@ -134,6 +134,24 @@ export const LOOK = {
   /** The blade's steel when nothing glows. */
   bossBladeSteel: '#e6e9f2',
 
+  // ---- Shots (bolts and arcs): drawn only, the real sizes come from the boss file ----
+  shot: {
+    /** The glowing core and the halo round a bolt or a flying arc, and the arc's landing mark and burst. */
+    core: '#fff1c9',
+    halo: '#b48cff',
+    mark: '#e0403a',
+    burst: '#ff6a5a',
+    /** Halo size as a multiple of the shot's size, and how much of a bolt's length the trail spans (in its own sizes). */
+    haloScale: 1.7,
+    trailLength: 2.6,
+    trailAlpha: 0.35,
+    /** Radius of a flying arc's orb, world units. */
+    arcOrbRadius: 16,
+    /** Alpha of the landing mark while the arc flies (it pulses up to this) and of the burst. */
+    markAlpha: 0.75,
+    burstAlpha: 0.7,
+  },
+
   // ---- Floor, platforms and cover (copied from the old render.ts colours) ----
   floor: '#2a2a3a',
   floorLine: '#8a8aa0',

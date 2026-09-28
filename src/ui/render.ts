@@ -1,7 +1,7 @@
 import type { BossDef } from '../bosses/schema';
-import { activeHitBoxes, attackActive, attackBox } from '../game/geometry';
+import { activeHitBoxes, attackActive, attackBox, shotBox } from '../game/geometry';
 import { PLAYER, WORLD } from '../game/params';
-import type { BossState, GameState } from '../game/state';
+import type { ArcState, BossState, GameState } from '../game/state';
 import { shakeOffset, type FeedbackState } from './feedback';
 import { drawBackground, type BackgroundCache } from './look/background';
 import type { EffectsState } from './look/effects';
@@ -74,6 +74,12 @@ export function landingRing(b: BossState, boss: BossDef): LandingRing | null {
     facing: b.facing,
     harmless: false,
   };
+}
+
+/** The floor span an arc will burst over, from its launch until the burst ends; null once it is gone. */
+export function arcFloorMark(shot: ArcState): { left: number; right: number } | null {
+  if (shot.age >= shot.flight + shot.burst) return null;
+  return { left: shot.toX - shot.radius, right: shot.toX + shot.radius };
 }
 
 /**
@@ -195,6 +201,58 @@ export const FLOOR_TILE_XS: number[] = (() => {
   for (let x = 0; x <= WORLD.width; x += LOOK.floorTileSpacing) xs.push(x);
   return xs;
 })();
+
+/** Bolts as glowing cores with a trail, arcs as an orb in the air over a red floor mark, and the burst when they land. */
+function drawShots(ctx: CanvasRenderingContext2D, state: GameState): void {
+  const look = LOOK.shot;
+  const pulse = 0.6 + 0.4 * Math.sin(state.tick / 4);
+  ctx.save();
+  for (const shot of state.shots) {
+    if (shot.kind === 'arc') {
+      const mark = arcFloorMark(shot);
+      if (mark !== null) {
+        ctx.fillStyle = look.mark;
+        ctx.globalAlpha = shot.age < shot.flight ? look.markAlpha * pulse : look.markAlpha;
+        ctx.fillRect(mark.left, WORLD.floorY - 6, mark.right - mark.left, 6);
+      }
+      const area = shotBox(shot);
+      if (area !== null) {
+        ctx.fillStyle = look.burst;
+        ctx.globalAlpha = look.burstAlpha;
+        ctx.fillRect(area.x, area.y, area.w, area.h);
+      } else {
+        const cy = WORLD.floorY - shot.lift - look.arcOrbRadius;
+        ctx.fillStyle = look.halo;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.arc(shot.x, cy, look.arcOrbRadius * look.haloScale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = look.core;
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.arc(shot.x, cy, look.arcOrbRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      continue;
+    }
+    const half = shot.size / 2;
+    const cy = WORLD.floorY - shot.lift - half;
+    const trail = shot.size * look.trailLength;
+    ctx.fillStyle = look.halo;
+    ctx.globalAlpha = look.trailAlpha;
+    ctx.fillRect(shot.dir === 1 ? shot.x - trail : shot.x, cy - half * 0.5, trail, half);
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(shot.x, cy, half * look.haloScale, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = look.core;
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(shot.x, cy, half, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
 
 function drawBoss(
   ctx: CanvasRenderingContext2D,
@@ -435,6 +493,7 @@ export function drawFrame(
 
   drawArena(ctx, boss, mood);
   drawBoss(ctx, state, boss, feedback, mood);
+  drawShots(ctx, state);
   drawPlayer(ctx, state, alpha, feedback, mood);
   if (look !== undefined) drawEffects(ctx, look.effects);
   drawHud(ctx, state, boss);
