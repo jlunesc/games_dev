@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, EMBER_DUELIST } from '../src/bosses';
+import { ASHEN_HOUND, BOSS_CHOICES, EMBER_DUELIST } from '../src/bosses';
 import { PRESETS } from '../src/game/difficulty';
 import {
   MENU_ITEMS,
@@ -92,30 +92,29 @@ describe('choosing in the menu', () => {
     expect(m.prefs.dials).toEqual(selectPreset(DEFAULT_PREFS, 'hard').dials);
   });
 
-  it('left and right cycle the bosses, Duelist then Hound then Generated then Duelist, and wrap', () => {
+  it('left and right cycle every boss choice in order (Duelist, Hound, ..., Generated) and wrap', () => {
     let m = at('boss');
     expect(m.prefs.bossId).toBe(EMBER_DUELIST.id);
-    m = press(m, 'right');
-    expect(m.prefs.bossId).toBe(ASHEN_HOUND.id);
-    m = press(m, 'right');
-    expect(m.prefs.bossId).toBe('generated');
+    for (let i = 1; i < BOSS_CHOICES.length; i++) {
+      m = press(m, 'right');
+      expect(m.prefs.bossId).toBe(BOSS_CHOICES[i]!.id);
+    }
     m = press(m, 'right');
     expect(m.prefs.bossId).toBe(EMBER_DUELIST.id);
     m = press(m, 'left');
-    expect(m.prefs.bossId).toBe('generated');
+    expect(m.prefs.bossId).toBe(BOSS_CHOICES[BOSS_CHOICES.length - 1]!.id);
     m = press(m, 'left');
-    expect(m.prefs.bossId).toBe(ASHEN_HOUND.id);
-    m = press(m, 'left');
-    expect(m.prefs.bossId).toBe(EMBER_DUELIST.id);
+    expect(m.prefs.bossId).toBe(BOSS_CHOICES[BOSS_CHOICES.length - 2]!.id);
   });
 
   it('the Boss row shows the name of each boss as it is chosen, Generated included', () => {
     const valueOf = (m: MenuModel) => menuRows(m).find((r) => r.id === 'boss')!.value;
-    const m = at('boss');
+    let m = at('boss');
+    for (const choice of BOSS_CHOICES) {
+      expect(valueOf(m)).toBe(choice.name);
+      m = press(m, 'right');
+    }
     expect(valueOf(m)).toBe(EMBER_DUELIST.name);
-    expect(valueOf(press(m, 'right'))).toBe(ASHEN_HOUND.name);
-    expect(valueOf(press(m, 'right', 'right'))).toBe('Generated');
-    expect(valueOf(press(m, 'right', 'right', 'right'))).toBe(EMBER_DUELIST.name);
   });
 
   it('confirm on the Boss row does nothing (only left and right choose)', () => {
