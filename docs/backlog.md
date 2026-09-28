@@ -47,7 +47,7 @@ Ideas that are **not built**, only listed:
 Order of the next steps (owner, 2026-09-21): the study phase (M5b, built), the arena (M5c, built), the visual pass (M5d, built), the generator (M5e, built). All four now await the owner's play test.
 
 ## Nicer visuals within the geometric style (raised 2026-09-21, built as M5d)
-**Built in M5d** (awaiting the owner's look on the phone; `docs/SPEC.md` section 11, checklist and tweak guide in `docs/phone-testing.md`): a layered background with a mood per boss, impact effects and particles, animated figures for the player, the Ember Duelist and the Ashen Hound (and a generic one for any other boss), and the Effects switch in Settings. All numbers are in `src/ui/look/tuning.ts`.
+**Built in M5d** (awaiting the owner's look on the phone; `docs/SPEC.md` section 11, checklist and tweak guide in `docs/phone-testing.md`): a layered background with a mood per boss, impact effects and particles, animated figures for the player, the Ember Duelist and the Ashen Hound (and a generic one for any other boss; every hand-made boss has since got its own, see slice D below), and the Effects switch in Settings. All numbers are in `src/ui/look/tuning.ts`.
 
 Look ideas that are **not built**, only listed:
 - **Clearer attack warnings**: a stronger, earlier or more distinct sign that an attack is coming (a ring pulse or a flash when a warning starts, a brighter ground marker, a sound cue), so the pose and glow are not the only telegraph. Not chosen by the owner for M5d. Related: the Hound has no arm, so its body shows the attack pose (jaw open for the bite, rearing for the rush and the slip, crouch for the pounce); if these are hard to read, stronger versions or a separate sign would help.
@@ -95,7 +95,7 @@ Slice A (`docs/superpowers/specs/2026-09-28-projectiles-design.md`) built straig
 The next slices, each its own design conversation (they came out of the owner's wish for different attacks, movements and shapes):
 - **Slice B: flying and hovering.** A boss that leaves the floor for more than a leap, so the player has to deal with attacks from above.
 - **Slice C** (ground hazards) is built, see the next section.
-- **Slice D: new figures for the five existing bosses.** Look-only (`src/ui/look/figures.ts`), one boss at a time. Done: the Cinder Golem (a walking furnace, 2026-09-29). Still on the generic block figure: Quill Warden, Veil Dancer, Gale Reaver and Brass Sentinel.
+- **Slice D: new figures for the five existing bosses (done 2026-09-29, awaiting the owner's look on the phone).** Look-only (`src/ui/look/figures.ts`, colours in `tuning.ts`, body colours in `moods.ts`). The Cinder Golem is a walking furnace, the Quill Warden a heron-like lancer with a quill crest that fans open in the warning, the Veil Dancer a masked dancer in a gown whose veils flare, the Gale Reaver a forward-leaning runner in a torn cloak with a curved blade, and the Brass Sentinel an armoured knight with a tower shield and a mace. The owner left the looks to the assistant, so every look is a first guess. Only the generic block figure remains, for a boss without a figure of its own (generated bosses).
 
 ## Slice C left out: more ground hazards (raised 2026-09-29)
 Slice C (`docs/superpowers/specs/2026-09-29-eruptions-design.md`) built marked floor eruptions and the Tremor Brute. Left out on purpose:

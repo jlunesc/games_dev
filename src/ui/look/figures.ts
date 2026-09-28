@@ -295,6 +295,45 @@ function gait(bp: BossPose, phase: number, swing: number): { dx: number; lift: n
   return { dx: swing * Math.sin(phase), lift: STEP_LIFT * Math.max(0, Math.cos(phase)) };
 }
 
+const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
+
+/** How far the warning has come: 0 at rest, up to 1 at the end of the wind-up and through the active part. */
+const chargeOf = (bp: BossPose): number =>
+  bp.posing ? (bp.attackTick < bp.windup ? bp.attackTick / Math.max(1, bp.windup) : 1) : 0;
+
+/** A straight bar between two points given in forward coordinates, `half` wide on each side of the line. */
+function bar(bp: BossPose, dx0: number, y0: number, dx1: number, y1: number, half: number, color: string): Primitive {
+  const len = Math.hypot(dx1 - dx0, y1 - y0) || 1;
+  const nx = (-(y1 - y0) / len) * half;
+  const ny = ((dx1 - dx0) / len) * half;
+  return forwardPoly(
+    bp,
+    [
+      [dx0 + nx, y0 + ny],
+      [dx1 + nx, y1 + ny],
+      [dx1 - nx, y1 - ny],
+      [dx0 - nx, y0 - ny],
+    ],
+    color,
+  );
+}
+
+/** A curved blade from `from` to `to` (forward coordinates), bowed out by `bow` on the upper side. */
+function curvedBlade(bp: BossPose, from: [number, number], to: [number, number], bow: number, color: string): Primitive {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = dy / len;
+  const ny = -dx / len;
+  const points: [number, number][] = [];
+  for (let i = 0; i <= 6; i++) {
+    const s = i / 6;
+    const off = bow * 4 * s * (1 - s);
+    points.push([from[0] + dx * s + nx * off, from[1] + dy * s + ny * off]);
+  }
+  return forwardPoly(bp, points, color);
+}
+
 /** The Ember Duelist: a biped with a head, a torso, two legs and a blade in its weapon arm. */
 function duelistFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
   const { w, h, top, feet, headR, rise, lean } = bp;
@@ -769,6 +808,375 @@ function cinderGolemFigure(bp: BossPose, colors: { body: string; accent: string;
   return out;
 }
 
+/**
+ * The Quill Warden: a tall, thin, heron-like figure on long legs, with a mantle of quills on its back, a beak, a crest
+ * of quills that fans wider during the wind-up (the cue) and a long quill-lance. The lance shows the attack: upright
+ * at rest, level for the poke, low for the piercer, raised for the overextended thrust.
+ */
+function quillWardenFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
+  const { w, h, top, feet, headR, rise, lean } = bp;
+  const out: Primitive[] = [];
+  const charge = chargeOf(bp);
+  const amount = bp.posing ? bp.poseAmount : 0;
+  const legTop = feet - 0.38 * h;
+  const shoulderY = top + 0.27 * h - rise;
+  const phase = (TAU * bp.t) / LOOK.legCycleTicks;
+
+  for (const i of [0, 1]) {
+    const hipDx = (i === 0 ? -0.08 : 0.1) * w;
+    const g = gait(bp, phase + i * Math.PI, LOOK.bossLegSwing * 0.6);
+    const footDx = hipDx + g.dx;
+    const footY = bp.airborne ? feet - 0.08 * h : feet - g.lift;
+    out.push(bar(bp, hipDx, legTop, footDx, footY - 2, 3.5, LOOK.quillDark));
+    out.push(forwardRect(bp, footDx - 3, footDx + 11, footY - 3, 3, LOOK.quillDark));
+  }
+
+  // The mantle: four quills hanging off the back.
+  for (let k = 0; k < 4; k++) {
+    const baseY = shoulderY + k * 0.085 * h;
+    const baseDx = -0.12 * w + lean * 0.4;
+    const tipDx = -0.5 * w + k * 3 + 2 * Math.sin(bp.t / 9 + k);
+    out.push(forwardPoly(bp, [[baseDx, baseY], [baseDx, baseY + 0.075 * h], [tipDx, baseY + (0.1 + 0.01 * k) * h]], LOOK.quillDark));
+  }
+
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.18 * w, legTop + 6],
+        [0.2 * w, legTop + 6],
+        [0.22 * w + lean, shoulderY],
+        [-0.14 * w + lean * 0.4, shoulderY - 2],
+      ],
+      colors.body,
+    ),
+  );
+
+  // Neck, head, beak, eye and the crest that opens with the charge.
+  const headDx = 0.12 * w + lean * 1.2;
+  const headY = top + headR * 1.1 - rise;
+  out.push(bar(bp, headDx - 2, headY, 0.06 * w + lean * 0.6, shoulderY + 2, 4, colors.body));
+  for (let k = 0; k < 4; k++) {
+    const theta = (((14 + 20 * k) * (1 + 0.6 * charge)) * Math.PI) / 180;
+    const len = 14 + 4 * charge + (k === 1 || k === 2 ? 4 : 0);
+    out.push(
+      bar(
+        bp,
+        headDx - 2,
+        headY - headR * 0.4,
+        headDx - 2 - Math.sin(theta) * len,
+        headY - headR * 0.4 - Math.cos(theta) * len,
+        2,
+        colors.accent,
+      ),
+    );
+  }
+  out.push({ kind: 'circle', x: bp.cx + bp.f * headDx, y: headY, r: headR * 0.8, color: colors.body });
+  out.push(forwardPoly(bp, [[headDx + headR * 0.5, headY - 4], [headDx + headR * 0.5 + 20, headY + 3], [headDx + headR * 0.5, headY + 6]], LOOK.quillDark));
+  out.push({ kind: 'circle', x: bp.cx + bp.f * (headDx + headR * 0.25), y: headY - 2, r: 2.5, color: colors.glow ?? colors.accent });
+
+  // The lance, held at the grip; its tip shows the attack.
+  const grip: [number, number] = [0.16 * w + lean * 0.6, shoulderY + 0.14 * h];
+  const rest: [number, number] = [0.24 * w + lean * 0.4, top - 6 - rise];
+  let target = rest;
+  if (bp.attackPose === 'sideways') target = [0.5 * w + 14, grip[1] - 4];
+  else if (bp.attackPose === 'down') target = [0.5 * w + 6, feet - 6];
+  else if (bp.attackPose === 'raised') target = [0.5 * w + 12, top - 16 - rise];
+  else if (bp.attackPose === 'back') target = [-0.35 * w, top + 0.2 * h - rise];
+  const tip: [number, number] = [mix(rest[0], target[0], amount), mix(rest[1], target[1], amount)];
+  const along = Math.hypot(tip[0] - grip[0], tip[1] - grip[1]) || 1;
+  const ux = (tip[0] - grip[0]) / along;
+  const uy = (tip[1] - grip[1]) / along;
+  const tail: [number, number] = [grip[0] - 0.45 * (tip[0] - grip[0]), grip[1] - 0.45 * (tip[1] - grip[1])];
+  out.push(bar(bp, 0.08 * w + lean * 0.6, shoulderY + 4, grip[0], grip[1], 4, colors.body));
+  out.push(bar(bp, tail[0], tail[1], tip[0] - ux * 14, tip[1] - uy * 14, 2.2, LOOK.quillDark));
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [tip[0] - ux * 14 - uy * 4.5, tip[1] - uy * 14 + ux * 4.5],
+        tip,
+        [tip[0] - ux * 14 + uy * 4.5, tip[1] - uy * 14 - ux * 4.5],
+      ],
+      colors.accent,
+    ),
+  );
+  return out;
+}
+
+/**
+ * The Veil Dancer: a slim figure in a tapered gown with a pale mask and two small horns. Veils stream from its
+ * shoulders and flare wide as an attack winds up (the cue), most when it pulls back to dash. A slim needle in one
+ * hand shows the attack: down at the side at rest, out in front for the piercing veil, flung back for the dashes,
+ * low for the slip.
+ */
+function veilDancerFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
+  const { w, h, top, feet, headR, rise, lean } = bp;
+  const out: Primitive[] = [];
+  const charge = chargeOf(bp);
+  const amount = bp.posing ? bp.poseAmount : 0;
+  const waistY = top + 0.5 * h - rise;
+  const shoulderY = top + 0.24 * h - rise;
+  const flare = bp.posing ? bp.poseAmount : bp.walking ? 0.55 : 0.25;
+  const phase = (TAU * bp.t) / LOOK.legCycleTicks;
+
+  // Veils streaming back from the shoulders, behind everything.
+  for (let k = 0; k < 3; k++) {
+    const sx = -0.06 * w + lean * 0.5;
+    const sy = shoulderY + k * 0.05 * h;
+    const len = 0.22 * w + 0.36 * w * flare - k * 3;
+    const tipY = sy + (0.06 + 0.04 * k) * h + 4 * Math.sin(bp.t / 7 + k * 1.7);
+    out.push(forwardPoly(bp, [[sx, sy], [sx, sy + 0.05 * h], [sx - len, tipY]], k % 2 === 0 ? colors.accent : colors.body));
+  }
+
+  // Gown, sash, and the slippers peeking under the hem.
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.34 * w, feet],
+        [0.3 * w, feet],
+        [0.1 * w + lean * 0.5, waistY],
+        [-0.1 * w + lean * 0.3, waistY],
+      ],
+      colors.body,
+    ),
+  );
+  for (const i of [0, 1]) {
+    const g = gait(bp, phase + i * Math.PI, LOOK.bossLegSwing * 0.5);
+    const dx = (i === 0 ? -0.14 : 0.14) * w + g.dx;
+    out.push(forwardRect(bp, dx - 5, dx + 7, feet - g.lift - 4, 4, LOOK.veilDark));
+  }
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.1 * w + lean * 0.3, waistY],
+        [0.1 * w + lean * 0.5, waistY],
+        [0.1 * w + lean * 0.55, waistY - 5],
+        [-0.1 * w + lean * 0.35, waistY - 5],
+      ],
+      colors.accent,
+    ),
+  );
+  // Bodice.
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.1 * w + lean * 0.3, waistY - 5],
+        [0.1 * w + lean * 0.55, waistY - 5],
+        [0.14 * w + lean, shoulderY],
+        [-0.1 * w + lean * 0.6, shoulderY],
+      ],
+      colors.body,
+    ),
+  );
+
+  // Head: a pale mask with a glowing slit and two horns.
+  const headDx = 0.06 * w + lean * 1.2;
+  const headY = top + headR - rise;
+  out.push(forwardPoly(bp, [[headDx - 3, headY - headR * 0.6], [headDx - 15, top - 10 - rise], [headDx + 2, headY - headR * 0.9]], colors.body));
+  out.push(forwardPoly(bp, [[headDx + 4, headY - headR * 0.8], [headDx + 12, top - 8 - rise], [headDx + 8, headY - headR * 0.4]], colors.body));
+  out.push({ kind: 'circle', x: bp.cx + bp.f * headDx, y: headY, r: headR * 0.85, color: LOOK.veilMask });
+  out.push(forwardRect(bp, headDx + headR * 0.05, headDx + headR * 0.7, headY - 2, 2 + 3 * charge, colors.glow ?? colors.accent));
+
+  // The arm and the needle.
+  const shoulder: [number, number] = [0.08 * w + lean * 0.6, shoulderY + 0.04 * h];
+  const restHand: [number, number] = [0.16 * w + lean * 0.5, shoulderY + 0.2 * h];
+  let hand = restHand;
+  let reach: [number, number] = [0, 24];
+  if (bp.attackPose === 'sideways') {
+    hand = [0.26 * w + lean * 0.5, shoulderY + 0.05 * h];
+    reach = [28, 0];
+  } else if (bp.attackPose === 'back') {
+    hand = [-0.2 * w, shoulderY - 0.02 * h];
+    reach = [-26, -6];
+  } else if (bp.attackPose === 'crouch') {
+    hand = [0.24 * w + lean * 0.5, shoulderY + 0.22 * h];
+    reach = [26, 10];
+  }
+  const h1: [number, number] = [mix(restHand[0], hand[0], amount), mix(restHand[1], hand[1], amount)];
+  const r1: [number, number] = [mix(0, reach[0], amount), mix(24, reach[1], amount)];
+  out.push(bar(bp, shoulder[0], shoulder[1], h1[0], h1[1], 3.5, colors.body));
+  out.push(bar(bp, h1[0], h1[1], h1[0] + r1[0], h1[1] + r1[1], 1.6, LOOK.veilMask));
+  return out;
+}
+
+/**
+ * The Gale Reaver: a lean runner that always tips forward, in a torn cloak that streams behind it and streams
+ * harder as an attack winds up (the cue), with a hood and a curved reaping blade. The blade shows the attack: low
+ * in front at rest, level for the wind-slash, thrust up for the jab, dragged behind for the rush.
+ */
+function galeReaverFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
+  const { w, h, top, feet, headR, rise } = bp;
+  const lean = bp.lean + 8;
+  const out: Primitive[] = [];
+  const charge = chargeOf(bp);
+  const amount = bp.posing ? bp.poseAmount : 0;
+  const hipY = feet - 0.36 * h;
+  const shoulderY = top + 0.3 * h - rise;
+  const phase = (TAU * bp.t) / LOOK.legCycleTicks;
+  const flow = bp.walking ? 1 : bp.posing ? bp.poseAmount : 0.35;
+
+  // Torn cloak streamers, behind everything.
+  for (let k = 0; k < 4; k++) {
+    const sx = -0.08 * w + lean * 0.6;
+    const sy = shoulderY + k * 0.07 * h;
+    const len = (0.28 * w + 0.3 * w * flow) * (1 - k * 0.08);
+    const tipY = sy + 0.05 * h + k * 3 + 3 * Math.sin(bp.t / 5 + k * 1.3);
+    out.push(forwardPoly(bp, [[sx, sy], [sx + 2, sy + 0.07 * h], [sx - len, tipY]], k === 1 ? colors.accent : LOOK.galeCloak));
+  }
+
+  // Legs: a thigh and a shin each, bent at the knee.
+  for (const i of [0, 1]) {
+    const hipDx = (i === 0 ? -0.08 : 0.08) * w + lean * 0.3;
+    const g = gait(bp, phase + i * Math.PI, LOOK.bossLegSwing * 1.3);
+    const footDx = hipDx + g.dx * 0.8 - 2;
+    const footY = bp.airborne ? feet - 0.08 * h : feet - g.lift;
+    const kneeDx = (hipDx + footDx) / 2 + 7;
+    const kneeY = (hipY + footY) / 2;
+    out.push(bar(bp, hipDx, hipY, kneeDx, kneeY, 4, LOOK.galeDark));
+    out.push(bar(bp, kneeDx, kneeY, footDx, footY - 2, 3.5, LOOK.galeDark));
+    out.push(forwardRect(bp, footDx - 3, footDx + 9, footY - 3, 3, LOOK.galeDark));
+  }
+
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.16 * w + lean * 0.2, hipY + 4],
+        [0.14 * w + lean * 0.3, hipY + 4],
+        [0.2 * w + lean, shoulderY],
+        [-0.1 * w + lean * 0.7, shoulderY - 4],
+      ],
+      colors.body,
+    ),
+  );
+
+  // Hood and face.
+  const headDx = 0.16 * w + lean * 1.1;
+  const headY = top + headR * 1.1 - rise;
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [headDx + headR * 0.2, headY - headR],
+        [headDx - headR * 2, headY + headR * 0.3],
+        [headDx - headR * 0.6, headY + headR],
+        [headDx + headR * 0.6, headY + headR * 0.9],
+      ],
+      LOOK.galeDark,
+    ),
+  );
+  out.push(forwardRect(bp, headDx + headR * 0.1, headDx + headR * 0.7, headY - 1, 2 + 3 * charge, colors.glow ?? colors.accent));
+
+  // The arm and the blade.
+  const grip: [number, number] = [0.06 * w + lean * 0.5, shoulderY + 0.1 * h];
+  const restTip: [number, number] = [grip[0] + 30, grip[1] + 26];
+  let target = restTip;
+  if (bp.attackPose === 'sideways') target = [0.76 * w, grip[1] - 2];
+  else if (bp.attackPose === 'raised') target = [grip[0] + 16, top - 14 - rise];
+  else if (bp.attackPose === 'back') target = [-0.74 * w, grip[1] - 16];
+  const tip: [number, number] = [mix(restTip[0], target[0], amount), mix(restTip[1], target[1], amount)];
+  out.push(bar(bp, -0.1 * w + lean * 0.6, shoulderY + 2, 0.14 * w + lean * 0.3, hipY, 3, LOOK.galeDark));
+  out.push(bar(bp, 0.02 * w + lean * 0.7, shoulderY + 4, grip[0], grip[1], 3.5, colors.body));
+  out.push(curvedBlade(bp, grip, tip, 10, colors.glow ?? LOOK.bossBladeSteel));
+  return out;
+}
+
+/**
+ * The Brass Sentinel: an armoured knight of brass plates, with a crested helm whose visor slit glows wider during the
+ * wind-up (the cue), big round shoulders, a tower shield held in front and a mace in the rear hand. The mace shows the
+ * attack: on the shoulder at rest, raised over the head, slammed down, swept out level, or dragged back while the
+ * shield drives forward for the bash.
+ */
+function brassSentinelFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
+  const { w, h, top, feet, rise, lean } = bp;
+  const out: Primitive[] = [];
+  const charge = chargeOf(bp);
+  const amount = bp.posing ? bp.poseAmount : 0;
+  const legTop = feet - 0.28 * h;
+  const torsoTop = top + 0.24 * h - rise;
+  const phase = (TAU * bp.t) / LOOK.legCycleTicks;
+
+  for (const i of [0, 1]) {
+    const hipDx = (i === 0 ? -0.2 : 0.16) * w;
+    const g = gait(bp, phase + i * Math.PI, LOOK.bossLegSwing * 0.55);
+    const footDx = hipDx + g.dx;
+    const footY = bp.airborne ? feet - 0.06 * h : feet - g.lift;
+    const half = 0.12 * w;
+    out.push(
+      forwardPoly(
+        bp,
+        [
+          [hipDx - half, legTop],
+          [hipDx + half, legTop],
+          [footDx + half + 3, footY],
+          [footDx - half, footY],
+        ],
+        LOOK.sentinelSteel,
+      ),
+    );
+  }
+
+  // Torso with a belt and a chest plate line.
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.42 * w, legTop + 2],
+        [0.4 * w, legTop + 2],
+        [0.36 * w + lean, torsoTop],
+        [-0.36 * w + lean * 0.4, torsoTop],
+      ],
+      colors.body,
+    ),
+  );
+  out.push(forwardRect(bp, -0.4 * w, 0.38 * w, legTop - 8, 8, LOOK.sentinelSteel));
+  out.push(forwardRect(bp, -0.3 * w + lean * 0.3, 0.32 * w + lean * 0.8, torsoTop + 0.12 * h, 3, LOOK.sentinelSteel));
+
+  // Shoulders.
+  for (const dx of [-0.26 * w + lean * 0.4, 0.26 * w + lean * 0.9]) {
+    out.push({ kind: 'circle', x: bp.cx + bp.f * dx, y: torsoTop + 0.02 * h, r: 0.13 * w + 2, color: LOOK.sentinelSteel });
+    out.push({ kind: 'circle', x: bp.cx + bp.f * dx, y: torsoTop + 0.02 * h, r: 0.13 * w, color: colors.body });
+  }
+
+  // Helm with a crest and a visor slit.
+  const helmL = 0.02 * w + lean * 1.1;
+  const helmR = helmL + 0.34 * w;
+  const helmTop = top + 0.04 * h - rise;
+  const helmH = torsoTop + 2 - helmTop;
+  out.push(forwardRect(bp, helmL, helmR, helmTop, helmH, colors.body));
+  out.push(forwardRect(bp, helmL + 0.06 * w, helmR - 0.06 * w, top - 6 - rise, 12, colors.accent));
+  out.push(forwardRect(bp, helmL + 0.08 * w, helmR, helmTop + 0.3 * helmH, 2.5 + 5 * charge, colors.glow ?? colors.accent));
+
+  // The tower shield, in front; it drives forward for the bash.
+  const shieldX0 = 0.2 * w + lean * 0.7 + (bp.attackPose === 'back' ? 0.06 * w * amount : 0);
+  const shieldX1 = shieldX0 + 0.26 * w;
+  const shieldY0 = torsoTop - 0.02 * h;
+  const shieldY1 = feet - 0.16 * h;
+  out.push(forwardRect(bp, shieldX0, shieldX1, shieldY0, shieldY1 - shieldY0, colors.accent));
+  out.push(forwardRect(bp, shieldX0 + 3, shieldX1 - 3, shieldY0 + 3, shieldY1 - shieldY0 - 6, LOOK.sentinelSteel));
+  out.push({ kind: 'circle', x: bp.cx + bp.f * ((shieldX0 + shieldX1) / 2), y: (shieldY0 + shieldY1) / 2, r: 0.07 * w, color: colors.accent });
+  // The mace, on the rear arm: drawn over the shield so a sweep or a slam stays in view.
+  const restP: [number, number] = [-0.3 * w, top + 0.12 * h - rise];
+  let target = restP;
+  if (bp.attackPose === 'raised') target = [0.05 * w + lean * 0.5, top - 6 - rise];
+  else if (bp.attackPose === 'down') target = [0.5 * w, feet - 10];
+  else if (bp.attackPose === 'sideways') target = [0.56 * w, torsoTop + 0.16 * h];
+  else if (bp.attackPose === 'back') target = [-0.5 * w, torsoTop + 0.08 * h];
+  const head: [number, number] = [mix(restP[0], target[0], amount), mix(restP[1], target[1], amount)];
+  const shoulder: [number, number] = [-0.12 * w + lean * 0.5, torsoTop + 0.06 * h];
+  const hand: [number, number] = [-0.04 * w + lean * 0.6, torsoTop + 0.16 * h];
+  const headR = 0.11 * w;
+  out.push(bar(bp, shoulder[0], shoulder[1], hand[0], hand[1], 5, colors.body));
+  out.push(bar(bp, hand[0], hand[1], head[0], head[1], 2.5, LOOK.sentinelSteel));
+  out.push({ kind: 'circle', x: bp.cx + bp.f * head[0], y: head[1], r: headR, color: colors.accent });
+  out.push({ kind: 'circle', x: bp.cx + bp.f * head[0], y: head[1], r: headR * 0.5, color: LOOK.sentinelSteel });
+  return out;
+}
+
 /** Any other boss: a body block as wide and tall as its box, a head, an eye, and the weapon arm. Sized from `width` and `height`. */
 function genericFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
   const { w, top, feet, headR, rise, lean } = bp;
@@ -784,8 +1192,8 @@ function genericFigure(bp: BossPose, colors: { body: string; accent: string; glo
 }
 
 /**
- * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster, `tremor-brute` a hunched bruiser, `cinder-golem` a walking furnace,
- * anything else a generic block); the animation from the tick, the boss mode, the running attack's pose, the facing and
+ * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster, `tremor-brute` a hunched bruiser, `cinder-golem` a walking furnace, `quill-warden` a heron-like lancer, `veil-dancer` a masked dancer in a veil,
+ * `gale-reaver` a forward-leaning wind-runner, `brass-sentinel` an armoured knight, anything else a generic block); the animation from the tick, the boss mode, the running attack's pose, the facing and
  * the lift. It fits inside the box `bossDrawBox` reports (crouch shortening and lift included), widened for the head,
  * tail, snout, arm and blade, so what the player sees is what can hurt them.
  */
@@ -806,6 +1214,14 @@ export function bossFigure(
       return tremorBruteFigure(bp, colors);
     case 'cinder-golem':
       return cinderGolemFigure(bp, colors);
+    case 'quill-warden':
+      return quillWardenFigure(bp, colors);
+    case 'veil-dancer':
+      return veilDancerFigure(bp, colors);
+    case 'gale-reaver':
+      return galeReaverFigure(bp, colors);
+    case 'brass-sentinel':
+      return brassSentinelFigure(bp, colors);
     default:
       return genericFigure(bp, colors);
   }

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, CINDER_GOLEM, TREMOR_BRUTE, VESPER_SAGE } from '../src/bosses';
+import {
+  ASHEN_HOUND,
+  BRASS_SENTINEL,
+  CINDER_GOLEM,
+  GALE_REAVER,
+  QUILL_WARDEN,
+  TREMOR_BRUTE,
+  VEIL_DANCER,
+  VESPER_SAGE,
+} from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { PLAYER, WORLD } from '../src/game/params';
 import { createInitialState, type BossMode, type GameState } from '../src/game/state';
@@ -804,5 +813,50 @@ describe('bossFigure: the Cinder Golem', () => {
       CINDER_GOLEM.attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), CINDER_GOLEM, BOSS_COLORS))),
     );
     expect(shapes.size).toBe(CINDER_GOLEM.attacks.length);
+  });
+});
+
+describe.each([
+  ['Quill Warden', QUILL_WARDEN],
+  ['Veil Dancer', VEIL_DANCER],
+  ['Gale Reaver', GALE_REAVER],
+  ['Brass Sentinel', BRASS_SENTINEL],
+])('bossFigure: the %s', (_name, boss) => {
+  const bounds = (s: GameState): Bounds => {
+    const box = bossDrawBox(s.boss, boss);
+    return {
+      left: s.boss.x - boss.width / 2 - FIGURE_MARGIN,
+      right: s.boss.x + boss.width / 2 + FIGURE_MARGIN,
+      top: box.top - FIGURE_MARGIN,
+      bottom: box.top + box.height,
+    };
+  };
+
+  it('has a figure of its own, not the generic block', () => {
+    const s = withBoss(base(boss), { mode: 'gap', facing: 1, x: 700 });
+    const generic = bossFigure(s, { ...boss, id: 'some-other-boss' }, BOSS_COLORS);
+    expect(bossFigure(s, boss, BOSS_COLORS)).not.toEqual(generic);
+  });
+
+  it('fits its drawn box plus a margin, in every state', () => {
+    for (const s of bossStates(boss)) {
+      expectInside(bossFigure(s, boss, BOSS_COLORS), bounds(s));
+    }
+  });
+
+  it('mirrors when the facing flips', () => {
+    for (const s of bossStates(boss)) {
+      if (s.boss.facing !== 1) continue;
+      const left = withBoss(s, { facing: -1 });
+      expectSame(bossFigure(left, boss, BOSS_COLORS), mirrored(bossFigure(s, boss, BOSS_COLORS), s.boss.x));
+    }
+  });
+
+  it('shows a different shape for each attack', () => {
+    const early = withBoss(base(boss), { mode: 'attack', attackId: boss.attacks[0]!.id, attackTick: 0, facing: 1, x: 700 });
+    const shapes = new Set(
+      boss.attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), boss, BOSS_COLORS))),
+    );
+    expect(shapes.size).toBe(boss.attacks.length);
   });
 });

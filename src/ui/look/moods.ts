@@ -89,7 +89,7 @@ export const MOODS: Record<string, Mood> = {
     floorLine: '#4fae82',
     floorGlow: '#6fe0a8',
     accent: '#8fe8bc',
-    bodyColor: LOOK.bossBodyEmber,
+    bodyColor: LOOK.bossBodyQuill,
   },
   'cinder-golem': {
     id: 'cinder-golem',
@@ -119,7 +119,7 @@ export const MOODS: Record<string, Mood> = {
     floorLine: '#8858b0',
     floorGlow: '#b070e0',
     accent: '#d0a0f4',
-    bodyColor: LOOK.bossBodyEmber,
+    bodyColor: LOOK.bossBodyVeil,
   },
   'gale-reaver': {
     id: 'gale-reaver',
@@ -134,7 +134,7 @@ export const MOODS: Record<string, Mood> = {
     floorLine: '#3ea8b4',
     floorGlow: '#5fd8e4',
     accent: '#8ff0f8',
-    bodyColor: LOOK.bossBodyAsh,
+    bodyColor: LOOK.bossBodyGale,
   },
   'brass-sentinel': {
     id: 'brass-sentinel',
@@ -149,7 +149,7 @@ export const MOODS: Record<string, Mood> = {
     floorLine: '#b09040',
     floorGlow: '#e0c050',
     accent: '#f0d878',
-    bodyColor: LOOK.bossBodyEmber,
+    bodyColor: LOOK.bossBodyBrass,
   },
   'vesper-sage': {
     id: 'vesper-sage',

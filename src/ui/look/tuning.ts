@@ -132,6 +132,20 @@ export const LOOK = {
   golemSmoke: '#9a9088',
   /** The darker iron of the Cinder Golem's legs and arms, so they read against its body. */
   golemIron: '#3c4658',
+  /** The Quill Warden: pale bone for the body, dark olive for its legs, mantle, beak and lance shaft. */
+  bossBodyQuill: '#cfc8a4',
+  quillDark: '#4e5a3c',
+  /** The Veil Dancer: rose gown, pale mask and needle, dark plum slippers. */
+  bossBodyVeil: '#b8507e',
+  veilMask: '#efe6f4',
+  veilDark: '#4a2a5a',
+  /** The Gale Reaver: sea-green body, a darker cloak, and dark legs and hood. */
+  bossBodyGale: '#4a9a94',
+  galeCloak: '#2f7276',
+  galeDark: '#1f4a4e',
+  /** The Brass Sentinel: brass plates and dark steel fittings. */
+  bossBodyBrass: '#b8923a',
+  sentinelSteel: '#5a5f6e',
   /** The hide of the Tremor Brute. */
   bossBodyBrute: '#7a5040',
   /** The body while staggered (every boss), the glows: powering up, counterable attack, must-dodge attack. */
