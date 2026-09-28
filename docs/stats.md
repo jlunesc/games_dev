@@ -30,7 +30,7 @@ A single JSON document (written without indentation), named `boss-trainer-YYYY-M
 | Field | Type | Meaning |
 |---|---|---|
 | `format` | string | Always `"boss-trainer-stats"`. |
-| `schemaVersion` | number | Version of this format (see section 9). Currently 3. |
+| `schemaVersion` | number | Version of this format (see section 9). Currently 4. |
 | `exportedAt` | string | ISO 8601 date-time (UTC) when the file was built. |
 | `gameVersion` | string | `GAME_VERSION` of the game that built the file (see section 9). Each fight also carries its own. |
 | `fights` | array | Every saved fight, oldest first (by `playedAt`, then `id`). Each is a fight record (section 5). |
@@ -41,7 +41,7 @@ One entry of `fights`. Every field is always present in a record written by the 
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schemaVersion` | number | The format version this record was written with (3 for records written by the current game; 1 and 2 for older ones, see section 9). |
+| `schemaVersion` | number | The format version this record was written with (4 for records written by the current game; 1, 2 and 3 for older ones, see section 9). |
 | `gameVersion` | string | The game version it was played on. A replay is only valid with the same version (section 8). |
 | `id` | string | `<playedAt>#<seed in hexadecimal>`. Unique key of the record. |
 | `playedAt` | string | ISO 8601 date-time (UTC) when the fight began. |
@@ -122,6 +122,7 @@ One boss attack, from the moment its warning began. Entries are in the order the
 | `marginTicks`, `marginMs` | number or null | See below. |
 | `damageTaken` | number | Health this attack actually took from the player; 0 when it did not hit. Always 0 for a demonstration in the study. |
 | `playerActionWhenHit` | string or null | What the player was doing when hit; `null` when not hit. Also set for a demonstration that reached the player. |
+| `shotsFired` | number | How many shots (bolts and arcs) the attack fires; 0 for an attack without shots. See 7.4. |
 | `study` | boolean | `true` for a demonstration in the study, `false` for an attack of the real fight. Decided on the update the attack's warning began: an attack that began in the study is a demonstration for its whole length, even if it ends on the update the study ends. |
 
 **Player action** (`playerActionAtStart`, `playerActionWhenHit`) is one of, checked in this order: `"dashing"` (in a dash), `"attacking"` (in a swing), `"airborne"` (off the ground), `"running"` (on the ground with a direction held), `"idle"`. It is read from the state after that update and the input given to it.
@@ -181,6 +182,15 @@ Some attacks move the boss (a dash, a leap, or a move that only repositions). Th
 - An attack with no hit windows (a reposition-only attack such as the Hound's slip) has no danger window: the analyzer falls back to the whole active part (from `windupTicks` to `windupTicks` plus `active`). Such an attack always scores `"dodged"` with evasion `"distance"` (it cannot hurt, and nothing can dash through it), unless it was cut short, when it is `"interrupted"`.
 - Compare reaction times per attack id, never across kinds of attack.
 
+**Attacks with shots.** A bolt or an arc can still be flying after its attack has ended, so an attack with shots (`shotsFired` above 0) is resolved only when its last shot is gone:
+
+- A shot that reaches the player is a hit **for the attack that fired it**, even if the boss has already started another attack. If any of its shots lands, the attack is `"hit"` with the damage taken.
+- The attack is `"dodged"` only when every shot has been fired and has gone (left the arena, been stopped by cover, or burst) without hurting the player.
+- If the fight ends, a phase changes or the run stops while a shot is still flying, the attack is `"interrupted"`. A phase change and the end of the fight remove every shot.
+- The danger window (`firstDangerTick` and the end of danger) covers the shots: a bolt from the update it fires, an arc from the update it lands until its burst ends.
+- Evasion for shots: `"dash"` if the player was dashing through a shot, `"jump"` if they were in the air where a shot would have hit them standing on the floor, `"platform"` if they were on a raised surface for the same reason, otherwise `"distance"`. A bolt stopped by cover is also `"distance"` (the analysis does not report `"cover"` for shots).
+- Occurrences are listed in the order their warnings began, not the order they were resolved.
+
 ### 7.5 The study phase
 
 With the menu's Study row on Once or Twice, a fight begins with a study (schema version 2). The boss demonstrates every attack of its **first phase**, once per round, each round in its own random order, using its normal warning, speed and pause. Nothing can hurt the player and the boss cannot be hurt; counters do nothing. The real fight begins on the update after the study ends, with everything else unchanged (the boss at full health, in its normal waiting pause). When the study ends, any leftover hit invulnerability the player got from a `studyHit` in the last demonstration is cleared, so the real fight starts clean (`endStudy` in `src/game/boss.ts`). The attacks shown are the ones the boss has in its first phase **after the dials are applied**, so a low Variety dial removes attacks from the study too. Because of that, the number of demonstrations per round is not fixed, and `study.rounds` is passed in from the record rather than inferred.
@@ -218,7 +228,7 @@ After `ticks` steps the state is the one the fight ended in (or the state the st
 - `schemaVersion` (`STATS_SCHEMA_VERSION` in `src/stats/record.ts`) is bumped **whenever the shape changes**: a field added, removed, renamed or given a new meaning, in the export, the record or `analysis`. Bump it and update this document and the tests in the same commit.
 - `gameVersion` (`GAME_VERSION` in `src/stats/record.ts`, a string such as `"0.4.0"`) is bumped **when a change to the game numbers or to a boss file changes how a recorded fight replays**. Old records keep their old `gameVersion`, so it is clear which ones cannot be replayed by the current game.
 - Adding a new measurement to the analyzer changes the shape, so it also bumps `schemaVersion`.
-- **Version 1** was the format of M3b and M5a. **Version 2** (M5b, the study phase) added the record's `study`, the analysis's `study` object, `fightSeconds` and `behavior.studyUpdatesClose/Mid/Far`, and the `study` flag on each attack occurrence. Version-1 records and files remain valid: `study` missing means 0, and replaying or re-analysing one with `record.study ?? 0` gives the same fight as before (with the new fields filled in as for a fight without a study: `study.rounds` 0, `study.ticks` 0, `fightSeconds` equal to `seconds`, every `study` flag false, the study distance bands all 0). An analysis stored inside an old record was computed then and is not rewritten, so it has no `study` block and no `fightSeconds`. **Version 3** (M5c, the arena) added the evasion values `"platform"` and `"cover"` (a change of meaning: an attack that used to be `"distance"` or `"jump"` can now be one of them, see 7.2) and `behavior.updatesOnPlatform`. Version-1 and version-2 records and files remain valid and readable: the record itself has the same fields as in version 2, and an analysis stored inside an old record was computed then and is not rewritten (it has no `updatesOnPlatform`). The schema version is 3 in the export document and in every record the current game writes.
+- **Version 1** was the format of M3b and M5a. **Version 2** (M5b, the study phase) added the record's `study`, the analysis's `study` object, `fightSeconds` and `behavior.studyUpdatesClose/Mid/Far`, and the `study` flag on each attack occurrence. Version-1 records and files remain valid: `study` missing means 0, and replaying or re-analysing one with `record.study ?? 0` gives the same fight as before (with the new fields filled in as for a fight without a study: `study.rounds` 0, `study.ticks` 0, `fightSeconds` equal to `seconds`, every `study` flag false, the study distance bands all 0). An analysis stored inside an old record was computed then and is not rewritten, so it has no `study` block and no `fightSeconds`. **Version 3** (M5c, the arena) added the evasion values `"platform"` and `"cover"` (a change of meaning: an attack that used to be `"distance"` or `"jump"` can now be one of them, see 7.2) and `behavior.updatesOnPlatform`. Version-1 and version-2 records and files remain valid and readable: the record itself has the same fields as in version 2, and an analysis stored inside an old record was computed then and is not rewritten (it has no `updatesOnPlatform`). **Version 4** (projectiles) added `shotsFired` to each attack occurrence and changed the meaning of `outcome` for attacks with shots (resolved when the last shot is gone, see 7.4). No boss before the Vesper Sage has shots, so an older record or analysis reads exactly as before (an older analysis has no `shotsFired`, which means 0). The schema version is 4 in the export document and in every record the current game writes.
 - **Game version 0.4.0** goes with schema 3. Giving the Ashen Hound an arena (ledges to stand on, cover that cuts its hit windows) changes how Hound fights play out, so **Hound records made by 0.3.0 (or earlier) no longer replay exactly** with the current game. Their stored `analysis` was computed at the time and stays valid as data, but replaying or re-analysing them now gives a different fight. **Ember Duelist records still replay exactly** (it has no arena, and `tests/duelist-golden.test.ts` is unchanged). So for an old Hound file, trust its stored `analysis`, not a fresh replay (section 8 says a replay is only valid with the same game version).
 - **The boss generator (M5e, still game version 0.4.0, no bump for it).** `bossId: "generated"` has no file, so its replay stability is a different promise from a named boss's: a `"generated"` record's replay is only guaranteed to match while the generator's algorithm and its tuning (`src/bosses/generate/`) are unchanged, in addition to `GAME_VERSION` itself. A future change to the generator (a tuning number, or the algorithm) will need a `GAME_VERSION` bump exactly like a change to a named boss file would, so old `"generated"` records stay identifiable as no-longer-exact. A version-1, version-2 or version-3 record with a real boss id (`"ember-duelist"` or `"ashen-hound"`) is unaffected by anything about the generator.
 - **Game version 0.5.0: generated arenas (M6a).** Drawing an arena is one more random choice the generator makes, so it reorders the whole random stream: a `"generated"` record made by game version 0.4.0 no longer reproduces the same boss (arena included) from its seed. As with the 0.4.0 bump, only `"generated"` records are affected; the Ember Duelist and Ashen Hound are unchanged.
@@ -252,6 +262,7 @@ A sweep at Normal, in the real fight (so `study` is `false`). The warning began 
   "marginMs": 200,
   "damageTaken": 0,
   "playerActionWhenHit": null,
+  "shotsFired": 0,
   "study": false
 }
 ```
@@ -277,6 +288,7 @@ A sweep in the study of a fight played with Study set to Once. It began on tick 
   "marginMs": null,
   "damageTaken": 0,
   "playerActionWhenHit": "idle",
+  "shotsFired": 0,
   "study": true
 }
 ```

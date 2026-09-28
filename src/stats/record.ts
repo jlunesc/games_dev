@@ -13,7 +13,7 @@ import { step } from '../game/step';
 import type { FightResult } from '../game/summary';
 import { decodeInputs, pushFrame, type InputRun } from './input-log';
 
-export const STATS_SCHEMA_VERSION = 3;
+export const STATS_SCHEMA_VERSION = 4;
 
 /**
  * Bump when a change to the game numbers or a boss file changes how a recorded fight replays.

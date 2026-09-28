@@ -3,7 +3,7 @@ import type { BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { TICK_RATE } from '../engine/time';
 import { applyDials } from '../game/difficulty';
-import { activeHitBoxes, overlaps, playerBox } from '../game/geometry';
+import { activeHitBoxes, overlaps, playerBox, shotBox } from '../game/geometry';
 import { PLAYER, WORLD } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState, type PlayerState } from '../game/state';
@@ -55,6 +55,8 @@ export interface AttackOccurrence {
   playerActionWhenHit: PlayerAction | null;
   /** True for a demonstration in the study (decided when the attack started); it hurts nobody. */
   study: boolean;
+  /** How many shots (bolts and arcs) the attack fires; 0 for an attack without shots. Such an attack is resolved only once its last shot is gone. */
+  shotsFired: number;
 }
 
 export interface PunishWindows {
@@ -155,8 +157,15 @@ interface OpenAttack {
   actionWhenHit: PlayerAction | null;
   /** The attack began while the study was on. */
   study: boolean;
-  /** Attack time on the last update seen while the attack was open. */
+  /** Attack time on the last update seen while the attack (or its shots) was watched. */
   lastT: number;
+  shotsFired: number;
+  /** The attack time of its last shot's firing update. */
+  lastShotAt: number;
+  /** Every shot has been fired and is gone. */
+  shotsDone: boolean;
+  /** A phase change or the end of the fight removed the shots that were left. */
+  shotsCleared: boolean;
   windowOpen: boolean;
   windowTaken: boolean;
 }
@@ -164,7 +173,7 @@ interface OpenAttack {
 function occurrence(open: OpenAttack): AttackOccurrence {
   // Hits resolve for attack time in [from, to), so the last dangerous update is `dangerTo - 1`. An attack that
   // lived to that update without hurting or being countered was dodged; one cut short before it is interrupted.
-  const resolved = open.lastT >= open.dangerTo - 1;
+  const resolved = open.lastT >= open.dangerTo - 1 && (open.shotsFired === 0 || open.shotsDone);
   const outcome: AttackOutcome = open.countered
     ? 'countered'
     : open.hit
@@ -206,6 +215,7 @@ function occurrence(open: OpenAttack): AttackOccurrence {
     damageTaken: open.damage,
     playerActionWhenHit: open.actionWhenHit,
     study: open.study,
+    shotsFired: open.shotsFired,
   };
 }
 
@@ -243,6 +253,8 @@ export function analyzeRun(
   let platformUpdates = 0;
   let maxPhase = state.boss.phase;
   let open: OpenAttack | null = null;
+  /** Attacks that are over but whose shots are still flying; each is emitted once its last shot is gone. */
+  let lingering: OpenAttack[] = [];
 
   // `cutShort`: the run ended while the attack was still going. A punish window that was cut short and never
   // saw a hit is not counted: the player did not get the chance to use it.
@@ -253,7 +265,47 @@ export function analyzeRun(
       if (attack.windowTaken) punish.taken += 1;
       else punish.missed += 1;
     }
-    attacks.push(occurrence(attack));
+    if (attack.shotsFired > 0 && !attack.shotsDone && !attack.shotsCleared && !cutShort) lingering.push(attack);
+    else attacks.push(occurrence(attack));
+  };
+
+  const dodgeBegan = (before: GameState, after: GameState): boolean =>
+    after.events.includes('dash') || (before.player.onGround && !after.player.onGround && after.player.vy < 0);
+
+  /**
+   * Feeds what the attack's shots did on this update: a dodge, how the player got past a shot (dash, jump,
+   * standing above it), a hit by one of its shots, and whether they are all gone. Runs for the open attack and
+   * for the ones still waiting on their shots.
+   */
+  const observeShots = (attack: OpenAttack, before: GameState, after: GameState, frame: InputFrame): void => {
+    if (attack.shotsFired === 0) return;
+    const { events, tick } = after;
+    const t = tick - attack.startTick;
+    attack.lastT = t;
+    if (dodgeBegan(before, after) && attack.dodgeStart === null && t <= attack.dangerTo) attack.dodgeStart = tick;
+    const mine = after.shots.filter((x) => x.attackId === attack.attackId && x.originTick === attack.startTick);
+    const real = playerBox(after.player);
+    const grounded = playerBox({ ...after.player, y: WORLD.floorY });
+    for (const shot of mine) {
+      const box = shotBox(shot);
+      if (box === null) continue;
+      const touches = overlaps(box, real);
+      if (touches && after.player.dashTick >= 0) attack.dashedInDanger = true;
+      else if (!touches && overlaps(box, grounded) && after.player.dashTick < 0) {
+        if (!after.player.onGround) attack.airborneInDanger = true;
+        else if (onRaisedSurface(after.player)) attack.platformInDanger = true;
+      }
+    }
+    if (after.shotHits.some((h) => h.attackId === attack.attackId && h.originTick === attack.startTick)) {
+      attack.hit = true;
+      attack.damage += before.player.health - after.player.health;
+      attack.actionWhenHit = actionOf(after.player, frame);
+    }
+    if (events.includes('phaseChange') || events.includes('bossDefeated') || events.includes('playerDefeated')) {
+      attack.shotsCleared = true;
+    } else if (t >= attack.lastShotAt && mine.length === 0) {
+      attack.shotsDone = true;
+    }
   };
 
   /** Feeds what happened on this update to an attack being watched. */
@@ -266,9 +318,7 @@ export function analyzeRun(
     const { events, tick } = after;
     const t = tick - attack.startTick;
     attack.lastT = t;
-    const dodgeStarted =
-      events.includes('dash') ||
-      (before.player.onGround && !after.player.onGround && after.player.vy < 0);
+    const dodgeStarted = dodgeBegan(before, after);
     if (dodgeStarted && attack.dodgeStart === null && t <= attack.dangerTo) attack.dodgeStart = tick;
 
     // What saved the player is judged against the boxes that were really dangerous on this update (`boxes`, cut
@@ -299,7 +349,8 @@ export function analyzeRun(
       if (!cutReal && !cutFloor && (rawReal || rawFloor)) attack.coveredInDanger = true;
     }
     // A demonstration that reaches the player counts as a hit for this attack (it just takes no health).
-    if (events.includes('playerHit') || events.includes('studyHit')) {
+    // A hit by a shot belongs to the attack that fired it (see `observeShots`), whichever attack is open now.
+    if ((events.includes('playerHit') || events.includes('studyHit')) && after.shotHits.length === 0) {
       attack.hit = true;
       attack.damage += before.player.health - after.player.health;
       attack.actionWhenHit = actionOf(after.player, frame);
@@ -314,6 +365,7 @@ export function analyzeRun(
       attack.windowOpen = true;
     }
     if (attack.windowOpen && events.includes('bossHit')) attack.windowTaken = true;
+    observeShots(attack, before, after, frame);
   };
 
   for (const frame of frames) {
@@ -358,6 +410,12 @@ export function analyzeRun(
     if (onRaisedSurface(after.player)) platformUpdates += 1;
     if (tick % POSITION_EVERY === 0) positions.push(Math.round(after.player.x));
 
+    for (const waiting of lingering) observeShots(waiting, before, after, frame);
+    const settled = lingering.filter((x) => x.shotsDone || x.shotsCleared);
+    if (settled.length > 0) {
+      for (const x of settled) attacks.push(occurrence(x));
+      lingering = lingering.filter((x) => !settled.includes(x));
+    }
     if (open !== null) observe(open, before, after, frame);
 
     const started = events.includes('bossWindupGold') || events.includes('bossWindupRed');
@@ -369,8 +427,13 @@ export function analyzeRun(
     const id = after.boss.attackId ?? before.boss.pendingAttackId;
     const def = started ? boss.attacks.find((a) => a.id === id) : undefined;
     if (def !== undefined) {
-      const froms = def.hits.map((h) => h.from);
-      const tos = def.hits.map((h) => h.to);
+      // A bolt is dangerous from the update it fires; an arc from the update it lands until its burst ends.
+      const shots = def.shots ?? [];
+      const froms = [...def.hits.map((h) => h.from), ...shots.map((x) => (x.kind === 'arc' ? x.at + x.flight : x.at))];
+      const tos = [
+        ...def.hits.map((h) => h.to),
+        ...shots.map((x) => (x.kind === 'arc' ? x.at + x.flight + x.burst : x.at + 1)),
+      ];
       open = {
         attackId: def.id,
         phase: after.boss.phase + 1,
@@ -392,6 +455,10 @@ export function analyzeRun(
         actionWhenHit: null,
         study: after.study.active,
         lastT: 0,
+        shotsFired: shots.length,
+        lastShotAt: shots.length > 0 ? Math.max(...shots.map((x) => x.at)) : 0,
+        shotsDone: false,
+        shotsCleared: false,
         windowOpen: false,
         windowTaken: false,
       };
@@ -404,6 +471,9 @@ export function analyzeRun(
     }
   }
   if (open !== null) finish(open, true);
+  // Shots still flying when the run ended: their attacks are not resolved.
+  for (const waiting of lingering) attacks.push(occurrence(waiting));
+  attacks.sort((a, b) => a.startTick - b.startTick);
 
   const studyTicks = state.study.active ? studyUpdates : state.study.endTick;
   return {
