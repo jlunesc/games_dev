@@ -1,6 +1,7 @@
 import ashenHoundRaw from './ashen-hound.json';
 import cinderGolemRaw from './cinder-golem.json';
 import raw from './ember-duelist.json';
+import galeReaverRaw from './gale-reaver.json';
 import { parseBoss } from './parse';
 import quillWardenRaw from './quill-warden.json';
 import type { BossDef } from './schema';
@@ -22,6 +23,9 @@ export const CINDER_GOLEM = parseBoss(cinderGolemRaw);
 /** The Veil Dancer: a trickster that fakes and repositions more than it damages. Checked at load like the Duelist. */
 export const VEIL_DANCER = parseBoss(veilDancerRaw);
 
+/** The Gale Reaver: a fast rushdown boss that closes distance and chains attacks. Checked at load like the Duelist. */
+export const GALE_REAVER = parseBoss(galeReaverRaw);
+
 /**
  * The Trainee: a plain, generous, hand-built boss (two `mustDodge` attacks, no leap, no counter,
  * no arena). Checked at load like the Duelist and the Hound. Not part of `BOSSES` and not offered
@@ -31,7 +35,14 @@ export const VEIL_DANCER = parseBoss(veilDancerRaw);
 export const TRAINEE = parseBoss(rawTrainee);
 
 /** Every boss the menu offers, in menu order. */
-export const BOSSES: readonly BossDef[] = [EMBER_DUELIST, ASHEN_HOUND, QUILL_WARDEN, CINDER_GOLEM, VEIL_DANCER];
+export const BOSSES: readonly BossDef[] = [
+  EMBER_DUELIST,
+  ASHEN_HOUND,
+  QUILL_WARDEN,
+  CINDER_GOLEM,
+  VEIL_DANCER,
+  GALE_REAVER,
+];
 
 /** The boss with this id; an unknown id (for example from old stored choices) falls back to the first boss. */
 export function bossById(id: string): BossDef {
