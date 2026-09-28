@@ -1,4 +1,5 @@
 import ashenHoundRaw from './ashen-hound.json';
+import brassSentinelRaw from './brass-sentinel.json';
 import cinderGolemRaw from './cinder-golem.json';
 import raw from './ember-duelist.json';
 import galeReaverRaw from './gale-reaver.json';
@@ -26,6 +27,9 @@ export const VEIL_DANCER = parseBoss(veilDancerRaw);
 /** The Gale Reaver: a fast rushdown boss that closes distance and chains attacks. Checked at load like the Duelist. */
 export const GALE_REAVER = parseBoss(galeReaverRaw);
 
+/** The Brass Sentinel: mostly counterable attacks, rewarding precise counter timing over dodging. Checked at load like the Duelist. */
+export const BRASS_SENTINEL = parseBoss(brassSentinelRaw);
+
 /**
  * The Trainee: a plain, generous, hand-built boss (two `mustDodge` attacks, no leap, no counter,
  * no arena). Checked at load like the Duelist and the Hound. Not part of `BOSSES` and not offered
@@ -42,6 +46,7 @@ export const BOSSES: readonly BossDef[] = [
   CINDER_GOLEM,
   VEIL_DANCER,
   GALE_REAVER,
+  BRASS_SENTINEL,
 ];
 
 /** The boss with this id; an unknown id (for example from old stored choices) falls back to the first boss. */

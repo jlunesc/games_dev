@@ -1,0 +1,77 @@
+{
+  "id": "brass-sentinel",
+  "name": "Brass Sentinel",
+  "width": 85,
+  "height": 150,
+  "startX": 960,
+  "maxHp": 28,
+  "spacing": { "min": 160, "max": 260 },
+  "approachTimeout": 45,
+  "predictability": 0.2,
+  "counter": { "window": 14, "range": 220, "staggerTicks": 90, "damageMultiplier": 2 },
+  "transitionTicks": 60,
+  "attacks": [
+    {
+      "id": "herald-strike",
+      "name": "Herald Strike",
+      "pose": "raised",
+      "class": "counterable",
+      "windup": 32,
+      "active": 8,
+      "recovery": 26,
+      "range": { "min": 110, "max": 180 },
+      "hits": [{ "from": 32, "to": 40, "x0": 0, "x1": 190, "bottom": 0, "top": 170 }]
+    },
+    {
+      "id": "brass-slam",
+      "name": "Brass Slam",
+      "pose": "down",
+      "class": "counterable",
+      "windup": 30,
+      "active": 8,
+      "recovery": 24,
+      "range": { "min": 110, "max": 190 },
+      "hits": [{ "from": 30, "to": 38, "x0": 0, "x1": 190, "bottom": 0, "top": 150 }]
+    },
+    {
+      "id": "wide-sweep",
+      "name": "Wide Sweep",
+      "pose": "sideways",
+      "class": "mustDodge",
+      "windup": 24,
+      "active": 8,
+      "recovery": 22,
+      "range": { "min": 120, "max": 220 },
+      "hits": [{ "from": 24, "to": 32, "x0": 0, "x1": 240, "bottom": 0, "top": 100 }]
+    },
+    {
+      "id": "charging-bash",
+      "name": "Charging Bash",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 28,
+      "active": 10,
+      "recovery": 26,
+      "range": { "min": 200, "max": 320 },
+      "move": { "from": 28, "to": 38, "speed": 1400 },
+      "hits": [{ "from": 28, "to": 38, "x0": 0, "x1": 100, "bottom": 0, "top": 130 }]
+    }
+  ],
+  "phases": [
+    {
+      "name": "Only phase",
+      "startsAtHpFraction": 1,
+      "attacks": [
+        { "id": "herald-strike", "weight": 3 },
+        { "id": "brass-slam", "weight": 3 },
+        { "id": "wide-sweep", "weight": 2 },
+        { "id": "charging-bash", "weight": 2 }
+      ],
+      "gap": 50,
+      "maxChain": 1,
+      "chainChance": 0,
+      "walkSpeed": 240,
+      "retreatSpeed": 200
+    }
+  ]
+}
