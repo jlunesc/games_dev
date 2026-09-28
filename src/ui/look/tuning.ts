@@ -126,6 +126,8 @@ export const LOOK = {
   /** The body of the Ember Duelist (and of any boss without a mood of its own), and of the Ashen Hound. */
   bossBodyEmber: '#c8642a',
   bossBodyAsh: '#66788f',
+  /** The robe of the Vesper Sage. */
+  bossBodySage: '#4a3a7a',
   /** The body while staggered (every boss), the glows: powering up, counterable attack, must-dodge attack. */
   bossStaggerBody: '#7fd6ff',
   bossPowerGlow: '#ffffff',

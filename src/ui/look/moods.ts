@@ -151,6 +151,22 @@ export const MOODS: Record<string, Mood> = {
     accent: '#f0d878',
     bodyColor: LOOK.bossBodyEmber,
   },
+  'vesper-sage': {
+    id: 'vesper-sage',
+    skyTop: '#0c0a1a',
+    skyBottom: '#241a4a',
+    layers: [
+      { shape: 'spires', color: '#2a2048', speed: FAR, heightFraction: 0.55, seed: 91 },
+      { shape: 'ridge', color: '#1a1432', speed: MID, heightFraction: 0.4, seed: 92 },
+      { shape: 'pillars', color: '#120e24', speed: NEAR, heightFraction: 0.6, seed: 93 },
+    ],
+    ember: '#b48cff',
+    floor: '#1a1530',
+    floorLine: '#7a64b8',
+    floorGlow: '#9a78e8',
+    accent: '#b48cff',
+    bodyColor: LOOK.bossBodySage,
+  },
 };
 
 /** The mood for a boss id; an unknown id gets the neutral one. */

@@ -8,12 +8,13 @@ import {
   GALE_REAVER,
   QUILL_WARDEN,
   VEIL_DANCER,
+  VESPER_SAGE,
   bossById,
 } from '../src/bosses';
 
 describe('the boss list', () => {
   it('lists every shipped boss, the Duelist and the Hound first, in menu order', () => {
-    expect(BOSSES).toEqual([EMBER_DUELIST, ASHEN_HOUND, QUILL_WARDEN, CINDER_GOLEM, VEIL_DANCER, GALE_REAVER, BRASS_SENTINEL]);
+    expect(BOSSES).toEqual([EMBER_DUELIST, ASHEN_HOUND, QUILL_WARDEN, CINDER_GOLEM, VEIL_DANCER, GALE_REAVER, BRASS_SENTINEL, VESPER_SAGE]);
     expect(BOSSES.map((b) => b.id)).toEqual([
       'ember-duelist',
       'ashen-hound',
@@ -22,6 +23,7 @@ describe('the boss list', () => {
       'veil-dancer',
       'gale-reaver',
       'brass-sentinel',
+      'vesper-sage',
     ]);
   });
 

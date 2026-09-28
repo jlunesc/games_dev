@@ -8,6 +8,7 @@ import quillWardenRaw from './quill-warden.json';
 import type { BossDef } from './schema';
 import rawTrainee from './trainee.json';
 import veilDancerRaw from './veil-dancer.json';
+import vesperSageRaw from './vesper-sage.json';
 
 /** The Ember Duelist. It is checked when the game loads: a broken file fails here with a message naming the exact place. */
 export const EMBER_DUELIST = parseBoss(raw);
@@ -30,6 +31,9 @@ export const GALE_REAVER = parseBoss(galeReaverRaw);
 /** The Brass Sentinel: mostly counterable attacks, rewarding precise counter timing over dodging. Checked at load like the Duelist. */
 export const BRASS_SENTINEL = parseBoss(brassSentinelRaw);
 
+/** The Vesper Sage: a caster that keeps its distance and fires bolts and lobbed arcs. Checked at load like the Duelist. */
+export const VESPER_SAGE = parseBoss(vesperSageRaw);
+
 /**
  * The Trainee: a plain, generous, hand-built boss (two `mustDodge` attacks, no leap, no counter,
  * no arena). Checked at load like the Duelist and the Hound. Not part of `BOSSES` and not offered
@@ -47,6 +51,7 @@ export const BOSSES: readonly BossDef[] = [
   VEIL_DANCER,
   GALE_REAVER,
   BRASS_SENTINEL,
+  VESPER_SAGE,
 ];
 
 /** The boss with this id; an unknown id (for example from old stored choices) falls back to the first boss. */

@@ -538,6 +538,59 @@ function houndFigure(bp: BossPose, colors: { body: string; accent: string; glow:
   return out;
 }
 
+/**
+ * The Vesper Sage: a tall hooded figure in a triangular robe with a glowing orb held out in front. The orb grows and
+ * brightens during the wind-up (the cue for a shot) and moves with the pose: held out, raised over the head, pulled
+ * back, or lowered to the floor.
+ */
+function vesperSageFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
+  const { w, h, top, feet, headR, rise, lean } = bp;
+  const out: Primitive[] = [];
+  const shoulderY = top + 0.3 * h - rise;
+  const hoodBase = top + headR * 2.4 - rise;
+
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.5 * w, feet],
+        [0.5 * w, feet],
+        [0.2 * w + lean, shoulderY],
+        [-0.2 * w + lean, shoulderY],
+      ],
+      colors.body,
+    ),
+  );
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.24 * w + lean * 1.2, hoodBase],
+        [0.24 * w + lean * 1.2, hoodBase],
+        [0.04 * w + lean * 1.2, top - rise],
+      ],
+      colors.body,
+    ),
+  );
+  out.push(forwardRect(bp, lean * 1.2 + 0.02 * w, lean * 1.2 + 0.2 * w, hoodBase - headR * 0.7, headR * 0.3, colors.glow ?? colors.accent));
+
+  const amount = bp.posing ? bp.poseAmount : 0;
+  const reach = 0.26 * w + 8 + lean * 0.8;
+  const pull = bp.attackPose === 'back' ? -2 * amount : 0;
+  const orbDx = reach * (1 + pull);
+  let orbY = shoulderY + 12;
+  if (bp.attackPose === 'raised') orbY -= 50 * amount;
+  if (bp.attackPose === 'down') orbY += 40 * amount;
+  const winding = bp.posing && bp.attackTick < bp.windup;
+  const charge = winding ? bp.attackTick / Math.max(1, bp.windup) : bp.posing ? 1 : 0;
+  const orbR = 7 + 9 * charge;
+
+  out.push(forwardRect(bp, 0.1 * w, orbDx, orbY - 4, 8, colors.body));
+  out.push({ kind: 'circle', x: bp.cx + bp.f * orbDx, y: orbY, r: orbR * 1.15, color: colors.glow ?? colors.accent });
+  out.push({ kind: 'circle', x: bp.cx + bp.f * orbDx, y: orbY, r: orbR * 0.75, color: LOOK.shot.core });
+  return out;
+}
+
 /** Any other boss: a body block as wide and tall as its box, a head, an eye, and the weapon arm. Sized from `width` and `height`. */
 function genericFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
   const { w, top, feet, headR, rise, lean } = bp;
@@ -553,7 +606,7 @@ function genericFigure(bp: BossPose, colors: { body: string; accent: string; glo
 }
 
 /**
- * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast,
+ * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster,
  * anything else a generic block); the animation from the tick, the boss mode, the running attack's pose, the facing and
  * the lift. It fits inside the box `bossDrawBox` reports (crouch shortening and lift included), widened for the head,
  * tail, snout, arm and blade, so what the player sees is what can hurt them.
@@ -569,6 +622,8 @@ export function bossFigure(
       return duelistFigure(bp, colors);
     case 'ashen-hound':
       return houndFigure(bp, colors);
+    case 'vesper-sage':
+      return vesperSageFigure(bp, colors);
     default:
       return genericFigure(bp, colors);
   }

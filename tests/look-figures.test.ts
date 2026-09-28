@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND } from '../src/bosses';
+import { ASHEN_HOUND, VESPER_SAGE } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { PLAYER, WORLD } from '../src/game/params';
 import { createInitialState, type BossMode, type GameState } from '../src/game/state';
@@ -696,5 +696,43 @@ describe('drawPrimitives', () => {
     const { ctx, alphas } = fakeContext();
     drawPrimitives(ctx, list);
     expect(alphas).toEqual([1, 1, 1]);
+  });
+});
+
+describe('bossFigure: the Vesper Sage', () => {
+  const sageBounds = (s: GameState): Bounds => {
+    const box = bossDrawBox(s.boss, VESPER_SAGE);
+    return {
+      left: s.boss.x - VESPER_SAGE.width / 2 - FIGURE_MARGIN,
+      right: s.boss.x + VESPER_SAGE.width / 2 + FIGURE_MARGIN,
+      top: box.top - FIGURE_MARGIN,
+      bottom: box.top + box.height,
+    };
+  };
+
+  it('fits its drawn box plus a margin, in every state', () => {
+    for (const s of bossStates(VESPER_SAGE)) {
+      expectInside(bossFigure(s, VESPER_SAGE, BOSS_COLORS), sageBounds(s));
+    }
+  });
+
+  it('mirrors when the facing flips', () => {
+    for (const s of bossStates(VESPER_SAGE)) {
+      if (s.boss.facing !== 1) continue;
+      const left = withBoss(s, { facing: -1 });
+      expectSame(bossFigure(left, VESPER_SAGE, BOSS_COLORS), mirrored(bossFigure(s, VESPER_SAGE, BOSS_COLORS), s.boss.x));
+    }
+  });
+
+  it('charges the orb during the wind-up and shows a different pose for each attack', () => {
+    const orbRadius = (s: GameState): number => Math.max(...bossFigure(s, VESPER_SAGE, BOSS_COLORS).flatMap((p) => (p.kind === 'circle' ? [p.r] : [])));
+    const attack = VESPER_SAGE.attacks.find((a) => a.id === 'single-bolt')!;
+    const early = withBoss(base(VESPER_SAGE), { mode: 'attack', attackId: attack.id, attackTick: 0, facing: 1, x: 700 });
+    const late = withBoss(early, { attackTick: attack.windup - 1 });
+    expect(orbRadius(late)).toBeGreaterThan(orbRadius(early));
+    const shapes = new Set(
+      VESPER_SAGE.attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), VESPER_SAGE, BOSS_COLORS))),
+    );
+    expect(shapes.size).toBe(VESPER_SAGE.attacks.length);
   });
 });
