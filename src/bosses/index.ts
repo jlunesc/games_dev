@@ -1,6 +1,7 @@
 import ashenHoundRaw from './ashen-hound.json';
 import raw from './ember-duelist.json';
 import { parseBoss } from './parse';
+import quillWardenRaw from './quill-warden.json';
 import type { BossDef } from './schema';
 import rawTrainee from './trainee.json';
 
@@ -9,6 +10,9 @@ export const EMBER_DUELIST = parseBoss(raw);
 
 /** The Ashen Hound: a low, fast beast that dashes and leaps. Checked at load like the Duelist. */
 export const ASHEN_HOUND = parseBoss(ashenHoundRaw);
+
+/** The Quill Warden: a zoner that fights from range and punishes an unsafe approach. Checked at load like the Duelist. */
+export const QUILL_WARDEN = parseBoss(quillWardenRaw);
 
 /**
  * The Trainee: a plain, generous, hand-built boss (two `mustDodge` attacks, no leap, no counter,
@@ -19,7 +23,7 @@ export const ASHEN_HOUND = parseBoss(ashenHoundRaw);
 export const TRAINEE = parseBoss(rawTrainee);
 
 /** Every boss the menu offers, in menu order. */
-export const BOSSES: readonly BossDef[] = [EMBER_DUELIST, ASHEN_HOUND];
+export const BOSSES: readonly BossDef[] = [EMBER_DUELIST, ASHEN_HOUND, QUILL_WARDEN];
 
 /** The boss with this id; an unknown id (for example from old stored choices) falls back to the first boss. */
 export function bossById(id: string): BossDef {
