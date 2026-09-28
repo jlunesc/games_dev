@@ -1,0 +1,79 @@
+{
+  "id": "veil-dancer",
+  "name": "Veil Dancer",
+  "width": 70,
+  "height": 145,
+  "startX": 960,
+  "maxHp": 24,
+  "spacing": { "min": 140, "max": 280 },
+  "approachTimeout": 45,
+  "predictability": 0.2,
+  "counter": { "window": 12, "range": 200, "staggerTicks": 90, "damageMultiplier": 2 },
+  "transitionTicks": 60,
+  "attacks": [
+    {
+      "id": "piercing-veil",
+      "name": "Piercing Veil",
+      "pose": "sideways",
+      "class": "mustDodge",
+      "windup": 24,
+      "active": 8,
+      "recovery": 26,
+      "range": { "min": 150, "max": 280 },
+      "hits": [{ "from": 24, "to": 32, "x0": 0, "x1": 220, "bottom": 0, "top": 130 }]
+    },
+    {
+      "id": "rending-dash",
+      "name": "Rending Dash",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 26,
+      "active": 10,
+      "recovery": 30,
+      "range": { "min": 220, "max": 380 },
+      "move": { "from": 26, "to": 36, "speed": 1500 },
+      "hits": [{ "from": 26, "to": 36, "x0": 0, "x1": 110, "bottom": 0, "top": 110 }]
+    },
+    {
+      "id": "phantom-step",
+      "name": "Phantom Step",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 18,
+      "active": 10,
+      "recovery": 16,
+      "range": { "min": 40, "max": 220 },
+      "move": { "from": 18, "to": 28, "speed": 1300 },
+      "hits": []
+    },
+    {
+      "id": "veil-slip",
+      "name": "Veil Slip",
+      "pose": "crouch",
+      "class": "mustDodge",
+      "windup": 20,
+      "active": 8,
+      "recovery": 14,
+      "range": { "min": 60, "max": 300 },
+      "move": { "from": 20, "to": 28, "speed": 1200, "dir": "back" },
+      "hits": []
+    }
+  ],
+  "phases": [
+    {
+      "name": "Only phase",
+      "startsAtHpFraction": 1,
+      "attacks": [
+        { "id": "piercing-veil", "weight": 2 },
+        { "id": "rending-dash", "weight": 2 },
+        { "id": "phantom-step", "weight": 2 },
+        { "id": "veil-slip", "weight": 2 }
+      ],
+      "gap": 45,
+      "maxChain": 1,
+      "chainChance": 0,
+      "walkSpeed": 300,
+      "retreatSpeed": 260
+    }
+  ]
+}
