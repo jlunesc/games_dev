@@ -46,4 +46,11 @@ describe('the unfair banner', () => {
     expect(studyBanner(afterStudy, 419, true)).toBe("This generated boss couldn't be checked as fair. Good luck!");
     expect(studyBanner(afterStudy, 420, true)).toBeNull();
   });
+
+  it('never shows while the study itself is still running, even for an unfair boss', () => {
+    // Regression: study.endTick stays 0 until the study finishes, which used to make the unfair
+    // banner's own "no study" branch fire mid-study by mistake.
+    expect(studyBanner(active, 60, true)).toBeNull();
+    expect(studyBanner(active, 119, true)).toBeNull();
+  });
 });

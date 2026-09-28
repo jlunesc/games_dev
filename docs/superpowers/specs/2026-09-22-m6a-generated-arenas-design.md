@@ -121,10 +121,15 @@ exists to catch, before it ever gets the chance to reject a candidate.
 ## Wiring
 
 - `generateBoss(seed)` gains an `arena` field on the `BossDef` it returns, built by the rules above
-  before the boss is checked. No change to its signature or to `resolveBoss`'s three-tries-then-Trainee
-  loop — a candidate whose arena creates a camp spot simply fails fairness like any other bad
-  candidate, and generation tries again exactly as it does today.
-- Trainee (the fallback boss) stays arena-free, as today.
+  before the boss is checked. No change to its signature — a candidate whose arena creates a camp spot
+  simply fails fairness like any other bad candidate, and generation tries again exactly as it does
+  today.
+- ~~No change to `resolveBoss`'s three-tries-then-Trainee loop; Trainee (the fallback boss) stays
+  arena-free.~~ **Superseded, same day, during implementation** (a separate decision from the reach
+  guarantee above): the owner replaced the Trainee fallback with a banner instead, recorded in
+  `docs/SPEC.md`'s M6a entry and in `docs/bosses.md` under "Retry, then use the first candidate anyway,
+  with a banner." `resolveBoss` now returns `{ boss, unfair }`; Trainee stays in the codebase (still
+  exported and tested) but is no longer used by `resolveBoss` at all.
 
 ## Versioning
 

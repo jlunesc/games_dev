@@ -14,7 +14,7 @@ const UNFAIR_TEXT_TICKS = 120;
 export function studyBanner(study: StudyState, tick: number, unfair: boolean): string | null {
   if (study.active && tick < STUDY_TEXT_TICKS) return 'Study: watch what it can do. Nothing can hurt you.';
   if (study.endTick > 0 && tick - study.endTick < BEGINS_TICKS) return 'The fight begins!';
-  if (unfair) {
+  if (unfair && !study.active) {
     const sinceRealFightStart = study.endTick > 0 ? tick - study.endTick : tick;
     if (sinceRealFightStart >= 0 && sinceRealFightStart < UNFAIR_TEXT_TICKS) {
       return "This generated boss couldn't be checked as fair. Good luck!";
