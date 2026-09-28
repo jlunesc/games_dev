@@ -45,6 +45,36 @@ export interface LeapDef {
   distance?: number;
 }
 
+/**
+ * A straight bolt: appears at the boss's front at update `at` (counted like hit windows) and flies the way the
+ * boss faces. `height` is its bottom edge above the floor, `size` the side of its square, `speed` in units per second.
+ */
+export interface BoltDef {
+  kind: 'bolt';
+  at: number;
+  height: number;
+  size: number;
+  speed: number;
+}
+
+/**
+ * A lobbed arc: launched at update `at`, it lands `flight` updates later on an x fixed at launch (the same targeting
+ * as a leap), peaking `peak` units above the floor. Only its landing burst hurts: `radius` either side of the landing
+ * x, for `burst` updates. A red mark shows on the floor from launch until the burst ends.
+ */
+export interface ArcDef {
+  kind: 'arc';
+  at: number;
+  flight: number;
+  peak: number;
+  target: LeapTarget;
+  distance?: number;
+  radius: number;
+  burst: number;
+}
+
+export type ShotDef = BoltDef | ArcDef;
+
 export interface AttackDef {
   id: string;
   name: string;
@@ -59,7 +89,9 @@ export interface AttackDef {
   range: { min: number; max: number };
   move?: AttackMove;
   leap?: LeapDef;
-  /** May be empty only when the attack has a `move` or a `leap` (a reposition-only attack). */
+  /** Shots fired during the active updates; they outlive the attack. Only a `mustDodge` attack may have them. */
+  shots?: ShotDef[];
+  /** May be empty only when the attack has a `move`, a `leap` or `shots` (a reposition-only or shooting attack). */
   hits: HitWindow[];
 }
 

@@ -13,6 +13,7 @@ import {
 } from '../src/game/difficulty';
 import { nextRandom } from '../src/game/rng';
 import { DUELIST } from './helpers';
+import { arc, bolt, shooter } from './shot-helpers';
 
 const only = (over: Partial<Dials>): Dials => ({ ...NORMAL_DIALS, ...over });
 
@@ -362,5 +363,56 @@ describe('applyDials with leaps and move directions', () => {
       const adjusted = applyDials(MOVING, dials);
       for (const id of ['backHop', 'slip', 'slipBack']) expect(attackOf(adjusted, id).hits).toEqual([]);
     }
+  });
+});
+
+describe('applyDials with shots', () => {
+  const boss = shooter([
+    bolt({ at: 20, height: 0, speed: 600 }),
+    bolt({ at: 24, height: 60, speed: 700 }),
+    arc({ at: 22, flight: 40, peak: 250, radius: 60 }),
+    arc({ at: 26, target: 'forward', distance: 300 }),
+  ]);
+  const extremes = (): Dials[] => {
+    const low: Record<string, number> = {};
+    const high: Record<string, number> = {};
+    for (const dial of DIALS) {
+      low[dial.id] = dial.min;
+      high[dial.id] = dial.max;
+    }
+    return [low as unknown as Dials, high as unknown as Dials];
+  };
+
+  it('changes nothing at Normal', () => {
+    expect(applyDials(boss, NORMAL_DIALS)).toEqual(boss);
+  });
+
+  it('gives a valid boss at both ends of every dial, and never changes what a bolt or an arc looks like in the air', () => {
+    for (const dials of [...extremes(), ...DIALS.flatMap((d) => [only({ [d.id]: d.min }), only({ [d.id]: d.max })])]) {
+      const adjusted = applyDials(boss, dials).attacks[0]!;
+      const shots = adjusted.shots!;
+      expect(shots).toHaveLength(4);
+      expect((shots[0] as { height: number }).height).toBe(0);
+      expect((shots[1] as { height: number; size: number }).height).toBe(60);
+      expect((shots[2] as { flight: number; peak: number }).flight).toBe(40);
+      expect((shots[2] as { flight: number; peak: number }).peak).toBe(250);
+    }
+  });
+
+  it('readability shifts every shot with the wind-up', () => {
+    const adjusted = applyDials(boss, only({ readability: 1.5 })).attacks[0]!;
+    const shift = adjusted.windup - boss.attacks[0]!.windup;
+    expect(shift).toBeGreaterThan(0);
+    expect(adjusted.shots!.map((s) => s.at)).toEqual(boss.attacks[0]!.shots!.map((s) => s.at + shift));
+  });
+
+  it('speed scales a bolt and not an arc, range scales an arc and not a bolt', () => {
+    const fast = applyDials(boss, only({ speed: 1.2 })).attacks[0]!.shots!;
+    expect((fast[0] as { speed: number }).speed).toBeCloseTo(720);
+    expect((fast[2] as { flight: number }).flight).toBe(40);
+    const far = applyDials(boss, only({ range: 1.2 })).attacks[0]!.shots!;
+    expect((far[0] as { speed: number }).speed).toBe(600);
+    expect((far[2] as { radius: number }).radius).toBeCloseTo(72);
+    expect((far[3] as { distance: number }).distance).toBeCloseTo(360);
   });
 });

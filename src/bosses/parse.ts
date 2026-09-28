@@ -1,9 +1,11 @@
 import { PLAYER, WORLD } from '../game/params';
 import type {
   ArenaDef,
+  ArcDef,
   ArenaPiece,
   AttackDef,
   AttackMove,
+  BoltDef,
   BossDef,
   CounterDef,
   HitWindow,
@@ -11,6 +13,7 @@ import type {
   LeapTarget,
   PhaseDef,
   Pose,
+  ShotDef,
 } from './schema';
 
 /** A boss file is broken. The message names the exact place, for example `boss.attacks[1].range`. */
@@ -76,6 +79,50 @@ function hitWindow(value: unknown, path: string): HitWindow {
   if (hit.x1 <= hit.x0) fail(path, '"x1" must be greater than "x0"');
   if (hit.top <= hit.bottom) fail(path, '"top" must be greater than "bottom"');
   return hit;
+}
+
+const MAX_SHOTS = 8;
+
+/** The shots of an attack: each fires inside the active updates; an arc's flight may run on past them. */
+function shotList(value: unknown, path: string, windup: number, active: number): ShotDef[] {
+  const entries = list(value, path);
+  if (entries.length === 0 || entries.length > MAX_SHOTS) fail(path, `needs 1 to ${MAX_SHOTS} shots`);
+  return entries.map((entry, i): ShotDef => {
+    const at = `${path}[${i}]`;
+    const o = object(entry, at);
+    const kind = text(o.kind, `${at}.kind`);
+    const fires = num(o.at, `${at}.at`, { min: 0, integer: true });
+    if (fires < windup || fires >= windup + active) fail(`${at}.at`, 'must lie inside the active updates');
+    if (kind === 'bolt') {
+      const bolt: BoltDef = {
+        kind,
+        at: fires,
+        height: num(o.height, `${at}.height`, { min: 0, max: 200 }),
+        size: num(o.size, `${at}.size`, { min: 10, max: 80 }),
+        speed: num(o.speed, `${at}.speed`, { min: 100, max: 1600 }),
+      };
+      return bolt;
+    }
+    if (kind === 'arc') {
+      const target = text(o.target, `${at}.target`);
+      if (!LEAP_TARGETS.includes(target as LeapTarget)) {
+        fail(`${at}.target`, `must be one of ${LEAP_TARGETS.join(', ')}`);
+      }
+      const arc: ArcDef = {
+        kind,
+        at: fires,
+        flight: num(o.flight, `${at}.flight`, { min: 20, max: 120, integer: true }),
+        peak: num(o.peak, `${at}.peak`, { min: 60, max: 400 }),
+        target: target as LeapTarget,
+        radius: num(o.radius, `${at}.radius`, { min: 10, max: 200 }),
+        burst: num(o.burst, `${at}.burst`, { min: 3, max: 30, integer: true }),
+      };
+      if (target !== 'player') arc.distance = num(o.distance, `${at}.distance`, { min: 1 });
+      else if (o.distance !== undefined) fail(`${at}.distance`, 'is only for "forward" and "back"');
+      return arc;
+    }
+    return fail(`${at}.kind`, 'must be "bolt" or "arc"');
+  });
 }
 
 function attack(value: unknown, path: string): AttackDef {
@@ -145,8 +192,13 @@ function attack(value: unknown, path: string): AttackDef {
     }
   }
 
-  if (hits.length === 0 && move === undefined && leap === undefined) {
-    fail(`${path}.hits`, 'needs at least one hit window, a move or a leap');
+  const shots = o.shots === undefined ? undefined : shotList(o.shots, `${path}.shots`, windup, active);
+  if (shots !== undefined && cls !== 'mustDodge') {
+    fail(`${path}.class`, 'an attack with shots must be "mustDodge"');
+  }
+
+  if (hits.length === 0 && move === undefined && leap === undefined && shots === undefined) {
+    fail(`${path}.hits`, 'needs at least one hit window, a move, a leap or shots');
   }
 
   const def: AttackDef = {
@@ -166,6 +218,7 @@ function attack(value: unknown, path: string): AttackDef {
     ...def,
     ...(move === undefined ? {} : { move }),
     ...(leap === undefined ? {} : { leap }),
+    ...(shots === undefined ? {} : { shots }),
   };
 }
 

@@ -358,7 +358,7 @@ describe('attacks with no hit window', () => {
     const b = copy();
     b.attacks[0]!.hits = [];
     rejects(b, 'boss.attacks[0].hits');
-    expect(() => parseBoss(b)).toThrow('needs at least one hit window, a move or a leap');
+    expect(() => parseBoss(b)).toThrow('needs at least one hit window, a move, a leap or shots');
   });
 });
 
@@ -531,5 +531,64 @@ describe('the arena', () => {
     // the platform spans [200, 400) and the cover spans [400, 500)
     const touching = withArena({ platforms: [piece(300, 200, 100)], covers: [piece(450, 100, 100)] });
     expect(parseBoss(touching).arena!.covers).toHaveLength(1);
+  });
+});
+
+describe('parseBoss and shots', () => {
+  const withShots = (shots: unknown, over: Record<string, unknown> = {}): unknown => ({
+    ...copy(),
+    attacks: [
+      {
+        id: 'zap',
+        name: 'Zap',
+        pose: 'sideways',
+        class: 'mustDodge',
+        windup: 20,
+        active: 8,
+        recovery: 20,
+        range: { min: 0, max: 600 },
+        hits: [],
+        shots,
+        ...over,
+      },
+    ],
+    phases: [{ ...copy().phases[0]!, attacks: [{ id: 'zap', weight: 1 }], opening: undefined }],
+  });
+  const bolt = { kind: 'bolt', at: 20, height: 10, size: 30, speed: 600 };
+  const arc = { kind: 'arc', at: 22, flight: 40, peak: 200, target: 'forward', distance: 300, radius: 60, burst: 6 };
+
+  it('accepts a bolt and an arc, and keeps every field', () => {
+    const boss = parseBoss(withShots([bolt, arc]));
+    expect(boss.attacks[0]!.shots).toEqual([bolt, arc]);
+  });
+
+  it('accepts a player-targeted arc and needs no hit window when there are shots', () => {
+    const { distance: _distance, ...playerArc } = { ...arc, target: 'player' };
+    expect(() => parseBoss(withShots([playerArc]))).not.toThrow();
+  });
+
+  it('rejects broken shots, naming the place', () => {
+    const at = 'boss.attacks[0].shots[0]';
+    rejects(withShots([{ ...bolt, kind: 'orb' }]), `${at}.kind`);
+    rejects(withShots([{ ...bolt, at: 19 }]), `${at}.at`);
+    rejects(withShots([{ ...bolt, at: 28 }]), `${at}.at`);
+    rejects(withShots([{ ...bolt, speed: 0 }]), `${at}.speed`);
+    rejects(withShots([{ ...bolt, height: -1 }]), `${at}.height`);
+    rejects(withShots([{ ...bolt, size: 5 }]), `${at}.size`);
+    rejects(withShots([{ ...arc, distance: undefined }]), `${at}.distance`);
+    rejects(withShots([{ ...arc, target: 'player' }]), `${at}.distance`);
+    rejects(withShots([{ ...arc, target: 'sideways' }]), `${at}.target`);
+    rejects(withShots([{ ...arc, flight: 5 }]), `${at}.flight`);
+    rejects(withShots([{ ...arc, burst: 0 }]), `${at}.burst`);
+    rejects(withShots([]), 'boss.attacks[0].shots');
+    rejects(withShots(Array.from({ length: 9 }, () => bolt)), 'boss.attacks[0].shots');
+  });
+
+  it('rejects a counterable attack with shots', () => {
+    rejects(withShots([bolt], { class: 'counterable' }), 'boss.attacks[0].class');
+  });
+
+  it('still rejects an attack with nothing to do', () => {
+    rejects(withShots(undefined), 'boss.attacks[0].hits');
   });
 });
