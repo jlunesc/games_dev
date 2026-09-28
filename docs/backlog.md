@@ -72,7 +72,7 @@ Ideas that are **not built**, only listed:
 - **A second phase**: a generated boss is one phase only.
 - **A saved roster of generated bosses**: today a generated boss only exists for the fight it was built for (rebuilt from the seed); there is no way to keep one and fight it again on purpose, or to name and share one.
 - **Using play stats to steer generation**: picking tuned ranges, or which primitives to draw from, based on what the exported stats say about the player (for example leaning the generator towards attack shapes that read badly for the owner). Today generation is uniform random inside fixed ranges (`src/bosses/generate/tuning.ts`), with no memory of past fights. **Pulled forward as M6 roadmap Phase 2** (`docs/SPEC.md` section 11, design in `docs/superpowers/specs/2026-09-22-m6-roadmap-design.md`) — no longer just an idea, it's the next major design after Phase 1's five hand-built bosses produce real data to design it from.
-- **Exposing the Trainee (the fallback boss) on its own**: today it only appears when the fairness check fails three times in a row for a seed (measured at about 2% of seeds); it is not offered anywhere in the menu by itself.
+- **Exposing the Trainee on its own**: a hand-built, generous boss (`src/bosses/trainee.json`) that used to be the generator's fallback when fairness kept failing. Since M6a replaced that fallback with a banner (`docs/bosses.md`, "Retry, then use the first candidate anyway, with a banner"), it is no longer used anywhere at all — still exported and tested, just unreachable in play. It is not offered in the menu by itself.
 
 ## Dynamic arena pieces (raised 2026-09-22)
 Platforms or cover that are not just static: appearing/disappearing, appearing in reaction to a
