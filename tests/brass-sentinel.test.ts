@@ -19,12 +19,11 @@ describe('the Brass Sentinel file', () => {
     expect(BRASS_SENTINEL.phases).toHaveLength(1);
   });
 
-  it('is mostly counterable: at least two counterable attacks and one or two mustDodge', () => {
+  it('is mostly counterable: a real majority, with at least one mustDodge attack left', () => {
     const counterable = BRASS_SENTINEL.attacks.filter((a) => a.class === 'counterable');
     const mustDodge = BRASS_SENTINEL.attacks.filter((a) => a.class === 'mustDodge');
-    expect(counterable.length).toBeGreaterThanOrEqual(2);
+    expect(counterable.length).toBeGreaterThan(mustDodge.length);
     expect(mustDodge.length).toBeGreaterThanOrEqual(1);
-    expect(mustDodge.length).toBeLessThanOrEqual(2);
   });
 
   it('has a generous counter window and range', () => {

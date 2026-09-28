@@ -37,7 +37,7 @@
       "id": "wide-sweep",
       "name": "Wide Sweep",
       "pose": "sideways",
-      "class": "mustDodge",
+      "class": "counterable",
       "windup": 24,
       "active": 8,
       "recovery": 22,
