@@ -1,6 +1,6 @@
 # M6a: generated arena diversity — design
 
-**Status:** design, awaiting the owner's review of this document.
+**Status:** built, awaiting the owner's play test.
 
 ## Why
 

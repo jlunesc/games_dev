@@ -302,7 +302,7 @@ Go to the **Boss** row and press left or right until it shows "Generated" (it cy
 ### What to expect
 - **Every time you press Fight it builds a new boss for that attempt.** Retrying (after a win, a loss, or leaving) gives you a different one: different attacks, different timings, a different size. There is no way to fight the "same" generated boss again, except by keeping the seed from an exported record and asking me to look it up.
 - It always has **3 to 5 attacks**. One of them is always **gold and counterable**, exactly like the Ember Duelist's slam: press attack in the last part of its warning, while close, to stagger it. The rest are red, must-dodge attacks.
-- It has **no ledges or walls** yet (a flat arena, like the Ember Duelist).
+- It **sometimes has ledges or a wall now (M6a)** — about 4 in 10 fights it stays flat, like the Ember Duelist; the rest of the time it has 1 to 3 platforms or cover, placed so they are never at nearly the same height.
 - Before you ever see it, the game **checks it for fairness**: it must be impossible to beat just by standing still, and there must be a way to beat it without ever getting hit. So a Generated boss should always be beatable and should never stall forever. **If a fight against a Generated boss ever feels impossible, or drags on with nothing happening, that is exactly the kind of report this milestone needs** — tell me the boss's attacks and roughly what went wrong.
 - The fairness check can fail three times in a row for the seed it tried — measured at about **1 in 5 fights** now that arenas are part of generation (up from roughly 1 in 50 before). When that happens the fight still uses that generated boss (not a fallback boss) but you'll see a short note at the top of the screen at the start of the real fight, roughly "This generated boss couldn't be checked as fair. Good luck!", for about 2 seconds. So expect to see this banner fairly often, not rarely. Please tell me whether the boss it accompanied actually felt unfair to fight (impossible to avoid damage, or impossible to beat) or felt fine despite the warning — that comparison is exactly what tells us whether the check is too strict or the banner is doing its job.
 
@@ -311,6 +311,7 @@ Go to the **Boss** row and press left or right until it shows "Generated" (it cy
 - [ ] Picking Generated and fighting several times in a row gives visibly different attack sets, timings and boss sizes each time.
 - [ ] Every generated boss you meet is readable: within a couple of tries you can tell what is coming from its pose and glow.
 - [ ] Every generated boss you meet is beatable.
+- [ ] Some Generated fights have platforms or cover at clearly different heights; others are flat — both should turn up over a handful of tries.
 - [ ] If you try standing completely still, it always loses for you (an idle test).
 - [ ] The gold, counterable attack works the same way as the Duelist's slam.
 - [ ] Stats save and export for Generated fights, the same as for the other bosses, and in the exported file that fight's `bossId` says `"generated"`.
@@ -319,6 +320,7 @@ Go to the **Boss** row and press left or right until it shows "Generated" (it cy
 - Does a generated boss ever feel unfair: too fast to read, or a wall you cannot get past?
 - Does the variety feel meaningfully different fight to fight, or does it feel same-ish after a while?
 - Is there any shape of attack — a leap, a dash, a plain hit — that reads worse than the others?
+- Does a generated arena ever feel like it traps you, or gives the boss an unfair angle on you?
 
 ## Stats and export (M3b)
 ### What is recorded
