@@ -50,7 +50,7 @@ An attack may have a `shots` list. The wind-up, pose and red glow work exactly a
 - **Shape.** A tall, thin hooded figure in a triangular robe holding a glowing orb out in front. The orb charges and brightens during the wind-up, which is the cue. It gets its own figure function in `src/ui/look/figures.ts` and its own mood in `src/ui/look/moods.ts`.
 - **Behaviour.** Keeps far away (`spacing` about 420 to 620) and backs off if approached, so fighting it means crossing the arena under fire.
 - **Attacks (first guess).** Single chest-height bolt; triple volley (low, chest, high); lobbed arc at the player's position; short-range burst that punishes a player who has closed in.
-- **Arena.** Cover placed so hiding from bolts is a real option, with heights chosen against the bolt heights so no place is safe from everything (the camping rule in `docs/bosses.md`).
+- **Arena (changed 2026-09-29: removed).** The first version had one middle cover so hiding from bolts was a real option, but the owner found it confined the player to one side, so the Sage now has no arena. The original text follows. Cover placed so hiding from bolts is a real option, with heights chosen against the bolt heights so no place is safe from everything (the camping rule in `docs/bosses.md`).
 - **Numbers** are a first guess, to be tuned from the owner's play test. Warnings stay above the readability floor (18 updates, 21 for anything that fires after the wind-up).
 
 ## Files expected to change

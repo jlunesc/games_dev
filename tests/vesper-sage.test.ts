@@ -14,8 +14,12 @@ type Bot = (n: number, prev: GameState) => InputFrame;
 const MAX_UPDATES = 5400;
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-function fight(bot: Bot, boss: BossDef, seed: number) {
+function fight(bot: Bot, boss: BossDef, seed: number, startX?: number) {
   const start = createInitialState(boss, seed);
+  if (startX !== undefined) {
+    start.player.x = startX;
+    start.player.prevX = startX;
+  }
   let s = start;
   for (let n = 1; n <= MAX_UPDATES && s.phase === 'fight'; n++) s = step(s, bot(n, s), boss);
   return { ended: s.phase !== 'fight', won: s.phase === 'victory', updates: s.tick, damage: start.player.health - s.player.health };
@@ -39,11 +43,11 @@ function standAt(boss: BossDef, x: number): GameState {
 }
 
 describe('the Vesper Sage file', () => {
-  it('is loaded and found by id, with four attacks, one cover and two phases', () => {
+  it('is loaded and found by id, with four attacks, no arena and two phases', () => {
     expect(VESPER_SAGE.id).toBe('vesper-sage');
     expect(bossById('vesper-sage')).toBe(VESPER_SAGE);
     expect(VESPER_SAGE.attacks.map((a) => a.id)).toEqual(['single-bolt', 'triple-volley', 'lob', 'point-blank-burst']);
-    expect(VESPER_SAGE.arena?.covers).toHaveLength(1);
+    expect(VESPER_SAGE.arena).toBeUndefined();
     expect(VESPER_SAGE.phases).toHaveLength(2);
   });
 
@@ -80,33 +84,16 @@ describe('the Sage never makes a degenerate fight', () => {
     }
   });
 
-  /** Perches on top of the cover (x 590 to 690, 90 high) and never leaves it. */
-  const coverCamper: Bot = (_n, prev) => {
-    const p = prev.player;
-    if (p.onGround && p.y < WORLD.floorY - 85 && p.x >= 590 && p.x <= 690) return NO_INPUT;
-    const dx = 640 - p.x;
-    return withInput({ moveX: Math.abs(dx) < 8 ? 0 : dx > 0 ? 1 : -1, jumpPressed: p.onGround, jumpHeld: true });
-  };
-
-  /** Stands right behind the cover, on the side away from the boss, and never leaves. */
-  const hider: Bot = (_n, prev) => {
-    const dx = 530 - prev.player.x;
-    return withInput({ moveX: Math.abs(dx) < 6 ? 0 : dx > 0 ? 1 : -1 });
-  };
-
-  for (const [name, bot] of [
-    ['perched on the cover', coverCamper],
-    ['hiding behind the cover', hider],
-  ] as const) {
-    it(`a player ${name} is still hurt and the fight ends`, () => {
-      const boss = applyDials(VESPER_SAGE, presetDials('normal'));
+  it('a player who stands still in either corner is hurt and the fight ends', () => {
+    const boss = applyDials(VESPER_SAGE, presetDials('normal'));
+    for (const x of [30, WORLD.width - 30]) {
       for (const seed of [1, 2, 3, 4]) {
-        const r = fight(bot, boss, seed);
+        const r = fight(() => NO_INPUT, boss, seed, x);
         expect(r.damage).toBeGreaterThan(0);
         expect(r.ended).toBe(true);
       }
-    });
-  }
+    }
+  });
 });
 
 describe('each shot has an answer', () => {
@@ -134,15 +121,6 @@ describe('each shot has an answer', () => {
     }
   });
 
-  it('the cover stops the single bolt for a player behind it, but not the lob', () => {
-    const single = solo('single-bolt');
-    const safe = analyzeRun(single, standAt(single, 530), Array.from({ length: 200 }, () => NO_INPUT));
-    expect(safe.attacks[0]!.outcome).toBe('dodged');
-    const lob = solo('lob');
-    const hit = analyzeRun(lob, standAt(lob, 530), Array.from({ length: 200 }, () => NO_INPUT));
-    expect(hit.attacks[0]!.outcome).toBe('hit');
-  });
-
   it('stepping off the arc\'s mark avoids the lob', () => {
     const boss = solo('lob');
     const frames = Array.from({ length: 200 }, () => withInput({ moveX: -1 }));
@@ -164,9 +142,7 @@ describe('the Sage can be beaten', () => {
     if (bolt) return withInput({ dashPressed: true });
     if (b.mode === 'attack' && b.attackId === 'point-blank-burst' && b.attackTick + 1 === 20) return withInput({ dashPressed: true });
     const dx = b.x - p.x;
-    // The cover is a wall for anyone below its top: hop over it on the way in.
-    const hop = dx > 0 && p.x > 500 && p.x < 720;
-    return withInput({ moveX: Math.abs(dx) < 90 ? 0 : dx > 0 ? 1 : -1, attackPressed: n % 20 === 0, jumpPressed: hop && p.onGround, jumpHeld: hop });
+    return withInput({ moveX: Math.abs(dx) < 90 ? 0 : dx > 0 ? 1 : -1, attackPressed: n % 20 === 0 });
   };
 
   it('a player who knows its shots wins at Normal', () => {

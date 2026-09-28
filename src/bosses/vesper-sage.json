@@ -10,10 +10,6 @@
   "predictability": 0.2,
   "counter": { "window": 12, "range": 200, "staggerTicks": 60, "damageMultiplier": 2 },
   "transitionTicks": 60,
-  "arena": {
-    "platforms": [],
-    "covers": [{ "x": 640, "width": 100, "height": 90 }]
-  },
   "attacks": [
     {
       "id": "single-bolt",

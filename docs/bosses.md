@@ -146,7 +146,7 @@ Two kinds, chosen by `kind`:
 | `bolt` | `at`; `height` (bottom edge above the floor, 0 to 200); `size` (it is a square this many units wide and tall, 10 to 80); `speed` (units per second, 100 to 1600) | Appears at the boss's front and flies in a straight line the way the boss faces, until it reaches the arena wall, a cover that stops it, or the player. Height is the dodge: low is jumped, chest height is dashed through, high is walked under. |
 | `arc` | `at`; `flight` (updates in the air, whole number 20 to 120); `peak` (height, 60 to 400); `target` (`player`, `forward` or `back`, as for a leap); `distance` (only for `forward` and `back`, at least 1); `radius` (half-width of the landing burst, 10 to 200); `burst` (updates the burst lasts, whole number 3 to 30) | Launched at `at`, flies up and lands where it was aimed. The landing x is fixed at launch and does not follow the player. A red mark shows on the floor from launch until it lands. In the air it hurts nobody; on landing a burst `2 * radius` wide and 90 high (`SHOT.arcBurstHeight`, `src/game/params.ts`) hurts for `burst` updates. |
 
-**Cover.** A cover stops a bolt whose bottom edge is below the cover's height (`height < cover.height`); a bolt at or above it flies over. Arcs ignore cover, and platforms affect nothing. So a bolt fired at height 40 is stopped by the Vesper Sage's 90-high cover and one at height 110 is not.
+**Cover.** A cover stops a bolt whose bottom edge is below the cover's height (`height < cover.height`); a bolt at or above it flies over. Arcs ignore cover, and platforms affect nothing. So a bolt fired at height 40 is stopped by a 90-high cover and one at height 110 is not. (The Vesper Sage has no cover today, so its bolts always fly to the wall; the rule is built and tested for a future boss that has one.)
 
 **Lifetime.** A shot outlives its attack: it can still be in flight while the boss recovers or begins its next attack. A phase change and the end of the fight remove every shot. A dashing or blinking player is skipped and the shot keeps flying; a shot that hits is used up. If several land on the same update the player is hurt once, for the largest damage.
 
@@ -262,20 +262,20 @@ The mix is `bite` 3, `rush` 2, `slip` 2, `pounce` 3; a chain of two follows an a
 
 ## 3a-bis. The Vesper Sage
 
-`src/bosses/vesper-sage.json`: a tall, thin hooded caster (60 wide, 170 tall, 20 health, two phases: Vesper and Overcharged from half health) that keeps far away (`spacing` 420 to 620) and backs off if approached, so fighting it means crossing the arena under fire. It is the first boss with `shots`. It has no counterable attack, so the counter does not apply. Its numbers are a **first guess**, to be tuned from the owner's play test. Every attack is red (must dodge):
+`src/bosses/vesper-sage.json`: a tall, thin hooded caster (60 wide, 170 tall, 20 health, two phases: Vesper and Overcharged from half health, no arena) that keeps far away (`spacing` 420 to 620) and backs off if approached, so fighting it means crossing the arena under fire. It is the first boss with `shots`. It has no counterable attack, so the counter does not apply. Its numbers are a **first guess**, to be tuned from the owner's play test. Every attack is red (must dodge):
 
 | Attack | Pose | What it does | What it trains |
 |---|---|---|---|
-| Single Bolt | sideways | 30 updates of wind-up, then one bolt at height 40 (30 wide, 700 per second). Starts from 300 to 700 away. | Jumping a low projectile, or ducking behind the cover (a bolt at 40 is stopped by the 90-high cover). |
-| Triple Volley | raised | 32 updates of wind-up, then three bolts 10 updates apart at heights 0, 46 and 110 (620 per second). Starts from 300 to 700 away. | Reading a burst: the low one is jumped, the middle one dashed, the high one walked under, and each needs a different answer. The cover stops the first two but not the third. |
-| Lob | back | 34 updates of wind-up, then an arc aimed at where the player stands at launch (46 updates in the air, 300 high, burst radius 70 for 8 updates). Starts from 250 to 700 away. | Leaving the red mark. Cover does not help. |
+| Single Bolt | sideways | 30 updates of wind-up, then one bolt at height 40 (30 wide, 700 per second). Starts from 300 to 700 away. | Jumping a low projectile, or dashing through it. |
+| Triple Volley | raised | 32 updates of wind-up, then three bolts 10 updates apart at heights 0, 46 and 110 (620 per second). Starts from 300 to 700 away. | Reading a burst: the low one is jumped, the middle one dashed, the high one walked under, and each needs a different answer.  |
+| Lob | back | 34 updates of wind-up, then an arc aimed at where the player stands at launch (46 updates in the air, 300 high, burst radius 70 for 8 updates). Starts from 250 to 700 away. | Leaving the red mark. |
 | Point-Blank Burst | down | 22 updates of wind-up, then a box 220 in front, 150 high, for 6 updates. Starts only within 260. | Punishes a player who has closed in, so the answer to the Sage is not simply to run at it. |
 
-**The arena.** One cover in the middle (x 640, 100 wide, 90 high), no platforms. The cover is there so that hiding from bolts is a real option. Its height is chosen against the bolt heights: 90 stops the bolt at 40 and the volley's first two, and lets the one at 110 pass. It does nothing against the lob, and it does not stop the burst, so **no place is safe from everything** (the camping rule in section 3a). `tests/vesper-sage.test.ts` checks that a player hiding behind the cover, and one perched on top of it, are still hurt and that the fight ends.
+**No arena.** The Sage had one cover in the middle at first (x 640, 100 wide, 90 high), so hiding from bolts was an option. The owner found it confined the player to one side of the arena, and it was removed (2026-09-29, game version 0.5.1). With a bare floor there is nowhere to hide from a bolt, so the answer to a bolt is always its height (jump, dash or walk under), and the camp rule holds trivially: no spot is safe from everything. `tests/vesper-sage.test.ts` checks that a player standing still in either corner is hurt and that the fight ends.
 
 **The mix.** Phase 1: `single-bolt` 3, `triple-volley` 2, `lob` 2, `point-blank-burst` 1, gap 45, no chaining. Phase 2 (Overcharged, from half health): the same mix, opening with `lob`, gap 30, a chain of two with chance 0.4, faster walking. `predictability` is 0.2.
 
-**Fairness measured** (`tests/vesper-sage.test.ts`): an idle player loses at every preset on eight seeds, a player hiding behind the cover is still hurt, and a scripted player who knows the right answer to each attack wins some seeds while taking at most one hit.
+**Fairness measured** (`tests/vesper-sage.test.ts`): an idle player loses at every preset on eight seeds, a player standing still in a corner is still hurt, and a scripted player who knows the right answer to each attack wins some seeds while taking at most one hit.
 
 ## 3b. The boss generator
 

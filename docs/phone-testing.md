@@ -329,16 +329,16 @@ A new choice on the **Boss** row, last in the list: **Vesper Sage**, a tall hood
 - It keeps about 420 to 620 units away and backs off if you walk up to it. You have to cross the arena while it shoots.
 - **Bolt**: a glowing square that flies straight at you. Its height is the answer: a low one is jumped, a chest-height one is dashed through, a high one is walked under. The pose is the cue and the orb in its hands charges up during the warning.
 - **Triple Volley**: three bolts one after the other at low, middle and high. Each needs a different answer.
-- **Lob**: a red mark appears on the floor and a ball flies up and lands there with a burst. Leave the mark. The wall in the middle does not stop it.
+- **Lob**: a red mark appears on the floor and a ball flies up and lands there with a burst. Leave the mark. 
 - **Point-Blank Burst**: if you get close, it punishes you with a wide blast in front of it.
-- The **wall in the middle** stops low bolts but not the high one, and not the lob. It is a place to catch your breath, not a safe place.
+- There is **no wall and no ledge**: the whole floor is open, so you can go to either side. There is nowhere to hide from a bolt.
 - A dash lets a bolt pass through you. Your sword does nothing to a bolt.
 
 ### Checklist
 - [ ] Vesper Sage is the last choice on the Boss row and Fight starts it.
 - [ ] You can see a bolt coming and tell how high it is.
 - [ ] The red mark of the lob is easy to see and the burst hurts only where it landed.
-- [ ] The low bolt is stopped by the wall and the high one flies over it.
+- [ ] You can cross to either side of the arena, and it never feels like something blocks you.
 - [ ] A dash through a bolt does not hurt.
 - [ ] In the study, bolts and lobs are shown and do not hurt.
 - [ ] Getting close is a bad idea (the burst) and staying far away is also a bad idea (bolts and lobs).
@@ -348,7 +348,7 @@ A new choice on the **Boss** row, last in the list: **Vesper Sage**, a tall hood
 - Can you read the height of a bolt in time? Which one is hardest?
 - Is the warning long enough for the lob and the volley, or too long and boring?
 - Does the fight feel different from the Duelist and the Hound, or still the same?
-- Is there anywhere on the screen where you feel safe the whole fight?
+- Now that there is nothing to hide behind, is it too hard, or does it feel about right?
 
 ## Stats and export (M3b)
 ### What is recorded

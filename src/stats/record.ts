@@ -22,8 +22,10 @@ export const STATS_SCHEMA_VERSION = 4;
  * 0.5.0: generated arenas (M6a). Drawing an arena is one more random choice the generator makes, so it
  * reorders the whole random stream: a "generated" record made by 0.4.0 no longer reproduces the same boss
  * (arena included) from its seed. Named-boss records (Ember Duelist, Ashen Hound) are unaffected.
+ * 0.5.1: the Vesper Sage lost its middle cover (it kept the player on one side), so Sage records made by
+ * 0.5.0 no longer replay exactly. Every other boss is unchanged.
  */
-export const GAME_VERSION = '0.5.0';
+export const GAME_VERSION = '0.5.1';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {
