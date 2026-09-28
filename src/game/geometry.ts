@@ -1,5 +1,5 @@
 import type { ArenaDef, BossDef } from '../bosses/schema';
-import { PLAYER, SHOT, WORLD } from './params';
+import { ERUPTION, PLAYER, SHOT, WORLD } from './params';
 import type { BossState, PlayerState, ShotState } from './state';
 
 /** Top-left corner plus size, in world units (y grows downward). */
@@ -80,10 +80,14 @@ export function activeHitBoxes(b: BossState, boss: BossDef, options: { ignoreCov
   return boxes;
 }
 
-/** The box of a shot that can hurt right now: a bolt's square, or an arc's landing burst; null for an arc still in the air. */
+/** The box of a shot that can hurt right now: a bolt's square, an arc's landing burst or an eruption's blast; null before those. */
 export function shotBox(shot: ShotState): Box | null {
   if (shot.kind === 'bolt') {
     return { x: shot.x - shot.size / 2, y: WORLD.floorY - shot.lift - shot.size, w: shot.size, h: shot.size };
+  }
+  if (shot.kind === 'eruption') {
+    if (shot.age < shot.delay) return null;
+    return { x: shot.x - shot.width / 2, y: WORLD.floorY - ERUPTION.height, w: shot.width, h: ERUPTION.height };
   }
   if (shot.age < shot.flight) return null;
   return {

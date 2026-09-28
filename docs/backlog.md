@@ -94,8 +94,18 @@ Slice A (`docs/superpowers/specs/2026-09-28-projectiles-design.md`) built straig
 
 The next slices, each its own design conversation (they came out of the owner's wish for different attacks, movements and shapes):
 - **Slice B: flying and hovering.** A boss that leaves the floor for more than a leap, so the player has to deal with attacks from above.
-- **Slice C: ground explosions and hazards.** Timed hazards on the floor (the "piece tied to an attack" idea in "Dynamic arena pieces" below belongs here).
+- **Slice C** (ground hazards) is built, see the next section.
 - **Slice D: new figures for the five existing bosses.** Look-only (`src/ui/look/figures.ts`): Quill Warden, Cinder Golem, Veil Dancer, Gale Reaver and Brass Sentinel share the generic block figure today. It can be done at any point.
+
+## Slice C left out: more ground hazards (raised 2026-09-29)
+Slice C (`docs/superpowers/specs/2026-09-29-eruptions-design.md`) built marked floor eruptions and the Tremor Brute. Left out on purpose:
+- **Lingering zones.** Ground that stays dangerous for seconds (fire, poison) instead of a short blast.
+- **Rolling ground waves** and **marches of eruptions** that travel outward from the boss.
+- **Eruptions in generated bosses.** The generator does not draw them, and its fairness check has no notion of them.
+- **Eruptions and the arena.** They ignore platforms and cover today; a platform that a blast cannot reach, or a blast that reshapes the arena (the "piece tied to an attack" idea in "Dynamic arena pieces" below), is not built.
+- **Eruptions that follow the player** or a mark that moves before it goes off.
+
+Slices B (flying and hovering) and D (new figures for the five older bosses) are still open, as listed under "Slice A left out" above.
 
 ## Dynamic arena pieces (raised 2026-09-22)
 Platforms or cover that are not just static: appearing/disappearing, appearing in reaction to a

@@ -41,3 +41,6 @@ export const FEEDBACK = {
 
 /** Shots: how tall an arc's landing burst is (from the floor up), world units. */
 export const SHOT = { arcBurstHeight: 90 };
+
+/** Eruptions: how tall a blast is (from the floor up), world units. A jump peaks near 163, so it does not clear it. */
+export const ERUPTION = { height: 220 };

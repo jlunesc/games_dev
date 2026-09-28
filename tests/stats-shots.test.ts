@@ -4,7 +4,7 @@ import type { InputFrame } from '../src/engine/input-frame';
 import { analyzeRun } from '../src/stats/analyze';
 import { standAt } from './boss-helpers';
 import { withInput } from './helpers';
-import { arc, bolt, shooter } from './shot-helpers';
+import { arc, bolt, eruption, shooter } from './shot-helpers';
 
 const frames = (count: number, at: Record<number, Partial<InputFrame>> = {}): InputFrame[] =>
   Array.from({ length: count }, (_, i) => withInput(at[i + 1] ?? {}));
@@ -57,5 +57,26 @@ describe('stats for attacks with shots', () => {
     const a = analyse(boss([bolt({ speed: 600 }), bolt({ at: 24, height: 0, speed: 600 })]), 400, 68);
     expect(a.attacks[0]).toMatchObject({ outcome: 'hit', shotsFired: 2 });
     expect(a.hitsTaken).toBe(1);
+  });
+});
+
+describe('stats for eruptions', () => {
+  const b = boss([eruption({ at: 20, offset: 0, width: 140, delay: 30, burst: 6 })]);
+
+  it('an idle player under the mark is hit, and the attack counts one shot fired', () => {
+    const a = analyse(b, 400, 200);
+    expect(a.attacks[0]).toMatchObject({ outcome: 'hit', shotsFired: 1, damageTaken: 1 });
+  });
+
+  it('a player who steps out is dodged only once the blast is over', () => {
+    const out = analyzeRun(b, standAt(b, 400), Array.from({ length: 200 }, (_, i) => withInput(i + 1 >= 30 ? { moveX: 1 } : {})));
+    expect(out.attacks[0]).toMatchObject({ outcome: 'dodged', evasion: 'distance', damageTaken: 0 });
+  });
+
+  it('a dash through the blast is a dash dodge', () => {
+    const idle = analyse(b, 400, 200);
+    const hitTick = idle.playerHitTicks[0]!;
+    const a = analyse(b, 400, 200, { [hitTick - 1]: { dashPressed: true } });
+    expect(a.attacks[0]).toMatchObject({ outcome: 'dodged', evasion: 'dash' });
   });
 });

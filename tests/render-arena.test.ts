@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ASHEN_HOUND, EMBER_DUELIST } from '../src/bosses';
 import { WORLD } from '../src/game/params';
 import type { ArcState } from '../src/game/state';
-import { arcFloorMark, arenaRects } from '../src/ui/render';
+import { arcFloorMark, arenaRects, eruptionMark } from '../src/ui/render';
 
 describe('arenaRects', () => {
   it('gives the Hound\'s platforms (14 thick, top at the floor minus their height) and its cover (floor to top)', () => {
@@ -42,5 +42,18 @@ describe('arcFloorMark', () => {
     expect(arcFloorMark(arcShot(0))).toEqual({ left: 440, right: 560 });
     expect(arcFloorMark(arcShot(45))).toEqual({ left: 440, right: 560 });
     expect(arcFloorMark(arcShot(46))).toBeNull();
+  });
+});
+
+describe('eruptionMark', () => {
+  const at = (age: number) =>
+    ({ kind: 'eruption', attackId: 'fissure', originTick: 1, x: 500, lift: 0, age, width: 140, delay: 30, burst: 6 }) as const;
+
+  it('covers the blast span, charges up to the blast, and is gone when the blast ends', () => {
+    expect(eruptionMark(at(0))).toEqual({ left: 430, right: 570, charge: 0 });
+    expect(eruptionMark(at(15))).toEqual({ left: 430, right: 570, charge: 0.5 });
+    expect(eruptionMark(at(30))?.charge).toBe(1);
+    expect(eruptionMark(at(35))).not.toBeNull();
+    expect(eruptionMark(at(36))).toBeNull();
   });
 });

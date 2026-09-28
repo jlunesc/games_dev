@@ -122,7 +122,7 @@ One boss attack, from the moment its warning began. Entries are in the order the
 | `marginTicks`, `marginMs` | number or null | See below. |
 | `damageTaken` | number | Health this attack actually took from the player; 0 when it did not hit. Always 0 for a demonstration in the study. |
 | `playerActionWhenHit` | string or null | What the player was doing when hit; `null` when not hit. Also set for a demonstration that reached the player. |
-| `shotsFired` | number | How many shots (bolts and arcs) the attack fires; 0 for an attack without shots. See 7.4. |
+| `shotsFired` | number | How many shots (bolts, arcs and floor eruptions) the attack fires; 0 for an attack without shots. See 7.4. |
 | `study` | boolean | `true` for a demonstration in the study, `false` for an attack of the real fight. Decided on the update the attack's warning began: an attack that began in the study is a demonstration for its whole length, even if it ends on the update the study ends. |
 
 **Player action** (`playerActionAtStart`, `playerActionWhenHit`) is one of, checked in this order: `"dashing"` (in a dash), `"attacking"` (in a swing), `"airborne"` (off the ground), `"running"` (on the ground with a direction held), `"idle"`. It is read from the state after that update and the input given to it.
@@ -187,7 +187,7 @@ Some attacks move the boss (a dash, a leap, or a move that only repositions). Th
 - A shot that reaches the player is a hit **for the attack that fired it**, even if the boss has already started another attack. If any of its shots lands, the attack is `"hit"` with the damage taken.
 - The attack is `"dodged"` only when every shot has been fired and has gone (left the arena, been stopped by cover, or burst) without hurting the player.
 - If the fight ends, a phase changes or the run stops while a shot is still flying, the attack is `"interrupted"`. A phase change and the end of the fight remove every shot.
-- The danger window (`firstDangerTick` and the end of danger) covers the shots: a bolt from the update it fires, an arc from the update it lands until its burst ends.
+- The danger window (`firstDangerTick` and the end of danger) covers the shots: a bolt from the update it fires, an arc from the update it lands until its burst ends, an eruption from the update its blast goes off until the blast ends. Eruptions are shots for the stats: `shotsFired` counts them and the schema version stays 4.
 - Evasion for shots: `"dash"` if the player was dashing through a shot, `"jump"` if they were in the air where a shot would have hit them standing on the floor, `"platform"` if they were on a raised surface for the same reason, otherwise `"distance"`. A bolt stopped by cover is also `"distance"` (the analysis does not report `"cover"` for shots).
 - Occurrences are listed in the order their warnings began, not the order they were resolved.
 

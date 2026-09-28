@@ -114,7 +114,7 @@ A counter happens when the player's attack swing **starts** (the first update of
 | `range` | `{ min, max }`: the distance from the player (centre to centre) at which it can start this attack. If it is outside, it walks (or backs off) until inside. | numbers, `min` at least 0, `max` greater than `min` |
 | `move` (optional) | `{ from, to, speed, dir }`: the boss moves at `speed` units per second while `from <= t < to`. `dir` is `forward` (the way it faces) or `back` (away from the way it faces, still facing forward); when absent it is `forward`. Stops at the arena wall. | `from`, `to` whole numbers; the range must lie inside the active updates; `speed` at least 1; `dir`, when present, `forward` or `back` |
 | `leap` (optional) | `{ from, to, height, target, distance }`: the boss leaps in an arc while `from <= t < to`, peaking `height` units above the floor. The landing x is fixed at take-off (update `from`) and does not follow the player afterwards. `target` says where it lands: `player` (the player's x at update `from`), `forward` or `back` (`distance` units in front of or behind the boss's x at update `from`). `distance` is required for `forward` and `back`, and ignored (dropped) for `player`. | `from` whole number at least 0, `to` whole number at least 1 and after `from`, both inside the active updates; `height` at least 1; `target` one of `player`, `forward`, `back`; `distance` at least 1 for `forward`/`back`. An attack may have both a `move` and a `leap`, but their update ranges must not overlap (both change the boss's x). |
-| `shots` (optional) | Bolts and lobbed arcs the boss fires (section "Shots" below). | 1 to 8 entries; the attack must be `mustDodge` |
+| `shots` (optional) | Bolts, lobbed arcs and floor eruptions the boss fires (section "Shots" below). | 1 to 8 entries; the attack must be `mustDodge` |
 | `hits` | The hurt boxes (next section). May be empty only when the attack has a `move`, a `leap` or `shots` (an attack that only repositions the boss or only shoots). | at least one, unless there is a `move`, a `leap` or `shots` |
 
 The whole attack lasts `windup + active + recovery` updates. The boss does not turn during an attack: it faces the way it faced when the attack started.
@@ -137,26 +137,27 @@ A box hurts the player when it overlaps the player's body and the player is not 
 For comparison, the sweep is `x0` 0, `x1` 250, `top` 100: a long, low box that a jump clears (the player's feet must be above `top`).
 
 ### Shots (each entry of `shots`)
-An attack may fire projectiles. The wind-up, pose and red glow work as for any attack; a shot appears at update `at`, counted from the first update of the attack like a hit window, and `at` must lie in the active part (`windup <= at < windup + active`). An attack with shots must be `mustDodge` (there is nothing to counter). The player can only dodge a shot: the swing does nothing to it. A shot costs the attack's `damage`, and the usual blinking after a hit applies.
+An attack may fire projectiles or raise eruptions from the floor. The wind-up, pose and red glow work as for any attack; a shot appears at update `at`, counted from the first update of the attack like a hit window, and `at` must lie in the active part (`windup <= at < windup + active`). An attack with shots must be `mustDodge` (there is nothing to counter). The player can only dodge a shot: the swing does nothing to it. A shot costs the attack's `damage`, and the usual blinking after a hit applies.
 
-Two kinds, chosen by `kind`:
+Three kinds, chosen by `kind`:
 
 | Kind | Fields | What it does |
 |---|---|---|
 | `bolt` | `at`; `height` (bottom edge above the floor, 0 to 200); `size` (it is a square this many units wide and tall, 10 to 80); `speed` (units per second, 100 to 1600) | Appears at the boss's front and flies in a straight line the way the boss faces, until it reaches the arena wall, a cover that stops it, or the player. Height is the dodge: low is jumped, chest height is dashed through, high is walked under. |
 | `arc` | `at`; `flight` (updates in the air, whole number 20 to 120); `peak` (height, 60 to 400); `target` (`player`, `forward` or `back`, as for a leap); `distance` (only for `forward` and `back`, at least 1); `radius` (half-width of the landing burst, 10 to 200); `burst` (updates the burst lasts, whole number 3 to 30) | Launched at `at`, flies up and lands where it was aimed. The landing x is fixed at launch and does not follow the player. A red mark shows on the floor from launch until it lands. In the air it hurts nobody; on landing a burst `2 * radius` wide and 90 high (`SHOT.arcBurstHeight`, `src/game/params.ts`) hurts for `burst` updates. |
+| `eruption` | `at`; `offset` (distance from the player's x at update `at` to the middle of the mark, -800 to 800; 0 is under the player, negative to the left); `width` (of the mark and the blast, 40 to 600); `delay` (updates from the mark appearing to the blast, whole number 8 to 200); `burst` (updates the blast stays live, whole number 3 to 30) | A red mark appears on the floor at update `at`, centred on the player's x at that moment plus `offset` (kept inside the arena, edges between x = 0 and 1280). The mark is fixed and never follows the player. `delay` updates later a blast fills the mark's width from the floor up to 220 (`ERUPTION.height`, `src/game/params.ts`) for `burst` updates. A jump peaks near 163, so a jump does not clear it: step out of the mark or dash through. Eruptions ignore platforms and cover. |
 
 **Cover.** A cover stops a bolt whose bottom edge is below the cover's height (`height < cover.height`); a bolt at or above it flies over. Arcs ignore cover, and platforms affect nothing. So a bolt fired at height 40 is stopped by a 90-high cover and one at height 110 is not. (The Vesper Sage has no cover today, so its bolts always fly to the wall; the rule is built and tested for a future boss that has one.)
 
-**Lifetime.** A shot outlives its attack: it can still be in flight while the boss recovers or begins its next attack. A phase change and the end of the fight remove every shot. A dashing or blinking player is skipped and the shot keeps flying; a shot that hits is used up. If several land on the same update the player is hurt once, for the largest damage.
+**Lifetime.** A shot (eruptions included) outlives its attack: it can still be in flight while the boss recovers or begins its next attack. A phase change and the end of the fight remove every shot. A dashing or blinking player is skipped and the shot keeps flying; a shot that hits is used up. If several land on the same update the player is hurt once, for the largest damage.
 
-**Dials.** `speed` multiplies a bolt's speed (an arc's flight is not scaled, like a leap's). `readability` shifts every shot's `at` with the wind-up. `range` multiplies an arc's `distance` and `radius`. No dial changes a bolt's `height` or `size`, so a bolt that could be jumped stays one that could be jumped.
+**Dials.** `speed` multiplies a bolt's speed (an arc's flight is not scaled, like a leap's). `readability` shifts every shot's `at` with the wind-up. `range` multiplies an arc's `distance` and `radius`, and an eruption's `offset` and `width`. Readability also multiplies an eruption's `delay` (rounded, at least 8), so the warning changes length; speed does not touch eruptions. No dial changes a bolt's `height` or `size`, so a bolt that could be jumped stays one that could be jumped.
 
 **Study.** Shots are shown and harmless in the study; the study waits for the last shot to leave before the demonstration is over.
 
-**Stats.** An attack with shots counts as dodged only when all its shots are gone without hitting the player, and as a hit if any lands (`docs/stats.md`, section 7.4, schema version 4). The analysis reads `shotsFired` for the number of shots the attack fired.
+**Stats.** `shotsFired` counts eruptions too (the schema stays 4). An attack with shots counts as dodged only when all its shots are gone without hitting the player, and as a hit if any lands (`docs/stats.md`, section 7.4, schema version 4). The analysis reads `shotsFired` for the number of shots the attack fired.
 
-**Not built** (`docs/backlog.md`): homing orbs, rolling ground waves, cutting or deflecting a shot with the swing, and shots in generated bosses.
+**Not built** (`docs/backlog.md`): homing orbs, rolling ground waves, lingering ground zones, marches of eruptions, cutting or deflecting a shot with the swing, and shots in generated bosses.
 
 ### Each phase in `phases`
 The phases are listed in order. **A phase does not inherit anything from the one before:** every phase field is given in every phase.
@@ -276,6 +277,21 @@ The mix is `bite` 3, `rush` 2, `slip` 2, `pounce` 3; a chain of two follows an a
 **The mix.** Phase 1: `single-bolt` 3, `triple-volley` 2, `lob` 2, `point-blank-burst` 1, gap 45, no chaining. Phase 2 (Overcharged, from half health): the same mix, opening with `lob`, gap 30, a chain of two with chance 0.4, faster walking. `predictability` is 0.2.
 
 **Fairness measured** (`tests/vesper-sage.test.ts`): an idle player loses at every preset on eight seeds, a player standing still in a corner is still hurt, and a scripted player who knows the right answer to each attack wins some seeds while taking at most one hit.
+
+## 3a-ter. The Tremor Brute
+
+`src/bosses/tremor-brute.json`: a wide, hunched bruiser (110 wide, 130 tall, 26 health, two phases: Rumble and Landslide from half health, no arena) with huge fists and glowing cracks across its back. It walks slowly toward the player and stays close (`spacing` 90 to 200). It is the first boss with `eruption` shots; the cracks widen during the wind-up. Its numbers are a **first guess**, to be tuned from the owner's play test.
+
+| Attack | Class | Pose | What it does | What it trains |
+|---|---|---|---|---|
+| Hammer Fist | red | raised | 26 updates of wind-up, then a box 160 in front, 140 high, for 6 updates. Starts within 190. | Dashing or backing out of a melee slam. |
+| Backhand | gold, counterable | sideways | 22 updates of wind-up, then a quick swing 150 in front, 100 high. Starts within 170. | Countering. |
+| Fissure | red | down | 30 updates of wind-up, then three marks at once: under the player and 260 to each side, 140 wide, each blasting 36 updates later. | Picking a gap between the marks and moving into it. |
+| Twin Quake | red | crouch | 26 updates of wind-up, then a mark under the player (blast 30 updates later) and, 25 updates after it, a second mark under wherever the player has moved (blast 26 updates later). | Leaving the first mark without stopping in the second. |
+
+**The mix.** Phase 1: `hammer-fist` 3, `backhand` 2, `fissure` 2, `twin-quake` 2, gap 50, no chaining, walk speed 150. Phase 2 (Landslide): the same attacks with `fissure` and `twin-quake` at 3, opening with `fissure`, gap 32, a chain of two with chance 0.35, walk speed 185. `predictability` is 0.25.
+
+**Fairness measured** (`tests/tremor-brute.test.ts`): every warning is at least 21 updates and every mark's delay at least 21; an idle player loses at every preset on eight seeds; a player standing still in either corner is hurt; stepping out of the marks avoids the Fissure and the Twin Quake while standing still does not, and a jump does not clear a blast; a scripted player who knows the answers wins all eight seeds at Normal without being hit (so it is probably on the easy side for a perfect player; tune from play).
 
 ## 3b. The boss generator
 

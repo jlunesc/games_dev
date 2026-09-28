@@ -591,6 +591,73 @@ function vesperSageFigure(bp: BossPose, colors: { body: string; accent: string; 
   return out;
 }
 
+/**
+ * The Tremor Brute: a hunched, wide figure with a small head, huge fists and glowing cracks across its back. The
+ * cracks widen during the wind-up (the cue). The fist shows the attack: raised over the head, swung out sideways,
+ * pulled back, slammed down (one fist) or both fists pounding the floor while it crouches.
+ */
+function tremorBruteFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
+  const { w, h, top, feet, headR, rise, lean } = bp;
+  const out: Primitive[] = [];
+  const shoulderY = top + 0.3 * h - rise;
+  const glow = colors.glow ?? colors.accent;
+
+  // Hunched torso: a high hump at the back, sloping down to a lower chest at the front.
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.5 * w, feet],
+        [-0.46 * w + lean * 0.4, top + 0.12 * h - rise],
+        [-0.12 * w + lean * 0.8, top + 0.02 * h - rise],
+        [0.3 * w + lean, shoulderY + 0.04 * h],
+        [0.34 * w, feet],
+      ],
+      colors.body,
+    ),
+  );
+
+  // Cracks across the back, thin at rest and wider as the attack winds up.
+  const charge = bp.posing ? (bp.attackTick < bp.windup ? bp.attackTick / Math.max(1, bp.windup) : 1) : 0;
+  const crack = 2 + 4 * charge;
+  const cracks: [number, number][] = [
+    [-0.38 * w, 0.22],
+    [-0.22 * w, 0.4],
+    [-0.06 * w, 0.3],
+  ];
+  for (const [dx, at] of cracks) {
+    const y = top + at * h - rise;
+    out.push(forwardPoly(bp, [[dx, y], [dx + crack, y + 0.05 * h], [dx + 0.1 * w, y + 0.32 * h], [dx + 0.1 * w - crack, y + 0.3 * h]], glow));
+  }
+
+  // Head: small, pushed forward and low between the shoulders.
+  const headX = 0.24 * w + lean * 1.1;
+  const headY = top + headR * 1.5 + 0.06 * h - rise;
+  out.push({ kind: 'circle', x: bp.cx + bp.f * headX, y: headY, r: headR * 0.85, color: colors.body });
+  out.push(forwardRect(bp, headX + headR * 0.2, headX + headR * 0.65, headY - headR * 0.2, headR * 0.25, glow));
+
+  // Fists: where they are depends on the pose; both come down together for the crouch.
+  const amount = bp.posing ? bp.poseAmount : 0;
+  const fistR = 0.17 * w;
+  const restDx = 0.3 * w + lean * 0.6;
+  const restY = shoulderY + 0.28 * h;
+  const pose = bp.attackPose;
+  const fists: [number, number][] = [];
+  const floorY = feet - fistR;
+  if (pose === null || amount === 0) fists.push([restDx, restY]);
+  else if (pose === 'raised') fists.push([restDx - 4 * amount, restY + (top - rise + fistR * 0.4 - restY) * amount]);
+  else if (pose === 'sideways') fists.push([restDx + 0.08 * w * amount, restY - 0.06 * h * amount]);
+  else if (pose === 'back') fists.push([restDx - 0.62 * w * amount, restY - 0.1 * h * amount]);
+  else if (pose === 'down') fists.push([restDx + 0.06 * w * amount, restY + (floorY - restY) * amount]);
+  else fists.push([restDx - 0.08 * w, restY + (floorY - restY) * amount], [restDx + 0.1 * w, restY + (floorY - restY) * amount]);
+  for (const [dx, y] of fists) {
+    const arm0 = shoulderY + 0.06 * h;
+    out.push(forwardPoly(bp, [[0.18 * w, arm0 - 8], [dx, y - 10], [dx, y + 10], [0.18 * w, arm0 + 14]], colors.body));
+    out.push({ kind: 'circle', x: bp.cx + bp.f * dx, y, r: fistR, color: colors.body });
+  }
+  return out;
+}
+
 /** Any other boss: a body block as wide and tall as its box, a head, an eye, and the weapon arm. Sized from `width` and `height`. */
 function genericFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
   const { w, top, feet, headR, rise, lean } = bp;
@@ -606,7 +673,7 @@ function genericFigure(bp: BossPose, colors: { body: string; accent: string; glo
 }
 
 /**
- * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster,
+ * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster, `tremor-brute` a hunched bruiser,
  * anything else a generic block); the animation from the tick, the boss mode, the running attack's pose, the facing and
  * the lift. It fits inside the box `bossDrawBox` reports (crouch shortening and lift included), widened for the head,
  * tail, snout, arm and blade, so what the player sees is what can hurt them.
@@ -624,6 +691,8 @@ export function bossFigure(
       return houndFigure(bp, colors);
     case 'vesper-sage':
       return vesperSageFigure(bp, colors);
+    case 'tremor-brute':
+      return tremorBruteFigure(bp, colors);
     default:
       return genericFigure(bp, colors);
   }

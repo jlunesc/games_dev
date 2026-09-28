@@ -128,6 +128,8 @@ export const LOOK = {
   bossBodyAsh: '#66788f',
   /** The robe of the Vesper Sage. */
   bossBodySage: '#4a3a7a',
+  /** The hide of the Tremor Brute. */
+  bossBodyBrute: '#7a5040',
   /** The body while staggered (every boss), the glows: powering up, counterable attack, must-dodge attack. */
   bossStaggerBody: '#7fd6ff',
   bossPowerGlow: '#ffffff',
@@ -152,6 +154,11 @@ export const LOOK = {
     /** Alpha of the landing mark while the arc flies (it pulses up to this) and of the burst. */
     markAlpha: 0.75,
     burstAlpha: 0.7,
+    /** Eruptions: the floor mark's height, the warning column that grows over it (alpha), and the blast (alpha and hot core). */
+    eruptionMarkHeight: 8,
+    eruptionFillAlpha: 0.28,
+    eruptionBlastAlpha: 0.85,
+    eruptionCore: '#ffd27a',
   },
 
   // ---- Floor, platforms and cover (copied from the old render.ts colours) ----

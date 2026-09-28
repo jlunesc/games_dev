@@ -1,5 +1,5 @@
 import { resolveBoss } from '../bosses/resolve';
-import type { BossDef } from '../bosses/schema';
+import type { BossDef, ShotDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { TICK_RATE } from '../engine/time';
 import { applyDials } from '../game/difficulty';
@@ -427,13 +427,15 @@ export function analyzeRun(
     const id = after.boss.attackId ?? before.boss.pendingAttackId;
     const def = started ? boss.attacks.find((a) => a.id === id) : undefined;
     if (def !== undefined) {
-      // A bolt is dangerous from the update it fires; an arc from the update it lands until its burst ends.
+      // A bolt is dangerous from the update it fires; an arc from the update it lands until its burst ends;
+      // an eruption from the update its blast goes off until the blast ends.
       const shots = def.shots ?? [];
-      const froms = [...def.hits.map((h) => h.from), ...shots.map((x) => (x.kind === 'arc' ? x.at + x.flight : x.at))];
-      const tos = [
-        ...def.hits.map((h) => h.to),
-        ...shots.map((x) => (x.kind === 'arc' ? x.at + x.flight + x.burst : x.at + 1)),
-      ];
+      const dangerStart = (x: ShotDef): number =>
+        x.kind === 'arc' ? x.at + x.flight : x.kind === 'eruption' ? x.at + x.delay : x.at;
+      const dangerEnd = (x: ShotDef): number =>
+        x.kind === 'arc' ? x.at + x.flight + x.burst : x.kind === 'eruption' ? x.at + x.delay + x.burst : x.at + 1;
+      const froms = [...def.hits.map((h) => h.from), ...shots.map(dangerStart)];
+      const tos = [...def.hits.map((h) => h.to), ...shots.map(dangerEnd)];
       open = {
         attackId: def.id,
         phase: after.boss.phase + 1,

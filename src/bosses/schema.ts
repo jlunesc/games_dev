@@ -73,7 +73,21 @@ export interface ArcDef {
   burst: number;
 }
 
-export type ShotDef = BoltDef | ArcDef;
+/**
+ * A floor eruption: at update `at` a red mark appears on the floor, centred on the player's x at that moment plus
+ * `offset` (fixed from then on). `delay` updates later a blast fills the mark's `width` from the floor up for
+ * `burst` updates.
+ */
+export interface EruptionDef {
+  kind: 'eruption';
+  at: number;
+  offset: number;
+  width: number;
+  delay: number;
+  burst: number;
+}
+
+export type ShotDef = BoltDef | ArcDef | EruptionDef;
 
 export interface AttackDef {
   id: string;

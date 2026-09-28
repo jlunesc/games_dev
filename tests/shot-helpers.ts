@@ -21,6 +21,16 @@ export const arc = (over: Partial<Extract<ShotDef, { kind: 'arc' }>> = {}): Shot
   ...over,
 });
 
+export const eruption = (over: Partial<Extract<ShotDef, { kind: 'eruption' }>> = {}): ShotDef => ({
+  kind: 'eruption',
+  at: 20,
+  offset: 0,
+  width: 140,
+  delay: 30,
+  burst: 6,
+  ...over,
+});
+
 /** An attack that only fires `shots` (wind-up 20, active 8, recovery 20), usable from any distance. */
 export const shootingAttack = (shots: ShotDef[], over: Partial<AttackDef> = {}): AttackDef => ({
   id: 'shoot',

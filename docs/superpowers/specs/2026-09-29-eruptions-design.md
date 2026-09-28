@@ -1,6 +1,8 @@
 # Slice C: floor eruptions and the Tremor Brute
 
-Status: design agreed in conversation 2026-09-29, approved by the owner section by section. Not built yet.
+Status: built 2026-09-29, awaiting the owner's play test. The numbers are a first guess.
+
+**Shape of the data (decided while planning, same behaviour as approved):** an eruption is a third `kind` (`'eruption'`) of entry in an attack's `shots` list, not a separate list. That reuses everything a shot already has: firing at update `at`, outliving its attack, being cleared by a phase change or the end of the fight, the study waiting for it, the dials' timing shift and the stats' attribution. So there is no `eruptionsFired` field and no schema bump: `shotsFired` counts eruptions too, and `schemaVersion` stays 4 (the export's shape does not change).
 
 ## Why
 
@@ -18,21 +20,21 @@ Slice A added projectiles. The owner still wants different attacks, movement and
 
 ## The mechanic
 
-An attack may have an `eruptions` list. The wind-up, pose and glow work as today; each eruption puts its mark on the floor at update `at` (counted like hit windows, inside the active part: `windup <= at < windup + active`).
+An attack may have `shots` of `kind: "eruption"` (alongside or instead of bolts and arcs). The wind-up, pose and glow work as today; each eruption puts its mark on the floor at update `at` (counted like hit windows, inside the active part: `windup <= at < windup + active`).
 
 | Field | Meaning | Checked |
 |---|---|---|
+| `kind` | `"eruption"`. | fixed |
 | `at` | Update on which the mark appears. | whole number inside the active updates |
-| `offset` | Distance from the player's x at update `at` to the middle of the mark. 0 is under the player. Negative is to the left, positive to the right. | number, -600 to 600 |
-| `width` | Width of the mark and of the blast. | number, 40 to 500 |
-| `delay` | Updates from the mark appearing to the blast going off. | whole number, 8 to 120 |
+| `offset` | Distance from the player's x at update `at` to the middle of the mark. 0 is under the player. Negative is to the left, positive to the right. | number, -800 to 800 |
+| `width` | Width of the mark and of the blast. | number, 40 to 600 |
+| `delay` | Updates from the mark appearing to the blast going off. | whole number, 8 to 200 |
 | `burst` | Updates the blast stays live. | whole number, 3 to 30 |
 
 - **Position.** The middle of the mark is fixed when it appears (player x plus `offset`) and never follows the player. It is kept inside the arena (the mark's edges stay between x = 0 and x = 1280).
 - **Blast.** Live for `delay <= age < delay + burst`, where `age` counts updates since the mark appeared. It fills the mark's width from the floor up to `ERUPTION.height` (220, in `src/game/params.ts`). A jump peaks near 163, so a jump does not clear it.
-- **Hits.** A blast hurts a player who overlaps it and is not untouchable (blinking after a hit, or dashing). It costs the attack's `damage`. It is not used up by a hit: the blink after a hit (60 updates) is longer than any burst (30 at most), so it hurts at most once per blast. A dash lets the blast keep going.
-- **Class.** An attack with eruptions is `mustDodge`; the checker rejects `counterable` with eruptions.
-- **Attack shape.** An attack may have eruptions and no hit windows, like shots. The rule "must have a hit, a move, a leap or shots" gains "or eruptions".
+- **Hits.** A blast hurts a player who overlaps it and is not untouchable (blinking after a hit, or dashing). It costs the attack's `damage`. Like an arc's burst it is used up by a hit; a dash lets it keep going.
+- **Class and shape.** The rules for shots apply: the attack must be `mustDodge`, and it may have no hit windows.
 - **Clean slate.** A phase change and the end of the fight remove every eruption. An eruption outlives its attack.
 - **Deterministic.** Eruptions are game state advanced once per update, so a recorded fight replays exactly.
 - **Study.** Marks and blasts are shown and hurt nobody (the same `studyHit` as shots). The study waits for the last eruption to end before a demonstration is over.
@@ -41,7 +43,7 @@ An attack may have an `eruptions` list. The wind-up, pose and glow work as today
 ## How it fits
 
 - **Difficulty dials.** Readability shifts each eruption's `at` with the wind-up and multiplies its `delay` (rounded, at least 8), so the warning changes length. Range multiplies `width` and `offset`. Speed, height and `burst` are not scaled. Damage, health, frequency and variety work as now.
-- **Stats.** An attack with eruptions counts as dodged only when all its eruptions are over without hitting the player, and as a hit if any hit. The export shape changes (`eruptionsFired`), so `schemaVersion` becomes 5 and `docs/stats.md` is updated. Stepping out counts as the `distance` evasion; a dash counts as `dash`. `GAME_VERSION` does not change (no existing boss uses eruptions and the Duelist golden test must not move).
+- **Stats.** An attack with eruptions counts as dodged only when all its eruptions are over without hitting the player, and as a hit if any hit. The export shape does not change (`shotsFired` counts eruptions), so `schemaVersion` stays 4; `docs/stats.md` gets a sentence saying so. Stepping out counts as the `distance` evasion; a dash counts as `dash`. `GAME_VERSION` does not change (no existing boss uses eruptions and the Duelist golden test must not move).
 - **Fairness.** The pre-fight check is unchanged (an idle player must lose). Tests also require that a player standing still in either corner is hurt.
 - **Format.** `docs/bosses.md` and `tests/boss-parse.test.ts` get the new field.
 - **Look.** The mark is a red bar on the floor that fills toward the blast, drawn like the arc's floor mark; the blast is a bright column. Tunables go in `src/ui/look/tuning.ts`. Looks never change how a fight plays.

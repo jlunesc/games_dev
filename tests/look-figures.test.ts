@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, VESPER_SAGE } from '../src/bosses';
+import { ASHEN_HOUND, TREMOR_BRUTE, VESPER_SAGE } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { PLAYER, WORLD } from '../src/game/params';
 import { createInitialState, type BossMode, type GameState } from '../src/game/state';
@@ -734,5 +734,40 @@ describe('bossFigure: the Vesper Sage', () => {
       VESPER_SAGE.attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), VESPER_SAGE, BOSS_COLORS))),
     );
     expect(shapes.size).toBe(VESPER_SAGE.attacks.length);
+  });
+});
+
+describe('bossFigure: the Tremor Brute', () => {
+  const bruteBounds = (s: GameState): Bounds => {
+    const box = bossDrawBox(s.boss, TREMOR_BRUTE);
+    return {
+      left: s.boss.x - TREMOR_BRUTE.width / 2 - FIGURE_MARGIN,
+      right: s.boss.x + TREMOR_BRUTE.width / 2 + FIGURE_MARGIN,
+      top: box.top - FIGURE_MARGIN,
+      bottom: box.top + box.height,
+    };
+  };
+
+  it('fits its drawn box plus a margin, in every state', () => {
+    for (const s of bossStates(TREMOR_BRUTE)) {
+      expectInside(bossFigure(s, TREMOR_BRUTE, BOSS_COLORS), bruteBounds(s));
+    }
+  });
+
+  it('mirrors when the facing flips', () => {
+    for (const s of bossStates(TREMOR_BRUTE)) {
+      if (s.boss.facing !== 1) continue;
+      const left = withBoss(s, { facing: -1 });
+      expectSame(bossFigure(left, TREMOR_BRUTE, BOSS_COLORS), mirrored(bossFigure(s, TREMOR_BRUTE, BOSS_COLORS), s.boss.x));
+    }
+  });
+
+  it('shows a different pose for each attack', () => {
+    const attack = TREMOR_BRUTE.attacks[0]!;
+    const early = withBoss(base(TREMOR_BRUTE), { mode: 'attack', attackId: attack.id, attackTick: 0, facing: 1, x: 700 });
+    const shapes = new Set(
+      TREMOR_BRUTE.attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), TREMOR_BRUTE, BOSS_COLORS))),
+    );
+    expect(shapes.size).toBe(TREMOR_BRUTE.attacks.length);
   });
 });

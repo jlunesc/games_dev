@@ -1,7 +1,7 @@
 import type { BossDef } from '../bosses/schema';
 import { activeHitBoxes, attackActive, attackBox, shotBox } from '../game/geometry';
-import { PLAYER, WORLD } from '../game/params';
-import type { ArcState, BossState, GameState } from '../game/state';
+import { ERUPTION, PLAYER, WORLD } from '../game/params';
+import type { ArcState, BossState, EruptionState, GameState } from '../game/state';
 import { shakeOffset, type FeedbackState } from './feedback';
 import { drawBackground, type BackgroundCache } from './look/background';
 import type { EffectsState } from './look/effects';
@@ -202,12 +202,39 @@ export const FLOOR_TILE_XS: number[] = (() => {
   return xs;
 })();
 
-/** Bolts as glowing cores with a trail, arcs as an orb in the air over a red floor mark, and the burst when they land. */
+/** Where an eruption's mark sits and how far it has charged (0 to 1 up to the blast); null once the blast is over. */
+export function eruptionMark(shot: EruptionState): { left: number; right: number; charge: number } | null {
+  if (shot.age >= shot.delay + shot.burst) return null;
+  return { left: shot.x - shot.width / 2, right: shot.x + shot.width / 2, charge: Math.min(1, shot.age / shot.delay) };
+}
+
+/** Bolts as glowing cores with a trail, arcs as an orb in the air over a red floor mark, eruptions as a mark that charges into a column, and the bursts. */
 function drawShots(ctx: CanvasRenderingContext2D, state: GameState): void {
   const look = LOOK.shot;
   const pulse = 0.6 + 0.4 * Math.sin(state.tick / 4);
   ctx.save();
   for (const shot of state.shots) {
+    if (shot.kind === 'eruption') {
+      const mark = eruptionMark(shot);
+      if (mark === null) continue;
+      const width = mark.right - mark.left;
+      const area = shotBox(shot);
+      if (area !== null) {
+        ctx.fillStyle = look.burst;
+        ctx.globalAlpha = look.eruptionBlastAlpha;
+        ctx.fillRect(area.x, area.y, area.w, area.h);
+        ctx.fillStyle = look.eruptionCore;
+        ctx.fillRect(area.x + area.w * 0.25, area.y, area.w * 0.5, area.h);
+      } else {
+        ctx.fillStyle = look.mark;
+        ctx.globalAlpha = look.markAlpha * (mark.charge < 1 ? pulse : 1);
+        ctx.fillRect(mark.left, WORLD.floorY - look.eruptionMarkHeight, width, look.eruptionMarkHeight);
+        ctx.globalAlpha = look.eruptionFillAlpha;
+        const fill = ERUPTION.height * mark.charge;
+        ctx.fillRect(mark.left, WORLD.floorY - fill, width, fill);
+      }
+      continue;
+    }
     if (shot.kind === 'arc') {
       const mark = arcFloorMark(shot);
       if (mark !== null) {

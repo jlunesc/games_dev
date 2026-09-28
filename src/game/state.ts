@@ -101,7 +101,16 @@ export interface ArcState extends ShotBase {
   burst: number;
 }
 
-export type ShotState = BoltState | ArcState;
+/** A floor eruption: the mark shows from `age` 0, the blast is live for `delay <= age < delay + burst`. */
+export interface EruptionState extends ShotBase {
+  kind: 'eruption';
+  age: number;
+  width: number;
+  delay: number;
+  burst: number;
+}
+
+export type ShotState = BoltState | ArcState | EruptionState;
 
 export type GameEvent =
   | 'bossHit'

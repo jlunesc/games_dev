@@ -584,6 +584,26 @@ describe('parseBoss and shots', () => {
     rejects(withShots(Array.from({ length: 9 }, () => bolt)), 'boss.attacks[0].shots');
   });
 
+  const eruption = { kind: 'eruption', at: 22, offset: -260, width: 140, delay: 36, burst: 6 };
+
+  it('accepts an eruption and keeps every field', () => {
+    expect(parseBoss(withShots([eruption])).attacks[0]!.shots).toEqual([eruption]);
+  });
+
+  it('rejects broken eruptions, naming the place', () => {
+    const at = 'boss.attacks[0].shots[0]';
+    rejects(withShots([{ ...eruption, at: 19 }]), `${at}.at`);
+    rejects(withShots([{ ...eruption, at: 28 }]), `${at}.at`);
+    rejects(withShots([{ ...eruption, offset: 900 }]), `${at}.offset`);
+    rejects(withShots([{ ...eruption, offset: 'left' }]), `${at}.offset`);
+    rejects(withShots([{ ...eruption, width: 10 }]), `${at}.width`);
+    rejects(withShots([{ ...eruption, delay: 3 }]), `${at}.delay`);
+    rejects(withShots([{ ...eruption, delay: 20.5 }]), `${at}.delay`);
+    rejects(withShots([{ ...eruption, burst: 40 }]), `${at}.burst`);
+    rejects(withShots([{ ...eruption, kind: 'wave' }]), `${at}.kind`);
+    rejects(withShots([eruption], { class: 'counterable' }), 'boss.attacks[0].class');
+  });
+
   it('rejects a counterable attack with shots', () => {
     rejects(withShots([bolt], { class: 'counterable' }), 'boss.attacks[0].class');
   });

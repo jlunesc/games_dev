@@ -167,6 +167,22 @@ export const MOODS: Record<string, Mood> = {
     accent: '#b48cff',
     bodyColor: LOOK.bossBodySage,
   },
+  'tremor-brute': {
+    id: 'tremor-brute',
+    skyTop: '#140c0c',
+    skyBottom: '#3a1c18',
+    layers: [
+      { shape: 'ridge', color: '#3a2220', speed: FAR, heightFraction: 0.5, seed: 101 },
+      { shape: 'pillars', color: '#26130f', speed: MID, heightFraction: 0.45, seed: 102 },
+      { shape: 'ridge', color: '#1a0c0a', speed: NEAR, heightFraction: 0.35, seed: 103 },
+    ],
+    ember: '#e0603a',
+    floor: '#2a1a16',
+    floorLine: '#a0553a',
+    floorGlow: '#d8583a',
+    accent: '#e8785a',
+    bodyColor: LOOK.bossBodyBrute,
+  },
 };
 
 /** The mood for a boss id; an unknown id gets the neutral one. */

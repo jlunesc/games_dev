@@ -195,9 +195,20 @@ function adjustAttack(attack: AttackDef, boss: BossDef, d: Dials): AttackDef {
   }
   if (attack.shots !== undefined) {
     // A bolt's height and size and an arc's flight and peak are not scaled by any dial: a bolt that can be jumped
-    // stays one that can be jumped. Timing shifts with the warning; speed scales a bolt; range scales an arc's reach.
+    // stays one that can be jumped. Timing shifts with the warning; speed scales a bolt; range scales an arc's reach
+    // and an eruption's width and offset.
     next.shots = attack.shots.map((shot) => {
       if (shot.kind === 'bolt') return { ...shot, at: shot.at + shift, speed: shot.speed * d.speed };
+      if (shot.kind === 'eruption') {
+        // Warning length stretches the delay (the mark is the warning); range widens the blast and pushes the side marks out.
+        return {
+          ...shot,
+          at: shot.at + shift,
+          delay: Math.max(8, Math.round(shot.delay * d.readability)),
+          width: Math.max(40, shot.width * d.range),
+          offset: shot.offset * d.range,
+        };
+      }
       const arc = { ...shot, at: shot.at + shift, radius: Math.max(10, shot.radius * d.range) };
       if (shot.distance !== undefined) arc.distance = Math.max(1, shot.distance * d.range);
       return arc;

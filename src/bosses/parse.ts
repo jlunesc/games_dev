@@ -13,6 +13,7 @@ import type {
   LeapTarget,
   PhaseDef,
   Pose,
+  EruptionDef,
   ShotDef,
 } from './schema';
 
@@ -83,7 +84,7 @@ function hitWindow(value: unknown, path: string): HitWindow {
 
 const MAX_SHOTS = 8;
 
-/** The shots of an attack: each fires inside the active updates; an arc's flight may run on past them. */
+/** The shots of an attack: each fires inside the active updates; an arc's flight or an eruption's delay may run on past them. */
 function shotList(value: unknown, path: string, windup: number, active: number): ShotDef[] {
   const entries = list(value, path);
   if (entries.length === 0 || entries.length > MAX_SHOTS) fail(path, `needs 1 to ${MAX_SHOTS} shots`);
@@ -103,6 +104,17 @@ function shotList(value: unknown, path: string, windup: number, active: number):
       };
       return bolt;
     }
+    if (kind === 'eruption') {
+      const eruption: EruptionDef = {
+        kind,
+        at: fires,
+        offset: num(o.offset, `${at}.offset`, { min: -800, max: 800 }),
+        width: num(o.width, `${at}.width`, { min: 40, max: 600 }),
+        delay: num(o.delay, `${at}.delay`, { min: 8, max: 200, integer: true }),
+        burst: num(o.burst, `${at}.burst`, { min: 3, max: 30, integer: true }),
+      };
+      return eruption;
+    }
     if (kind === 'arc') {
       const target = text(o.target, `${at}.target`);
       if (!LEAP_TARGETS.includes(target as LeapTarget)) {
@@ -121,7 +133,7 @@ function shotList(value: unknown, path: string, windup: number, active: number):
       else if (o.distance !== undefined) fail(`${at}.distance`, 'is only for "forward" and "back"');
       return arc;
     }
-    return fail(`${at}.kind`, 'must be "bolt" or "arc"');
+    return fail(`${at}.kind`, 'must be "bolt", "arc" or "eruption"');
   });
 }
 

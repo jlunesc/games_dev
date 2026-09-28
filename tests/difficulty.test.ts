@@ -13,7 +13,7 @@ import {
 } from '../src/game/difficulty';
 import { nextRandom } from '../src/game/rng';
 import { DUELIST } from './helpers';
-import { arc, bolt, shooter } from './shot-helpers';
+import { arc, bolt, eruption, shooter } from './shot-helpers';
 
 const only = (over: Partial<Dials>): Dials => ({ ...NORMAL_DIALS, ...over });
 
@@ -414,5 +414,36 @@ describe('applyDials with shots', () => {
     expect((far[0] as { speed: number }).speed).toBe(600);
     expect((far[2] as { radius: number }).radius).toBeCloseTo(72);
     expect((far[3] as { distance: number }).distance).toBeCloseTo(360);
+  });
+});
+
+describe('applyDials with eruptions', () => {
+  const boss = shooter([eruption({ at: 20, offset: -260, width: 140, delay: 36, burst: 6 })]);
+  const shotOf = (dials: Dials) => applyDials(boss, dials).attacks[0]!.shots![0] as {
+    at: number; offset: number; width: number; delay: number; burst: number;
+  };
+
+  it('changes nothing at Normal and is valid at both ends of every dial', () => {
+    expect(applyDials(boss, NORMAL_DIALS)).toEqual(boss);
+    for (const d of DIALS) {
+      for (const value of [d.min, d.max]) expect(() => applyDials(boss, only({ [d.id]: value }))).not.toThrow();
+    }
+  });
+
+  it('readability shifts the mark with the wind-up and stretches the delay', () => {
+    const adjusted = applyDials(boss, only({ readability: 1.5 })).attacks[0]!;
+    const shift = adjusted.windup - boss.attacks[0]!.windup;
+    const e = adjusted.shots![0] as { at: number; delay: number };
+    expect(e.at).toBe(20 + shift);
+    expect(e.delay).toBe(54);
+    expect(shotOf(only({ readability: 0.7 })).delay).toBe(25);
+  });
+
+  it('range widens the blast and pushes the mark out; speed and burst change nothing', () => {
+    const far = shotOf(only({ range: 1.2 }));
+    expect(far.width).toBeCloseTo(168);
+    expect(far.offset).toBeCloseTo(-312);
+    const fast = shotOf(only({ speed: 1.4 }));
+    expect(fast).toMatchObject({ width: 140, offset: -260, delay: 36, burst: 6 });
   });
 });

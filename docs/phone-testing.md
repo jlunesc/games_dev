@@ -350,6 +350,34 @@ A new choice on the **Boss** row, last in the list: **Vesper Sage**, a tall hood
 - Does the fight feel different from the Duelist and the Hound, or still the same?
 - Now that there is nothing to hide behind, is it too hard, or does it feel about right?
 
+## Floor eruptions and the Tremor Brute (slice C)
+A new choice on the **Boss** row, last in the list: **Tremor Brute**, a wide hunched bruiser with glowing cracks on its back. It walks up close and hits hard. It is the first boss with **eruptions**: red marks on the floor that blow up a moment later.
+
+### What to expect
+- **Hammer Fist**: it raises a fist over its head, then slams a box down in front of it. Dash or back off.
+- **Backhand**: a quicker sideways swing with the gold glow. This one can be countered.
+- **Fissure**: it slams a fist down and three red marks appear on the floor at once: one under you and one a long step to each side. Move into a gap between the marks before they blow up.
+- **Twin Quake**: it crouches and pounds the floor. A mark appears under you; leave it, and a second mark appears under wherever you went. Leave that one too.
+- A blast is too tall to jump over. Step out of the mark, or dash through it (a dash is untouchable).
+- The cracks on its back get wider during the warning.
+- From half health it attacks more often and can chain two attacks.
+
+### Checklist
+- [ ] Tremor Brute is the last choice on the Boss row and Fight starts it.
+- [ ] The red marks on the floor are easy to see, and the blast hurts only inside the mark.
+- [ ] You can tell the four attacks apart from the pose before they land.
+- [ ] Jumping does not avoid a blast; stepping out and dashing do.
+- [ ] The gaps in the Fissure are wide enough to step into in time.
+- [ ] In the study, the marks and blasts are shown and do not hurt.
+- [ ] The Brute looks different from the other bosses.
+- [ ] Stats save and export, and in the file that fight's `bossId` says `"tremor-brute"`; eruption attacks count in `shotsFired`.
+
+### Questions about the Brute
+- Is the warning on the marks long enough, or too long and boring?
+- Is the Twin Quake fair, or does the second mark catch you too often?
+- Does it stay close enough to feel like a brawler, or does it feel far away?
+- Is 26 health too little? (A player who knows every attack can beat it in about 15 to 20 seconds in the tests.)
+
 ## Stats and export (M3b)
 ### What is recorded
 The game now keeps a record of every fight you play: which boss and difficulty, and the exact buttons you pressed on every step of the fight. From that the game works out the numbers we will study together: how long you took to react to each attack, whether you dodged, got hit or countered, how you moved, and whether you punished the boss after its attacks. A finished fight (a win or a loss) and a fight you leave after it started are saved by themselves, and the summary ends with "Fight saved (3 on this device)." (the number is how many fights are saved). A fight you leave before it started is not saved.

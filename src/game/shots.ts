@@ -24,6 +24,21 @@ export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef): void
   const originTick = s.tick - b.attackTick;
   for (const def of attack.shots) {
     if (def.at !== b.attackTick) continue;
+    if (def.kind === 'eruption') {
+      const half = def.width / 2;
+      s.shots.push({
+        kind: 'eruption',
+        attackId: attack.id,
+        originTick,
+        x: Math.min(Math.max(s.player.x + def.offset, half), WORLD.width - half),
+        lift: 0,
+        age: 0,
+        width: def.width,
+        delay: def.delay,
+        burst: def.burst,
+      });
+      continue;
+    }
     const x = muzzleX(s, boss);
     if (def.kind === 'bolt') {
       s.shots.push({
@@ -70,7 +85,7 @@ function stoppedByCover(shot: Extract<ShotState, { kind: 'bolt' }>, boss: BossDe
   return false;
 }
 
-/** Moves every shot one update; drops bolts that left the arena or hit a cover, and arcs whose burst is over. */
+/** Moves every shot one update; drops bolts that left the arena or hit a cover, and arcs and eruptions whose burst is over. */
 export function moveShots(s: GameState, boss: BossDef): void {
   const kept: ShotState[] = [];
   for (const shot of s.shots) {
@@ -78,6 +93,9 @@ export function moveShots(s: GameState, boss: BossDef): void {
       shot.x += shot.dir * shot.speed * DT;
       const outside = shot.x + shot.size / 2 < 0 || shot.x - shot.size / 2 > WORLD.width;
       if (outside || stoppedByCover(shot, boss)) continue;
+    } else if (shot.kind === 'eruption') {
+      shot.age += 1;
+      if (shot.age >= shot.delay + shot.burst) continue;
     } else {
       shot.age += 1;
       if (shot.age >= shot.flight + shot.burst) continue;
