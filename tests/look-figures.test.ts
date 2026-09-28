@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, TREMOR_BRUTE, VESPER_SAGE } from '../src/bosses';
+import { ASHEN_HOUND, CINDER_GOLEM, TREMOR_BRUTE, VESPER_SAGE } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { PLAYER, WORLD } from '../src/game/params';
 import { createInitialState, type BossMode, type GameState } from '../src/game/state';
@@ -769,5 +769,40 @@ describe('bossFigure: the Tremor Brute', () => {
       TREMOR_BRUTE.attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), TREMOR_BRUTE, BOSS_COLORS))),
     );
     expect(shapes.size).toBe(TREMOR_BRUTE.attacks.length);
+  });
+});
+
+describe('bossFigure: the Cinder Golem', () => {
+  const golemBounds = (s: GameState): Bounds => {
+    const box = bossDrawBox(s.boss, CINDER_GOLEM);
+    return {
+      left: s.boss.x - CINDER_GOLEM.width / 2 - FIGURE_MARGIN,
+      right: s.boss.x + CINDER_GOLEM.width / 2 + FIGURE_MARGIN,
+      top: box.top - FIGURE_MARGIN,
+      bottom: box.top + box.height,
+    };
+  };
+
+  it('fits its drawn box plus a margin, in every state', () => {
+    for (const s of bossStates(CINDER_GOLEM)) {
+      expectInside(bossFigure(s, CINDER_GOLEM, BOSS_COLORS), golemBounds(s));
+    }
+  });
+
+  it('mirrors when the facing flips', () => {
+    for (const s of bossStates(CINDER_GOLEM)) {
+      if (s.boss.facing !== 1) continue;
+      const left = withBoss(s, { facing: -1 });
+      expectSame(bossFigure(left, CINDER_GOLEM, BOSS_COLORS), mirrored(bossFigure(s, CINDER_GOLEM, BOSS_COLORS), s.boss.x));
+    }
+  });
+
+  it('shows a different pose for each attack', () => {
+    const attack = CINDER_GOLEM.attacks[0]!;
+    const early = withBoss(base(CINDER_GOLEM), { mode: 'attack', attackId: attack.id, attackTick: 0, facing: 1, x: 700 });
+    const shapes = new Set(
+      CINDER_GOLEM.attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), CINDER_GOLEM, BOSS_COLORS))),
+    );
+    expect(shapes.size).toBe(CINDER_GOLEM.attacks.length);
   });
 });

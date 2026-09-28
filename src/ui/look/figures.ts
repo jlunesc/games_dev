@@ -658,6 +658,117 @@ function tremorBruteFigure(bp: BossPose, colors: { body: string; accent: string;
   return out;
 }
 
+/**
+ * The Cinder Golem: a squat iron furnace on two thick legs, with a smoking chimney on its back, a slit head and a
+ * hatch in its belly that glows wider as an attack winds up (the cue). Two piston arms end in block fists; the pose
+ * shows in the fist: over the head, out in front, pulled back, or slammed to the floor.
+ */
+function cinderGolemFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
+  const { w, h, top, feet, rise, lean } = bp;
+  const out: Primitive[] = [];
+  const glow = colors.glow ?? colors.accent;
+  const legTop = feet - 0.24 * h;
+  const torsoTop = top + 0.2 * h - rise;
+  const phase = (TAU * bp.t) / LOOK.legCycleTicks;
+
+  for (const i of [0, 1]) {
+    const hipDx = (i === 0 ? -0.26 : 0.22) * w;
+    const g = gait(bp, phase + i * Math.PI, LOOK.bossLegSwing * 0.5);
+    const footDx = hipDx + g.dx;
+    const footY = bp.airborne ? feet - 0.08 * h : feet - g.lift;
+    const half = 0.14 * w;
+    out.push(
+      forwardPoly(
+        bp,
+        [
+          [hipDx - half, legTop],
+          [hipDx + half, legTop],
+          [footDx + half, footY],
+          [footDx - half, footY],
+        ],
+        LOOK.golemIron,
+      ),
+    );
+  }
+
+  out.push(
+    forwardPoly(
+      bp,
+      [
+        [-0.5 * w, legTop + 2],
+        [0.5 * w, legTop + 2],
+        [0.4 * w + lean, torsoTop],
+        [-0.4 * w + lean * 0.4, torsoTop],
+      ],
+      colors.body,
+    ),
+  );
+
+  // The chimney on the back, with a rim, and smoke that drifts up and fades out of view as it rises.
+  const chimneyTop = top + 0.03 * h - rise;
+  out.push(forwardRect(bp, -0.36 * w + lean * 0.4, -0.16 * w + lean * 0.4, chimneyTop, torsoTop - chimneyTop + 2, colors.body));
+  out.push(forwardRect(bp, -0.39 * w + lean * 0.4, -0.13 * w + lean * 0.4, chimneyTop, 4, colors.accent));
+  for (let k = 0; k < 3; k++) {
+    const age = ((bp.t + k * 14) % 42) / 42;
+    out.push({
+      kind: 'circle',
+      x: bp.cx + bp.f * (-0.26 * w + lean * 0.4 + 5 * Math.sin(age * 5 + k)),
+      y: chimneyTop - 2 - 12 * age,
+      r: 2 + 2 * age,
+      color: LOOK.golemSmoke,
+    });
+  }
+
+  // The head: a low block with an eye slit, sitting forward on the shoulders.
+  const headLeft = 0.14 * w + lean * 1.1;
+  const headTop = top + 0.09 * h - rise;
+  out.push(forwardRect(bp, headLeft, headLeft + 0.24 * w, headTop, torsoTop - headTop + 2, colors.body));
+  out.push(forwardRect(bp, headLeft + 0.08 * w, headLeft + 0.24 * w, headTop + 0.04 * h, 0.025 * h, glow));
+
+  // The belly hatch: a thin slit at rest, wide open at the end of the wind-up.
+  const charge = bp.posing ? (bp.attackTick < bp.windup ? bp.attackTick / Math.max(1, bp.windup) : 1) : 0;
+  const hatchH = 0.05 * h + 0.13 * h * charge;
+  const hatchY = torsoTop + 0.3 * (legTop - torsoTop);
+  out.push(forwardRect(bp, 0.02 * w + lean * 0.6, 0.34 * w + lean * 0.6, hatchY, hatchH, glow));
+
+  // Piston arms and block fists.
+  const amount = bp.posing ? bp.poseAmount : 0;
+  const fist = 0.18 * w;
+  const shoulderDx = 0.22 * w + lean * 0.8;
+  const shoulderY = top + 0.3 * h - rise;
+  const restY = shoulderY + 0.32 * h;
+  const restDx = 0.34 * w + lean * 0.5;
+  const floorY = feet - fist / 2;
+  let fx = restDx;
+  let fy = restY;
+  switch (bp.attackPose) {
+    case 'raised':
+      fx = 0.3 * w + lean * 0.5;
+      fy = restY + (top - rise + fist / 2 + 2 - restY) * amount;
+      break;
+    case 'sideways':
+      fx = restDx + 0.14 * w * amount;
+      fy = restY - 0.2 * h * amount;
+      break;
+    case 'back':
+      fx = restDx - 0.6 * w * amount;
+      fy = restY - 0.14 * h * amount;
+      break;
+    case 'down':
+      fx = restDx + 0.06 * w * amount;
+      fy = restY + (floorY - restY) * amount;
+      break;
+    case 'crouch':
+      fy = restY + (floorY - restY) * 0.5 * amount;
+      break;
+    case null:
+      break;
+  }
+  out.push(forwardPoly(bp, [[shoulderDx - 8, shoulderY], [fx - 7, fy], [fx + 7, fy], [shoulderDx + 8, shoulderY + 14]], LOOK.golemIron));
+  out.push(forwardRect(bp, fx - fist / 2, fx + fist / 2, fy - fist / 2, fist, colors.accent));
+  return out;
+}
+
 /** Any other boss: a body block as wide and tall as its box, a head, an eye, and the weapon arm. Sized from `width` and `height`. */
 function genericFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
   const { w, top, feet, headR, rise, lean } = bp;
@@ -673,7 +784,7 @@ function genericFigure(bp: BossPose, colors: { body: string; accent: string; glo
 }
 
 /**
- * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster, `tremor-brute` a hunched bruiser,
+ * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster, `tremor-brute` a hunched bruiser, `cinder-golem` a walking furnace,
  * anything else a generic block); the animation from the tick, the boss mode, the running attack's pose, the facing and
  * the lift. It fits inside the box `bossDrawBox` reports (crouch shortening and lift included), widened for the head,
  * tail, snout, arm and blade, so what the player sees is what can hurt them.
@@ -693,6 +804,8 @@ export function bossFigure(
       return vesperSageFigure(bp, colors);
     case 'tremor-brute':
       return tremorBruteFigure(bp, colors);
+    case 'cinder-golem':
+      return cinderGolemFigure(bp, colors);
     default:
       return genericFigure(bp, colors);
   }

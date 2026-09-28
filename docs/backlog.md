@@ -95,7 +95,7 @@ Slice A (`docs/superpowers/specs/2026-09-28-projectiles-design.md`) built straig
 The next slices, each its own design conversation (they came out of the owner's wish for different attacks, movements and shapes):
 - **Slice B: flying and hovering.** A boss that leaves the floor for more than a leap, so the player has to deal with attacks from above.
 - **Slice C** (ground hazards) is built, see the next section.
-- **Slice D: new figures for the five existing bosses.** Look-only (`src/ui/look/figures.ts`): Quill Warden, Cinder Golem, Veil Dancer, Gale Reaver and Brass Sentinel share the generic block figure today. It can be done at any point.
+- **Slice D: new figures for the five existing bosses.** Look-only (`src/ui/look/figures.ts`), one boss at a time. Done: the Cinder Golem (a walking furnace, 2026-09-29). Still on the generic block figure: Quill Warden, Veil Dancer, Gale Reaver and Brass Sentinel.
 
 ## Slice C left out: more ground hazards (raised 2026-09-29)
 Slice C (`docs/superpowers/specs/2026-09-29-eruptions-design.md`) built marked floor eruptions and the Tremor Brute. Left out on purpose:

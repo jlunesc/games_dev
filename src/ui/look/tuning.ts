@@ -128,6 +128,10 @@ export const LOOK = {
   bossBodyAsh: '#66788f',
   /** The robe of the Vesper Sage. */
   bossBodySage: '#4a3a7a',
+  /** The smoke from the Cinder Golem's chimney. */
+  golemSmoke: '#9a9088',
+  /** The darker iron of the Cinder Golem's legs and arms, so they read against its body. */
+  golemIron: '#3c4658',
   /** The hide of the Tremor Brute. */
   bossBodyBrute: '#7a5040',
   /** The body while staggered (every boss), the glows: powering up, counterable attack, must-dodge attack. */
