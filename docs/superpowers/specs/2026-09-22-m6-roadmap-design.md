@@ -32,18 +32,11 @@ open, LOCKED-but-undesigned line in the spec since the very first conversation:
 
 This roadmap exists to stop treating that as a someday-item and put it on the critical path.
 
-## Phase 0 — Finish M6a (in progress, nearly done)
+## Phase 0 — Finish M6a (done, merged to `main` 2026-09-28)
 
-Status at time of writing: Tasks 1 and 2 (arena generation, the camp-safety fairness check) are
-complete and reviewed. Task 3 (wiring arenas into `generateBoss`, the fallback-to-banner redesign) is
-**implemented and fully passing (981/981 tests, typecheck/build/check:dist clean) but its review has
-not completed** — the review dispatch hit a session rate limit, not a real finding. Task 4 (docs) has
-not started. Full detail and exact resume instructions: `.superpowers/sdd/2026-09-22-m6a-generated-arenas/progress.md`
-(the ledger) and `/home/juan/.claude/projects/-home-juan-Documents-repositories-game-dev/memory/m6a-generated-arenas-checkpoint.md`.
-
-**Next action on resume: re-dispatch the Task 3 review** (the review package is already generated),
-then Task 4, then a final whole-branch review, then merge with the owner's go-ahead. No further design
-work expected here — the hard part (the fairness/fallback redesign) is already decided and built.
+All 4 tasks complete, final whole-branch review clean, merged and pushed. The feature branch and its
+SDD workspace are deleted. See `docs/SPEC.md` section 11 and `docs/bosses.md`/`docs/phone-testing.md`
+for the shipped behavior.
 
 ## Phase 1 — Five hand-built boss archetypes (no new engineering)
 
@@ -78,7 +71,16 @@ variations) over a real session, then exports stats.
 (Phase 4) once that exists — an archetypally distinct set of five bosses is exactly what a campaign
 needs, and this phase produces it as a side effect.
 
-## Phase 2 — Skill-tagging and stat-driven steering (the real unlock)
+## Active track (owner, 2026-09-28): Phase 1 → Phase 3 → backgrounds, Phase 2 and 4 parked
+
+The owner chose to build Phase 1 and Phase 3 next, then play and bring back stats and feedback, before
+deciding on Phase 2. **Nothing is lost by this sequencing**: Phase 1 and 3 both feed the same stats
+pipeline Phase 2 would need, so playing them first only gives Phase 2 more real data to be designed
+from later, rather than less. Phase 2 (skill-tagging/steering) and Phase 4 (campaign mode) are **parked,
+not dropped** — revisit Phase 2 once there's enough played variety to make "what am I weak at" a
+meaningful question, and Phase 4 whenever there's appetite for it (it has no dependency deadline).
+
+## Phase 2 — Skill-tagging and stat-driven steering (the real unlock; parked, see above)
 
 Depends on Phase 1's real data — design this from what the owner's actual fights show, not from
 guessing ahead of time. Two parts, likely two sub-designs:
@@ -115,7 +117,7 @@ e.g. flying) — still valuable, still on the list, just built differently than 
   design pass together with how they interact with arenas — do that pass fresh, informed by what
   actually shipped in M6a, not the pre-M6a assumptions.
 
-## Phase 4 — Campaign mode
+## Phase 4 — Campaign mode (parked, see "Active track" above)
 
 Face a sequence of bosses, must beat each to advance, each with a different trained focus. Depends on
 having a roster of archetypally distinct bosses to sequence — Phase 1's five hand-built bosses are a
