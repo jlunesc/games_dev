@@ -322,6 +322,34 @@ Go to the **Boss** row and press left or right until it shows "Generated" (it cy
 - Is there any shape of attack — a leap, a dash, a plain hit — that reads worse than the others?
 - Does a generated arena ever feel like it traps you, or gives the boss an unfair angle on you?
 
+## Projectiles and the Vesper Sage (slice A)
+A new choice on the **Boss** row, last in the list: **Vesper Sage**, a tall hooded caster that stays far away and fires things at you. It is the first boss with projectiles, so this is a new kind of fight to play.
+
+### What to expect
+- It keeps about 420 to 620 units away and backs off if you walk up to it. You have to cross the arena while it shoots.
+- **Bolt**: a glowing square that flies straight at you. Its height is the answer: a low one is jumped, a chest-height one is dashed through, a high one is walked under. The pose is the cue and the orb in its hands charges up during the warning.
+- **Triple Volley**: three bolts one after the other at low, middle and high. Each needs a different answer.
+- **Lob**: a red mark appears on the floor and a ball flies up and lands there with a burst. Leave the mark. The wall in the middle does not stop it.
+- **Point-Blank Burst**: if you get close, it punishes you with a wide blast in front of it.
+- The **wall in the middle** stops low bolts but not the high one, and not the lob. It is a place to catch your breath, not a safe place.
+- A dash lets a bolt pass through you. Your sword does nothing to a bolt.
+
+### Checklist
+- [ ] Vesper Sage is the last choice on the Boss row and Fight starts it.
+- [ ] You can see a bolt coming and tell how high it is.
+- [ ] The red mark of the lob is easy to see and the burst hurts only where it landed.
+- [ ] The low bolt is stopped by the wall and the high one flies over it.
+- [ ] A dash through a bolt does not hurt.
+- [ ] In the study, bolts and lobs are shown and do not hurt.
+- [ ] Getting close is a bad idea (the burst) and staying far away is also a bad idea (bolts and lobs).
+- [ ] Stats save and export, and in the file that fight's `bossId` says `"vesper-sage"`; attacks with shots have `shotsFired`.
+
+### Questions about the Sage
+- Can you read the height of a bolt in time? Which one is hardest?
+- Is the warning long enough for the lob and the volley, or too long and boring?
+- Does the fight feel different from the Duelist and the Hound, or still the same?
+- Is there anywhere on the screen where you feel safe the whole fight?
+
 ## Stats and export (M3b)
 ### What is recorded
 The game now keeps a record of every fight you play: which boss and difficulty, and the exact buttons you pressed on every step of the fight. From that the game works out the numbers we will study together: how long you took to react to each attack, whether you dodged, got hit or countered, how you moved, and whether you punished the boss after its attacks. A finished fight (a win or a loss) and a fight you leave after it started are saved by themselves, and the summary ends with "Fight saved (3 on this device)." (the number is how many fights are saved). A fight you leave before it started is not saved.

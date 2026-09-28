@@ -85,6 +85,18 @@ attacks, rewarding precise counter timing and range over dodging). Each is singl
 and stays within or close to the generator's playtested `GEN` ranges (`src/bosses/generate/tuning.ts`)
 except where the archetype's brief explicitly called for going past them (the Warden's poke reach).
 
+## Slice A left out: more on projectiles, and the slices after it (raised 2026-09-28)
+Slice A (`docs/superpowers/specs/2026-09-28-projectiles-design.md`) built straight bolts, lobbed arcs and the Vesper Sage. Left out on purpose:
+- **Shots in generated bosses.** The generator does not draw `shots` yet, and its fairness check has no notion of them.
+- **Cutting or deflecting a shot.** Today the swing does nothing to a shot (dodge only). Slicing a bolt, or knocking it back at the boss, is a possible addition.
+- **More shot paths:** homing orbs and rolling ground waves.
+- **Shots and platforms.** Platforms affect no shot. A bolt that a platform blocks, or a ceiling, is not built.
+
+The next slices, each its own design conversation (they came out of the owner's wish for different attacks, movements and shapes):
+- **Slice B: flying and hovering.** A boss that leaves the floor for more than a leap, so the player has to deal with attacks from above.
+- **Slice C: ground explosions and hazards.** Timed hazards on the floor (the "piece tied to an attack" idea in "Dynamic arena pieces" below belongs here).
+- **Slice D: new figures for the five existing bosses.** Look-only (`src/ui/look/figures.ts`): Quill Warden, Cinder Golem, Veil Dancer, Gale Reaver and Brass Sentinel share the generic block figure today. It can be done at any point.
+
 ## Dynamic arena pieces (raised 2026-09-22)
 Platforms or cover that are not just static: appearing/disappearing, appearing in reaction to a
 specific incoming attack, or constantly moving. Raised while reviewing the M6a generated-arenas

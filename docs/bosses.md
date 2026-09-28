@@ -114,7 +114,8 @@ A counter happens when the player's attack swing **starts** (the first update of
 | `range` | `{ min, max }`: the distance from the player (centre to centre) at which it can start this attack. If it is outside, it walks (or backs off) until inside. | numbers, `min` at least 0, `max` greater than `min` |
 | `move` (optional) | `{ from, to, speed, dir }`: the boss moves at `speed` units per second while `from <= t < to`. `dir` is `forward` (the way it faces) or `back` (away from the way it faces, still facing forward); when absent it is `forward`. Stops at the arena wall. | `from`, `to` whole numbers; the range must lie inside the active updates; `speed` at least 1; `dir`, when present, `forward` or `back` |
 | `leap` (optional) | `{ from, to, height, target, distance }`: the boss leaps in an arc while `from <= t < to`, peaking `height` units above the floor. The landing x is fixed at take-off (update `from`) and does not follow the player afterwards. `target` says where it lands: `player` (the player's x at update `from`), `forward` or `back` (`distance` units in front of or behind the boss's x at update `from`). `distance` is required for `forward` and `back`, and ignored (dropped) for `player`. | `from` whole number at least 0, `to` whole number at least 1 and after `from`, both inside the active updates; `height` at least 1; `target` one of `player`, `forward`, `back`; `distance` at least 1 for `forward`/`back`. An attack may have both a `move` and a `leap`, but their update ranges must not overlap (both change the boss's x). |
-| `hits` | The hurt boxes (next section). May be empty only when the attack has a `move` or a `leap` (an attack that only repositions the boss). | at least one, unless there is a `move` or a `leap` |
+| `shots` (optional) | Bolts and lobbed arcs the boss fires (section "Shots" below). | 1 to 8 entries; the attack must be `mustDodge` |
+| `hits` | The hurt boxes (next section). May be empty only when the attack has a `move`, a `leap` or `shots` (an attack that only repositions the boss or only shoots). | at least one, unless there is a `move`, a `leap` or `shots` |
 
 The whole attack lasts `windup + active + recovery` updates. The boss does not turn during an attack: it faces the way it faced when the attack started.
 
@@ -134,6 +135,28 @@ A box hurts the player when it overlaps the player's body and the player is not 
 **Worked example: the slam** (`x0` 0, `x1` 150, `bottom` 0, `top` 180). The box starts at the boss's centre, so it also covers the ground under the boss's own body: a player who runs into the boss and stands on it is hit. (An `x0` of 40, the body's edge, would leave a safe pocket in the middle of the boss.) The box reaches 150 from the centre, so it sticks out 110 units past the body (the boss is 80 wide, so its body edge is 40 from its centre), and it goes from the floor up to 180 high. If the boss stands at x = 900 and faces left, the box covers x = 750 to 900; facing right, x = 900 to 1050. Jumping reaches only about 150 units, so a 180-high box cannot be jumped: the player has to dash through it or stay out of reach.
 
 For comparison, the sweep is `x0` 0, `x1` 250, `top` 100: a long, low box that a jump clears (the player's feet must be above `top`).
+
+### Shots (each entry of `shots`)
+An attack may fire projectiles. The wind-up, pose and red glow work as for any attack; a shot appears at update `at`, counted from the first update of the attack like a hit window, and `at` must lie in the active part (`windup <= at < windup + active`). An attack with shots must be `mustDodge` (there is nothing to counter). The player can only dodge a shot: the swing does nothing to it. A shot costs the attack's `damage`, and the usual blinking after a hit applies.
+
+Two kinds, chosen by `kind`:
+
+| Kind | Fields | What it does |
+|---|---|---|
+| `bolt` | `at`; `height` (bottom edge above the floor, 0 to 200); `size` (it is a square this many units wide and tall, 10 to 80); `speed` (units per second, 100 to 1600) | Appears at the boss's front and flies in a straight line the way the boss faces, until it reaches the arena wall, a cover that stops it, or the player. Height is the dodge: low is jumped, chest height is dashed through, high is walked under. |
+| `arc` | `at`; `flight` (updates in the air, whole number 20 to 120); `peak` (height, 60 to 400); `target` (`player`, `forward` or `back`, as for a leap); `distance` (only for `forward` and `back`, at least 1); `radius` (half-width of the landing burst, 10 to 200); `burst` (updates the burst lasts, whole number 3 to 30) | Launched at `at`, flies up and lands where it was aimed. The landing x is fixed at launch and does not follow the player. A red mark shows on the floor from launch until it lands. In the air it hurts nobody; on landing a burst `2 * radius` wide and 90 high (`SHOT.arcBurstHeight`, `src/game/params.ts`) hurts for `burst` updates. |
+
+**Cover.** A cover stops a bolt whose bottom edge is below the cover's height (`height < cover.height`); a bolt at or above it flies over. Arcs ignore cover, and platforms affect nothing. So a bolt fired at height 40 is stopped by the Vesper Sage's 90-high cover and one at height 110 is not.
+
+**Lifetime.** A shot outlives its attack: it can still be in flight while the boss recovers or begins its next attack. A phase change and the end of the fight remove every shot. A dashing or blinking player is skipped and the shot keeps flying; a shot that hits is used up. If several land on the same update the player is hurt once, for the largest damage.
+
+**Dials.** `speed` multiplies a bolt's speed (an arc's flight is not scaled, like a leap's). `readability` shifts every shot's `at` with the wind-up. `range` multiplies an arc's `distance` and `radius`. No dial changes a bolt's `height` or `size`, so a bolt that could be jumped stays one that could be jumped.
+
+**Study.** Shots are shown and harmless in the study; the study waits for the last shot to leave before the demonstration is over.
+
+**Stats.** An attack with shots counts as dodged only when all its shots are gone without hitting the player, and as a hit if any lands (`docs/stats.md`, section 7.4, schema version 4). The analysis reads `shotsFired` for the number of shots the attack fired.
+
+**Not built** (`docs/backlog.md`): homing orbs, rolling ground waves, cutting or deflecting a shot with the swing, and shots in generated bosses.
 
 ### Each phase in `phases`
 The phases are listed in order. **A phase does not inherit anything from the one before:** every phase field is given in every phase.
@@ -236,6 +259,23 @@ The platforms span x 230 to 430 and 850 to 1050; the cover spans 610 to 670, so 
 - **The `platform` evasion counts any raised surface**, including the top of the cover (`docs/stats.md`, section 7.2).
 
 The mix is `bite` 3, `rush` 2, `slip` 2, `pounce` 3; a chain of two follows an attack with chance 0.35; the gap is 45 updates; `predictability` is 0.2. `tests/ashen-hound.test.ts` pins the file's shape and shows, with scripted players, that a player who knows the right answer to each attack can beat it without being hit, and that a player who camps on a platform is still hit and the fight still ends.
+
+## 3a-bis. The Vesper Sage
+
+`src/bosses/vesper-sage.json`: a tall, thin hooded caster (60 wide, 170 tall, 20 health, two phases: Vesper and Overcharged from half health) that keeps far away (`spacing` 420 to 620) and backs off if approached, so fighting it means crossing the arena under fire. It is the first boss with `shots`. It has no counterable attack, so the counter does not apply. Its numbers are a **first guess**, to be tuned from the owner's play test. Every attack is red (must dodge):
+
+| Attack | Pose | What it does | What it trains |
+|---|---|---|---|
+| Single Bolt | sideways | 30 updates of wind-up, then one bolt at height 40 (30 wide, 700 per second). Starts from 300 to 700 away. | Jumping a low projectile, or ducking behind the cover (a bolt at 40 is stopped by the 90-high cover). |
+| Triple Volley | raised | 32 updates of wind-up, then three bolts 10 updates apart at heights 0, 46 and 110 (620 per second). Starts from 300 to 700 away. | Reading a burst: the low one is jumped, the middle one dashed, the high one walked under, and each needs a different answer. The cover stops the first two but not the third. |
+| Lob | back | 34 updates of wind-up, then an arc aimed at where the player stands at launch (46 updates in the air, 300 high, burst radius 70 for 8 updates). Starts from 250 to 700 away. | Leaving the red mark. Cover does not help. |
+| Point-Blank Burst | down | 22 updates of wind-up, then a box 220 in front, 150 high, for 6 updates. Starts only within 260. | Punishes a player who has closed in, so the answer to the Sage is not simply to run at it. |
+
+**The arena.** One cover in the middle (x 640, 100 wide, 90 high), no platforms. The cover is there so that hiding from bolts is a real option. Its height is chosen against the bolt heights: 90 stops the bolt at 40 and the volley's first two, and lets the one at 110 pass. It does nothing against the lob, and it does not stop the burst, so **no place is safe from everything** (the camping rule in section 3a). `tests/vesper-sage.test.ts` checks that a player hiding behind the cover, and one perched on top of it, are still hurt and that the fight ends.
+
+**The mix.** Phase 1: `single-bolt` 3, `triple-volley` 2, `lob` 2, `point-blank-burst` 1, gap 45, no chaining. Phase 2 (Overcharged, from half health): the same mix, opening with `lob`, gap 30, a chain of two with chance 0.4, faster walking. `predictability` is 0.2.
+
+**Fairness measured** (`tests/vesper-sage.test.ts`): an idle player loses at every preset on eight seeds, a player hiding behind the cover is still hurt, and a scripted player who knows the right answer to each attack wins some seeds while taking at most one hit.
 
 ## 3b. The boss generator
 

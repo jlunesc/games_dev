@@ -1,6 +1,6 @@
 # Slice A: projectiles and a caster boss
 
-Status: design agreed in conversation 2026-09-28, awaiting the owner's review of this document. Nothing is built.
+Status: built 2026-09-28 (plan in `docs/superpowers/plans/2026-09-28-projectiles.md`), awaiting the owner's play test. The numbers are a first guess.
 
 ## Why
 
