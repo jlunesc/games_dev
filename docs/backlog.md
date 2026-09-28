@@ -74,6 +74,17 @@ Ideas that are **not built**, only listed:
 - **Using play stats to steer generation**: picking tuned ranges, or which primitives to draw from, based on what the exported stats say about the player (for example leaning the generator towards attack shapes that read badly for the owner). Today generation is uniform random inside fixed ranges (`src/bosses/generate/tuning.ts`), with no memory of past fights. **Pulled forward as M6 roadmap Phase 2** (`docs/SPEC.md` section 11, design in `docs/superpowers/specs/2026-09-22-m6-roadmap-design.md`) — no longer just an idea, it's the next major design after Phase 1's five hand-built bosses produce real data to design it from.
 - **Exposing the Trainee on its own**: a hand-built, generous boss (`src/bosses/trainee.json`) that used to be the generator's fallback when fairness kept failing. Since M6a replaced that fallback with a banner (`docs/bosses.md`, "Retry, then use the first candidate anyway, with a banner"), it is no longer used anywhere at all — still exported and tested, just unreachable in play. It is not offered in the menu by itself.
 
+## M6 roadmap Phase 1: five hand-built archetype bosses (built 2026-09-28)
+Five new hand-built bosses (`src/bosses/*.json`, wired into `BOSSES`/the menu's Boss row), one per
+archetype named in the M6 roadmap design (`docs/superpowers/specs/2026-09-22-m6-roadmap-design.md`):
+**Quill Warden** (zoner — fights from range, punishes an unsafe approach), **Cinder Golem** (heavy
+bruiser — slow with long, very readable telegraphs and a big punish window), **Veil Dancer**
+(trickster — fakes and repositions more than it damages), **Gale Reaver** (rushdown — fast, closes
+distance, chains attacks with little gap) and **Brass Sentinel** (counter-bait — mostly counterable
+attacks, rewarding precise counter timing and range over dodging). Each is single-phase, arena-free,
+and stays within or close to the generator's playtested `GEN` ranges (`src/bosses/generate/tuning.ts`)
+except where the archetype's brief explicitly called for going past them (the Warden's poke reach).
+
 ## Dynamic arena pieces (raised 2026-09-22)
 Platforms or cover that are not just static: appearing/disappearing, appearing in reaction to a
 specific incoming attack, or constantly moving. Raised while reviewing the M6a generated-arenas
