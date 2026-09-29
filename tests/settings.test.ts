@@ -48,6 +48,7 @@ describe('settings', () => {
     expect(parseSettings('{"sound": false}').volume).toBe('off');
     expect(parseSettings('{"sound": true}').volume).toBe('medium');
     expect(parseSettings('{"sound": false, "volume": "low"}').volume).toBe('low');
+    expect(parseSettings('{"sound":false,"volume":"bogus"}').volume).toBe('off');
   });
 
   it('survive a browser that blocks storage', () => {

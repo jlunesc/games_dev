@@ -13,7 +13,7 @@ export const SOUND = {
   /** A voice that is pushed out by a more important one fades over this long. */
   stealFadeSeconds: 0.02,
   /** The music dips to `level` for `holdSeconds`, then recovers over `recoverSeconds`. */
-  duck: { level: 0.4, holdSeconds: 0.15, recoverSeconds: 0.1 },
+  duck: { level: 0.4, attackSeconds: 0.008, holdSeconds: 0.15, recoverSeconds: 0.1 },
 } as const;
 
 /** A short attack-and-decay envelope keeps a sound from clicking when it starts. */

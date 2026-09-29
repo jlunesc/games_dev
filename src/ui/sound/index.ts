@@ -17,6 +17,8 @@ export interface Sound {
   startFight(fight: FightDef, seed: number): void;
   /** Called once per simulation update with the states around it. Only reads them. */
   update(before: GameState, after: GameState, fight: FightDef): void;
+  /** The page went to the background: the music stops, and the next update in a fight starts it again. */
+  suspend(): void;
   /** The fight is over or was left: the music fades out. */
   endFight(): void;
 }
@@ -83,6 +85,9 @@ export function createSound(env: SoundEnv = browserEnv): Sound {
       if (cues.some((cue) => DUCKS.has(cue.voice))) engine.duck();
       if (!player.running) player.start(theme, layersFor(intensityOf(after, fight)));
       else if (after.tick % MUSIC.checkEvery === 0) player.setLayers(layersFor(intensityOf(after, fight)));
+    },
+    suspend(): void {
+      music?.stop();
     },
     endFight(): void {
       music?.stop();

@@ -100,9 +100,11 @@ export function createEngine(ctx: AudioContext, volume: Volume, cap: number = SO
       const now = ctx.currentTime;
       const gain = musicBus.gain;
       gain.cancelScheduledValues(now);
-      gain.setValueAtTime(SOUND.duck.level, now);
-      gain.setValueAtTime(SOUND.duck.level, now + SOUND.duck.holdSeconds);
-      gain.linearRampToValueAtTime(1, now + SOUND.duck.holdSeconds + SOUND.duck.recoverSeconds);
+      const held = now + SOUND.duck.attackSeconds + SOUND.duck.holdSeconds;
+      gain.setValueAtTime(gain.value, now);
+      gain.linearRampToValueAtTime(SOUND.duck.level, now + SOUND.duck.attackSeconds);
+      gain.setValueAtTime(SOUND.duck.level, held);
+      gain.linearRampToValueAtTime(1, held + SOUND.duck.recoverSeconds);
     },
   };
 }

@@ -120,6 +120,10 @@ export function mountApp(root: HTMLElement): void {
   for (const type of ['pointerdown', 'pointerup', 'click']) {
     root.addEventListener(type, () => sound.unlock());
   }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) sound.suspend();
+    else sound.unlock();
+  });
 
   let screen: Screen = 'menu';
   let menu: MenuModel = createMenu(prefs);
@@ -413,7 +417,7 @@ export function mountApp(root: HTMLElement): void {
     renderList(
       panel,
       'Settings',
-      'Left, right or the bottom button switch a setting, top button goes back.',
+      'Left, right or the bottom button change a setting, top button goes back.',
       settingsRows(settingsModel).map((row) => ({ label: row.label, value: row.value, help: row.help })),
       settingsModel.focus,
       (index) => {

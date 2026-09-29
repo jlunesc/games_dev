@@ -88,14 +88,18 @@ describe('the sound engine', () => {
     expect(engine.begin(5, 0.5)).not.toBeNull();
   });
 
-  it('ducks the music bus, holds, then recovers', () => {
+  it('ducks the music bus with a short ramp, holds, then recovers', () => {
     const { ctx, engine } = make();
     ctx.currentTime = 2;
+    node(engine.musicBus).gain.value = 1;
     engine.duck();
-    const calls = node(engine.musicBus).gain.calls;
+    const { attackSeconds, holdSeconds, recoverSeconds, level } = SOUND.duck;
+    const calls = node(engine.musicBus).gain.calls.slice(-5);
     expect(calls[0]).toMatchObject({ op: 'cancel', time: 2 });
-    expect(calls[1]).toMatchObject({ op: 'set', value: SOUND.duck.level, time: 2 });
-    expect(calls[2]).toMatchObject({ op: 'set', value: SOUND.duck.level, time: 2 + SOUND.duck.holdSeconds });
-    expect(calls[3]).toMatchObject({ op: 'linear', value: 1, time: 2 + SOUND.duck.holdSeconds + SOUND.duck.recoverSeconds });
+    expect(calls[1]).toMatchObject({ op: 'set', value: 1, time: 2 });
+    expect(calls[2]).toMatchObject({ op: 'linear', value: level, time: 2 + attackSeconds });
+    expect(calls[3]).toMatchObject({ op: 'set', value: level, time: 2 + attackSeconds + holdSeconds });
+    expect(calls[4]).toMatchObject({ op: 'linear', value: 1, time: 2 + attackSeconds + holdSeconds + recoverSeconds });
+    expect(calls.filter((call) => call.time === 2 && call.value === level)).toHaveLength(0);
   });
 });
