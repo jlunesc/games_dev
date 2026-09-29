@@ -109,6 +109,7 @@ describe('creating a fight without a study', () => {
         lastAttacks: [],
         cycleIndex: 0,
       },
+      partners: [],
       events: [],
       rng: 5,
       seed: 5,

@@ -1,4 +1,5 @@
 import type { BossDef } from '../bosses/schema';
+import { asFight, type FightDef } from './fight';
 import { PLAYER, WORLD } from './params';
 import { nextRandom } from './rng';
 
@@ -83,6 +84,8 @@ interface ShotBase {
   x: number;
   /** Height of the shot's bottom edge above the floor. */
   lift: number;
+  /** Which boss fired it: an index into the fight's bosses. Absent means the primary boss, so a one-boss fight's shots are unchanged. */
+  owner?: number;
 }
 
 /** A straight bolt in flight. */
@@ -131,6 +134,7 @@ export type GameEvent =
   | 'counter'
   | 'phaseChange'
   | 'bossDefeated'
+  | 'bossDown'
   | 'playerDefeated'
   | 'studyHit'
   | 'studyEnd';
@@ -153,7 +157,10 @@ export interface GameState {
   phase: 'fight' | 'defeated' | 'victory';
   endTicks: number;
   player: PlayerState;
+  /** The primary boss (index 0). */
   boss: BossState;
+  /** The other bosses of a fight with more than one (index 1 and up); empty in a normal fight. */
+  partners: BossState[];
   /** Events produced by the last update. */
   events: GameEvent[];
   /** State of the seeded random generator; advances only when the boss makes a random choice. */
@@ -188,9 +195,51 @@ function planStudy(boss: BossDef, rng: number, rounds: number): { queue: string[
   return { queue, rng: state };
 }
 
-export function createInitialState(boss: BossDef, seed = 1, studyRounds = 0): GameState {
+/** The boss with this index: 0 is `boss`, 1 and up are `partners`. */
+export function bossAt(s: GameState, index: number): BossState {
+  const found = index === 0 ? s.boss : s.partners[index - 1];
+  if (found === undefined) throw new Error(`The fight has no boss ${index}`);
+  return found;
+}
+
+export const bossCount = (s: GameState): number => 1 + s.partners.length;
+
+export const allBosses = (s: GameState): BossState[] => [s.boss, ...s.partners];
+
+/**
+ * A boss of a fight with partners that has been beaten. A lone boss at 0 health ends the fight at once, so in a
+ * one-boss fight no boss is ever downed.
+ */
+export const isDowned = (s: GameState, index: number): boolean =>
+  s.partners.length > 0 && bossAt(s, index).hp <= 0;
+
+function initialBoss(boss: BossDef): BossState {
+  return {
+    x: boss.startX,
+    lift: boss.flight?.height ?? 0,
+    leapFromX: null,
+    leapToX: null,
+    diveFromLift: null,
+    facing: -1,
+    hp: boss.maxHp,
+    phase: 0,
+    mode: 'gap',
+    modeTick: 0,
+    attackId: null,
+    attackTick: 0,
+    pendingAttackId: null,
+    chainLeft: 0,
+    lastAttacks: [],
+    cycleIndex: 0,
+  };
+}
+
+export function createInitialState(source: BossDef | FightDef, seed = 1, studyRounds = 0): GameState {
+  const fight = asFight(source);
+  const boss = fight.bosses[0]!;
   const start = seed >>> 0;
-  const rounds = Math.min(2, Math.floor(Math.max(0, studyRounds)));
+  // The study demonstrates one boss's attacks; a fight with partners has none until it is built for them.
+  const rounds = fight.bosses.length > 1 ? 0 : Math.min(2, Math.floor(Math.max(0, studyRounds)));
   const study = rounds > 0 ? planStudy(boss, start, rounds) : { queue: [], rng: start };
   return {
     tick: 0,
@@ -216,24 +265,8 @@ export function createInitialState(boss: BossDef, seed = 1, studyRounds = 0): Ga
       dashCooldown: 0,
       buffer: { jump: 0, attack: 0, dash: 0 },
     },
-    boss: {
-      x: boss.startX,
-      lift: boss.flight?.height ?? 0,
-      leapFromX: null,
-      leapToX: null,
-      diveFromLift: null,
-      facing: -1,
-      hp: boss.maxHp,
-      phase: 0,
-      mode: 'gap',
-      modeTick: 0,
-      attackId: null,
-      attackTick: 0,
-      pendingAttackId: null,
-      chainLeft: 0,
-      lastAttacks: [],
-      cycleIndex: 0,
-    },
+    boss: initialBoss(boss),
+    partners: fight.bosses.slice(1).map(initialBoss),
     events: [],
     rng: study.rng,
     seed: start,
