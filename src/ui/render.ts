@@ -6,7 +6,7 @@ import { shakeOffset, type FeedbackState } from './feedback';
 import { drawBackground, type BackgroundCache } from './look/background';
 import type { EffectsState } from './look/effects';
 import { bossFigure, drawPrimitives, playerFigure } from './look/figures';
-import { boltTrail, slashShape } from './look/attackfx';
+import { attackPalette, boltTrail, slashShape } from './look/attackfx';
 import { moodFor, type Mood } from './look/moods';
 import { BOSS_COLORS, armRect, bossDrawBox, bossLook, type BossLook, type Rect } from './look/pose';
 import { LOOK } from './look/tuning';
@@ -221,8 +221,8 @@ export function eruptionMark(shot: EruptionState): { left: number; right: number
 }
 
 /** Bolts as glowing cores with a trail, arcs as an orb in the air over a red floor mark, eruptions as a mark that charges into a column, and the bursts. */
-function drawShots(ctx: CanvasRenderingContext2D, state: GameState): void {
-  const look = LOOK.shot;
+function drawShots(ctx: CanvasRenderingContext2D, state: GameState, bossId: string): void {
+  const look = { ...LOOK.shot, ...attackPalette(bossId) };
   const pulse = 0.6 + 0.4 * Math.sin(state.tick / 4);
   ctx.save();
   for (const shot of state.shots) {
@@ -232,7 +232,7 @@ function drawShots(ctx: CanvasRenderingContext2D, state: GameState): void {
       const width = mark.right - mark.left;
       const area = shotBox(shot);
       if (area !== null) {
-        ctx.fillStyle = look.burst;
+        ctx.fillStyle = look.edge;
         ctx.globalAlpha = look.eruptionBlastAlpha;
         ctx.fillRect(area.x, area.y, area.w, area.h);
         ctx.fillStyle = look.eruptionCore;
@@ -256,7 +256,7 @@ function drawShots(ctx: CanvasRenderingContext2D, state: GameState): void {
       }
       const area = shotBox(shot);
       if (area !== null) {
-        ctx.fillStyle = look.burst;
+        ctx.fillStyle = look.edge;
         ctx.globalAlpha = look.burstAlpha;
         ctx.fillRect(area.x, area.y, area.w, area.h);
       } else {
@@ -382,7 +382,7 @@ function drawBoss(
     ctx.fillStyle = look.glow ?? COLORS.bossHp;
     ctx.fillRect(box.x, box.y, box.w, box.h);
     ctx.globalAlpha = 1;
-    drawPrimitives(ctx, slashShape(box, box.x + box.w / 2 >= b.x ? 1 : -1), LOOK.slash.shapeAlpha);
+    drawPrimitives(ctx, slashShape(box, box.x + box.w / 2 >= b.x ? 1 : -1, attackPalette(boss.id)), LOOK.slash.shapeAlpha);
   }
 }
 
@@ -540,7 +540,7 @@ export function drawFrame(
 
   drawArena(ctx, boss, mood);
   drawBoss(ctx, state, boss, feedback, mood);
-  drawShots(ctx, state);
+  drawShots(ctx, state, boss.id);
   drawPlayer(ctx, state, alpha, feedback, mood);
   if (look !== undefined) drawEffects(ctx, look.effects);
   drawHud(ctx, state, boss);

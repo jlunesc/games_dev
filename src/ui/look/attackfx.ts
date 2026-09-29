@@ -9,6 +9,17 @@ import { WORLD } from '../../game/params';
 import type { Primitive } from './figures';
 import { LOOK } from './tuning';
 
+export interface AttackPalette {
+  edge: string;
+  core: string;
+  halo: string;
+}
+
+/** The colours of a boss's attacks: its own set in `LOOK.palette`, or the default one. */
+export function attackPalette(bossId: string): AttackPalette {
+  return LOOK.palette[bossId] ?? LOOK.palette['default']!;
+}
+
 export type SlashKind = 'spikes' | 'spear' | 'crescent';
 
 /** Which shape a live hit box gets: low boxes on the floor are spikes, long thin ones a spear, the rest a crescent. */
@@ -28,9 +39,9 @@ function toWorld(box: Box, side: 1 | -1, u: number, v: number): Point {
 }
 
 /** The bright shape and its hot core for one live hit box, in world coordinates, inside the box. */
-export function slashShape(box: Box, side: 1 | -1): Primitive[] {
+export function slashShape(box: Box, side: 1 | -1, palette: AttackPalette = attackPalette('')): Primitive[] {
   if (box.w <= 0 || box.h <= 0) return [];
-  const s = LOOK.slash;
+  const s = { ...LOOK.slash, ...palette };
   const kind = slashKind(box);
   const out: Primitive[] = [];
   const pt = (u: number, v: number): Point => toWorld(box, side, u, v);

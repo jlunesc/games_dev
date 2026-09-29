@@ -10,6 +10,7 @@
 import type { AttackDef, BossDef, Pose } from '../../bosses/schema';
 import { PLAYER, WORLD } from '../../game/params';
 import type { GameState } from '../../game/state';
+import { attackPalette } from './attackfx';
 import { armRect, bossDrawBox, type Rect } from './pose';
 import { LOOK } from './tuning';
 
@@ -647,7 +648,7 @@ function vesperSageFigure(bp: BossPose, colors: { body: string; accent: string; 
 
   out.push(forwardRect(bp, 0.1 * w, orbDx, orbY - 4, 8, colors.body));
   out.push({ kind: 'circle', x: bp.cx + bp.f * orbDx, y: orbY, r: orbR * 1.15, color: colors.glow ?? colors.accent });
-  out.push({ kind: 'circle', x: bp.cx + bp.f * orbDx, y: orbY, r: orbR * 0.75, color: LOOK.shot.core });
+  out.push({ kind: 'circle', x: bp.cx + bp.f * orbDx, y: orbY, r: orbR * 0.75, color: attackPalette('vesper-sage').core });
   return out;
 }
 
@@ -1218,11 +1219,12 @@ function genericFigure(bp: BossPose, colors: { body: string; accent: string; glo
  * aimed bolt, behind the boss for a bolt fired backwards, a triangle for a lobbed shot, a bar for an eruption).
  * Everything stays inside the figure's box plus its margin.
  */
-function attackMarks(bp: BossPose): Primitive[] {
+function attackMarks(bp: BossPose, bossId: string): Primitive[] {
   const m = bp.marks;
   if (m === null) return [];
   const out: Primitive[] = [];
-  const t = LOOK.mark;
+  const pal = attackPalette(bossId);
+  const t = { ...LOOK.mark, spring: pal.core, pip: pal.core, flare: pal.halo };
   if (m.hover) {
     for (const side of [-1, 1]) {
       out.push(forwardRect(bp, side * bp.w * 0.32 - 7, side * bp.w * 0.32 + 7, bp.feet - t.springHeight, t.springHeight, t.spring));
@@ -1297,15 +1299,15 @@ export function bossFigure(
     case 'tremor-brute':
       return tremorBruteFigure(bp, colors);
     case 'cinder-golem':
-      return [...cinderGolemFigure(bp, colors), ...attackMarks(bp)];
+      return [...cinderGolemFigure(bp, colors), ...attackMarks(bp, boss.id)];
     case 'quill-warden':
-      return [...quillWardenFigure(bp, colors), ...attackMarks(bp)];
+      return [...quillWardenFigure(bp, colors), ...attackMarks(bp, boss.id)];
     case 'veil-dancer':
-      return [...veilDancerFigure(bp, colors), ...attackMarks(bp)];
+      return [...veilDancerFigure(bp, colors), ...attackMarks(bp, boss.id)];
     case 'gale-reaver':
-      return [...galeReaverFigure(bp, colors), ...attackMarks(bp)];
+      return [...galeReaverFigure(bp, colors), ...attackMarks(bp, boss.id)];
     case 'brass-sentinel':
-      return [...brassSentinelFigure(bp, colors), ...attackMarks(bp)];
+      return [...brassSentinelFigure(bp, colors), ...attackMarks(bp, boss.id)];
     default:
       return genericFigure(bp, colors);
   }

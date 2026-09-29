@@ -158,11 +158,8 @@ export const LOOK = {
 
   // ---- Shots (bolts and arcs): drawn only, the real sizes come from the boss file ----
   shot: {
-    /** The glowing core and the halo round a bolt or a flying arc, and the arc's landing mark and burst. */
-    core: '#fff1c9',
-    halo: '#b48cff',
+    /** The landing mark of an arc and of an eruption stays red for every boss (danger reads the same); the glow, halo and burst follow the boss's `palette`. */
     mark: '#e0403a',
-    burst: '#ff6a5a',
     /** Halo size as a multiple of the shot's size, and how much of a bolt's length the trail spans (in its own sizes). */
     haloScale: 1.7,
     trailLength: 2.6,
@@ -181,8 +178,6 @@ export const LOOK = {
 
   // ---- The look of a boss's strike (see attackfx.ts): the shape drawn inside each live hit box ----
   slash: {
-    edge: '#ff7a5a',
-    core: '#fff1c9',
     /** The plain box behind the shape, so the real reach is always shown, and the shape's own opacity. */
     boxAlpha: 0.16,
     shapeAlpha: 0.9,
@@ -199,19 +194,32 @@ export const LOOK = {
 
   // ---- Signs on a boss that show what its attack will do (see `attackMarks` in figures.ts) ----
   mark: {
-    /** A pip for each shot, a ring round it when aimed. Up to `maxPips` are shown, `pipSpacing` apart, `pipLift` above the head. */
-    pip: '#fff1c9',
+    /** A pip for each shot, a ring round it when aimed (red for every boss). Up to `maxPips` are shown, `pipSpacing` apart, `pipLift` above the head. The pips and springs take the boss's `palette.core`, the flare its `palette.halo`. */
     aimRing: '#e0403a',
     maxPips: 5,
     pipSpacing: 13,
     pipLift: 12,
     pipRadius: 4,
     /** Springs under the feet of a hovering attack, and the flare behind the body of a strike on both sides. */
-    spring: '#fff1c9',
     springHeight: 8,
-    flare: '#b48cff',
     flareLength: 18,
   },
+
+  // ---- The colours of a boss's attacks, one set per boss id (the same set is used by its strikes, shots and signs) ----
+  /**
+   * `edge`: the outline of its strikes, and the burst of its lobbed shots and eruptions. `core`: the hot middle of a strike,
+   * of a shot, and its signs (pips, springs). `halo`: the glow and trail of its shots, and the flare. A boss with no set
+   * of its own uses `default`.
+   */
+  palette: {
+    default: { edge: '#ff7a5a', core: '#fff1c9', halo: '#b48cff' },
+    'quill-warden': { edge: '#d8d08a', core: '#fffbe0', halo: '#9aa860' },
+    'cinder-golem': { edge: '#ff8a2a', core: '#ffe2a0', halo: '#ff5a1a' },
+    'veil-dancer': { edge: '#e0609a', core: '#ffe6f2', halo: '#c070e0' },
+    'gale-reaver': { edge: '#5fd6c8', core: '#e6fffb', halo: '#3fb8b0' },
+    'brass-sentinel': { edge: '#e8b84a', core: '#fff4d0', halo: '#d8a030' },
+    'tremor-brute': { edge: '#d0703a', core: '#ffd8a8', halo: '#a04a30' },
+  } as Record<string, { edge: string; core: string; halo: string }>,
 
   // ---- Floor, platforms and cover (copied from the old render.ts colours) ----
   floor: '#2a2a3a',

@@ -4,7 +4,7 @@ import type { BossDef } from '../src/bosses/schema';
 import type { Box } from '../src/game/geometry';
 import { WORLD } from '../src/game/params';
 import { createInitialState, type GameState } from '../src/game/state';
-import { boltTrail, slashKind, slashShape } from '../src/ui/look/attackfx';
+import { attackPalette, boltTrail, slashKind, slashShape } from '../src/ui/look/attackfx';
 import { bossFigure, type Primitive } from '../src/ui/look/figures';
 import { BOSS_COLORS } from '../src/ui/look/pose';
 import { landingRing, landingSpans } from '../src/ui/render';
@@ -129,5 +129,42 @@ describe('where a leap with a strike on both sides lands', () => {
     const ring = landingRing({ ...s.boss, mode: 'attack', attackId: lance.id, attackTick: lance.leap!.from + 3, leapToX: 400 }, boss)!;
     expect(ring.both).toBeUndefined();
     expect(landingSpans(ring)).toHaveLength(1);
+  });
+});
+
+describe('the colours of a boss attacks', () => {
+  const ids = ['quill-warden', 'cinder-golem', 'veil-dancer', 'gale-reaver', 'brass-sentinel', 'tremor-brute'];
+
+  it('each boss with its own figure has its own set, different from the default and from every other boss', () => {
+    const seen = new Set<string>();
+    for (const id of ids) {
+      const p = attackPalette(id);
+      expect(p).not.toBe(attackPalette('someone-else'));
+      const key = `${p.edge}${p.core}${p.halo}`;
+      expect(seen.has(key)).toBe(false);
+      seen.add(key);
+    }
+  });
+
+  it('a boss without a set of its own gets the default', () => {
+    expect(attackPalette('generated')).toBe(attackPalette('ember-duelist'));
+  });
+
+  it('a strike takes its bosses colours and nothing else', () => {
+    const box = floorBox(190, 70);
+    for (const id of ids) {
+      const p = attackPalette(id);
+      const colors = new Set(slashShape(box, 1, p).map((x) => x.color));
+      expect([...colors].sort()).toEqual([p.core, p.edge].sort());
+    }
+  });
+
+  it('a winding-up boss shows its signs in its own colours', () => {
+    const boss = QUILL_WARDEN;
+    const volley = boss.attacks.find((a) => a.id === 'feather-volley')!;
+    const s0 = createInitialState(boss, 1);
+    const s = { ...s0, boss: { ...s0.boss, mode: 'attack' as const, attackId: volley.id, attackTick: volley.windup - 1, facing: 1 as const, x: 700 } };
+    const prims = bossFigure(s, boss, { body: BOSS_COLORS.red, accent: BOSS_COLORS.red, glow: BOSS_COLORS.red });
+    expect(prims.some((p) => p.color === attackPalette('quill-warden').core)).toBe(true);
   });
 });

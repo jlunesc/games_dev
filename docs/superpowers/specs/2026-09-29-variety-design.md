@@ -29,6 +29,7 @@ Looks never change a fight (`src/ui/look/`).
 - **Strike shapes** (`attackfx.ts`): the live hit box is still drawn faintly so the true reach is honest, and a shape sits inside it: spikes for a low box on the floor, a spear for a long thin one, a crescent for a tall one. Shapes mirror with the side.
 - **Bolt trails:** a bolt's trail slants with its climb, so an aimed bolt reads as a diagonal streak.
 - **Signs before the attack** (`attackMarks` in `figures.ts`): springs under a boss that will hover, a flare behind one that will strike both sides, and one pip per shot over the head (a ring round it when aimed, one behind when fired backward).
+- **Colours follow the boss** (`LOOK.palette` in `tuning.ts`, one `edge`, `core` and `halo` per boss id; `default` for the rest): its strikes, shot glow and trails, lobbed-shot bursts and signs all use them. Danger marks on the floor and the aim ring stay red for every boss so a warning always reads the same.
 - **Landing bar:** shows both spans when the strike is on both sides.
 - Every new attack is distinct from the others at the last update of its wind-up (a test per figure).
 
