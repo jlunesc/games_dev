@@ -5,11 +5,17 @@ import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 
 describe('the Quill Warden file', () => {
-  it('is loaded, has three attacks, no arena and exactly one counterable attack', () => {
+  it('is loaded, has five attacks (three melee, a volley and a hovering strike), no arena and exactly one counterable attack', () => {
     expect(QUILL_WARDEN).toBeDefined();
     expect(QUILL_WARDEN.id).toBe('quill-warden');
     expect(QUILL_WARDEN.name).toBe('Quill Warden');
-    expect(QUILL_WARDEN.attacks.map((a) => a.id)).toEqual(['reaching-poke', 'low-piercer', 'overextended-thrust']);
+    expect(QUILL_WARDEN.attacks.map((a) => a.id)).toEqual([
+      'reaching-poke',
+      'low-piercer',
+      'overextended-thrust',
+      'feather-volley',
+      'sky-lance',
+    ]);
     expect(QUILL_WARDEN.arena).toBeUndefined();
     expect(QUILL_WARDEN.attacks.filter((a) => a.class === 'counterable')).toHaveLength(1);
     expect(QUILL_WARDEN.phases).toHaveLength(1);

@@ -8,7 +8,7 @@ import { run } from './helpers';
 import { updatesWith, windupUpdates } from './boss-helpers';
 
 describe('the Veil Dancer file', () => {
-  it('is loaded, has four attacks and no arena', () => {
+  it('is loaded, has six attacks and no arena', () => {
     expect(VEIL_DANCER).toBeDefined();
     expect(VEIL_DANCER.id).toBe('veil-dancer');
     expect(VEIL_DANCER.name).toBe('Veil Dancer');
@@ -17,6 +17,8 @@ describe('the Veil Dancer file', () => {
       'rending-dash',
       'phantom-step',
       'veil-slip',
+      'needle-fan',
+      'falling-veil',
     ]);
     expect(VEIL_DANCER.arena).toBeUndefined();
     expect(VEIL_DANCER.phases).toHaveLength(1);

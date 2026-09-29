@@ -16,6 +16,8 @@ export interface HitWindow {
   x1: number;
   bottom: number;
   top: number;
+  /** True: the same box also covers the mirrored side behind the boss (a spin that hurts both sides). */
+  both?: boolean;
 }
 
 /**
@@ -43,11 +45,18 @@ export interface LeapDef {
   height: number;
   target: LeapTarget;
   distance?: number;
+  /**
+   * Updates the boss stays at the top of the leap, hovering, out of the `to - from` flight (it rises, hangs, then falls,
+   * and slides along to the landing x the whole time). Absent means the plain arc. At most `to - from - 2`.
+   */
+  hang?: number;
 }
 
 /**
- * A straight bolt: appears at the boss's front at update `at` (counted like hit windows) and flies the way the
- * boss faces. `height` is its bottom edge above the floor, `size` the side of its square, `speed` in units per second.
+ * A bolt: appears at the boss's edge at update `at` (counted like hit windows) and flies the way the boss faces (or
+ * the opposite way for `dir: 'back'`). `height` is its bottom edge above the boss's feet (the floor for a boss on the
+ * floor), `size` the side of its square, `speed` in units per second. With `aim` it flies in a straight line at the
+ * player's body as it was at update `at` (it can fly down from a hovering boss); `speed` is then its speed along that line.
  */
 export interface BoltDef {
   kind: 'bolt';
@@ -55,6 +64,8 @@ export interface BoltDef {
   height: number;
   size: number;
   speed: number;
+  dir?: 'forward' | 'back';
+  aim?: boolean;
 }
 
 /**

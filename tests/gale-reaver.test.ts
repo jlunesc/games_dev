@@ -5,11 +5,18 @@ import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 
 describe('the Gale Reaver file', () => {
-  it('is loaded, has three attacks and no arena', () => {
+  it('is loaded, has six attacks and no arena', () => {
     expect(GALE_REAVER).toBeDefined();
     expect(GALE_REAVER.id).toBe('gale-reaver');
     expect(GALE_REAVER.name).toBe('Gale Reaver');
-    expect(GALE_REAVER.attacks.map((a) => a.id)).toEqual(['wind-slash', 'gale-jab', 'tempest-rush']);
+    expect(GALE_REAVER.attacks.map((a) => a.id)).toEqual([
+      'wind-slash',
+      'gale-jab',
+      'tempest-rush',
+      'gale-cyclone',
+      'updraft-dive',
+      'retreating-gust',
+    ]);
     expect(GALE_REAVER.arena).toBeUndefined();
     expect(GALE_REAVER.phases).toHaveLength(1);
   });

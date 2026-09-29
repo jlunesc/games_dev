@@ -59,23 +59,27 @@ export function activeHitBoxes(b: BossState, boss: BossDef, options: { ignoreCov
   const boxes: Box[] = [];
   for (const hit of attack.hits) {
     if (b.attackTick < hit.from || b.attackTick >= hit.to) continue;
-    let x = b.facing === 1 ? b.x + hit.x0 : b.x - hit.x1;
-    // Uncut windows keep the width written in the boss file, so a bare arena gives exactly the old numbers.
-    let w = hit.x1 - hit.x0;
-    for (const cover of covers) {
-      if (cover.height < hit.top) continue;
-      const coverLeft = cover.x - cover.width / 2;
-      const coverRight = cover.x + cover.width / 2;
-      if (b.facing === 1 && coverLeft > b.x && coverLeft < x + w) {
-        w = coverLeft - x;
-      } else if (b.facing === -1 && coverRight < b.x && coverRight > x) {
-        w = x + w - coverRight;
-        x = coverRight;
+    // A window with `both` also covers the mirrored side behind the boss; each side is cut by its own covers.
+    const sides: (1 | -1)[] = hit.both === true ? [b.facing, b.facing === 1 ? -1 : 1] : [b.facing];
+    for (const side of sides) {
+      let x = side === 1 ? b.x + hit.x0 : b.x - hit.x1;
+      // Uncut windows keep the width written in the boss file, so a bare arena gives exactly the old numbers.
+      let w = hit.x1 - hit.x0;
+      for (const cover of covers) {
+        if (cover.height < hit.top) continue;
+        const coverLeft = cover.x - cover.width / 2;
+        const coverRight = cover.x + cover.width / 2;
+        if (side === 1 && coverLeft > b.x && coverLeft < x + w) {
+          w = coverLeft - x;
+        } else if (side === -1 && coverRight < b.x && coverRight > x) {
+          w = x + w - coverRight;
+          x = coverRight;
+        }
       }
+      // A window with no width left was cut away by a cover and is dropped. Without covers every window is kept as
+      // written, even a zero-width one, so the bare arena gives exactly the old boxes.
+      if (covers.length === 0 || w > 0) boxes.push({ x, y: WORLD.floorY - hit.top, w, h: hit.top - hit.bottom });
     }
-    // A window with no width left was cut away by a cover and is dropped. Without covers every window is kept as
-    // written, even a zero-width one, so the bare arena gives exactly the old boxes.
-    if (covers.length === 0 || w > 0) boxes.push({ x, y: WORLD.floorY - hit.top, w, h: hit.top - hit.bottom });
   }
   return boxes;
 }

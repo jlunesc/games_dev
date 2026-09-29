@@ -85,7 +85,10 @@ export interface BoltState extends ShotBase {
   /** Where it appeared, so a cover behind the boss cannot stop it. */
   originX: number;
   size: number;
+  /** Sideways speed, units per second (in the way of `dir`). */
   speed: number;
+  /** Vertical speed of the bottom edge, units per second (0 for a level bolt, negative when it flies down at the player). */
+  climb: number;
 }
 
 /** A lobbed arc: in flight until `age` reaches `flight`, then a landing burst for `burst` updates. */

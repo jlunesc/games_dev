@@ -113,7 +113,7 @@ A counter happens when the player's attack swing **starts** (the first update of
 | `recovery` | Updates after the active part before the boss does anything else. | whole number, at least 0 |
 | `range` | `{ min, max }`: the distance from the player (centre to centre) at which it can start this attack. If it is outside, it walks (or backs off) until inside. | numbers, `min` at least 0, `max` greater than `min` |
 | `move` (optional) | `{ from, to, speed, dir }`: the boss moves at `speed` units per second while `from <= t < to`. `dir` is `forward` (the way it faces) or `back` (away from the way it faces, still facing forward); when absent it is `forward`. Stops at the arena wall. | `from`, `to` whole numbers; the range must lie inside the active updates; `speed` at least 1; `dir`, when present, `forward` or `back` |
-| `leap` (optional) | `{ from, to, height, target, distance }`: the boss leaps in an arc while `from <= t < to`, peaking `height` units above the floor. The landing x is fixed at take-off (update `from`) and does not follow the player afterwards. `target` says where it lands: `player` (the player's x at update `from`), `forward` or `back` (`distance` units in front of or behind the boss's x at update `from`). `distance` is required for `forward` and `back`, and ignored (dropped) for `player`. | `from` whole number at least 0, `to` whole number at least 1 and after `from`, both inside the active updates; `height` at least 1; `target` one of `player`, `forward`, `back`; `distance` at least 1 for `forward`/`back`. An attack may have both a `move` and a `leap`, but their update ranges must not overlap (both change the boss's x). |
+| `leap` (optional) | `{ from, to, height, target, distance, hang }`: the boss leaps in an arc while `from <= t < to`, peaking `height` units above the floor. With `hang` it rises, stays at the top for `hang` updates (a hover) and then falls, sliding toward the landing x the whole time (see "Movement skills"). The landing x is fixed at take-off (update `from`) and does not follow the player afterwards. `target` says where it lands: `player` (the player's x at update `from`), `forward` or `back` (`distance` units in front of or behind the boss's x at update `from`). `distance` is required for `forward` and `back`, and ignored (dropped) for `player`. | `from` whole number at least 0, `to` whole number at least 1 and after `from`, both inside the active updates; `height` at least 1; `target` one of `player`, `forward`, `back`; `distance` at least 1 for `forward`/`back`; `hang` (optional) a whole number from 1 to `to - from - 2`. An attack may have both a `move` and a `leap`, but their update ranges must not overlap (both change the boss's x). |
 | `shots` (optional) | Bolts, lobbed arcs and floor eruptions the boss fires (section "Shots" below). | 1 to 8 entries; the attack must be `mustDodge` |
 | `hits` | The hurt boxes (next section). May be empty only when the attack has a `move`, a `leap` or `shots` (an attack that only repositions the boss or only shoots). | at least one, unless there is a `move`, a `leap` or `shots` |
 
@@ -129,6 +129,7 @@ Times are in updates counted from the first update of the attack (`t = 0`). A hi
 | `from`, `to` | Live from update `from` up to but not including `to`. | whole numbers; `to` after `from`; must lie inside the active updates: `windup <= from` and `to <= windup + active` |
 | `x0`, `x1` | Near and far edge of the box, measured from the boss's **centre**, in the direction the boss **faces**. | numbers, `x1` greater than `x0` |
 | `bottom`, `top` | Bottom and top edge, as heights above the floor. | `bottom` at least 0, `top` greater than `bottom` |
+| `both` (optional) | `true`: the same box also covers the mirrored side behind the boss, so a spin or a landing hurts on both sides. Each side is cut by its own cover. | `true` or `false` |
 
 A box hurts the player when it overlaps the player's body and the player is not untouchable (after a hit, or during a dash).
 
@@ -143,7 +144,7 @@ Three kinds, chosen by `kind`:
 
 | Kind | Fields | What it does |
 |---|---|---|
-| `bolt` | `at`; `height` (bottom edge above the floor, 0 to 200); `size` (it is a square this many units wide and tall, 10 to 80); `speed` (units per second, 100 to 1600) | Appears at the boss's front and flies in a straight line the way the boss faces, until it reaches the arena wall, a cover that stops it, or the player. Height is the dodge: low is jumped, chest height is dashed through, high is walked under. |
+| `bolt` | `at`; `height` (bottom edge above the boss's feet, 0 to 200); `size` (it is a square this many units wide and tall, 10 to 80); `speed` (units per second, 100 to 1600); optional `dir` (`forward`, the default, or `back`: fired behind the boss); optional `aim` (`true`: a straight line at the player's body as it was at update `at`; cannot be combined with `dir`) | Appears at the boss's front (its back for `dir: back`) and flies in a straight line the way the boss faces, until it reaches the arena wall, a cover that stops it, or the player. Height is the dodge: low is jumped, chest height is dashed through, high is walked under. An aimed bolt keeps the course it was given, so moving after it is fired dodges it; fired from a hovering boss it flies down at the player. Height is measured from the boss's feet, so a boss in the air fires from where it hangs. |
 | `arc` | `at`; `flight` (updates in the air, whole number 20 to 120); `peak` (height, 60 to 400); `target` (`player`, `forward` or `back`, as for a leap); `distance` (only for `forward` and `back`, at least 1); `radius` (half-width of the landing burst, 10 to 200); `burst` (updates the burst lasts, whole number 3 to 30) | Launched at `at`, flies up and lands where it was aimed. The landing x is fixed at launch and does not follow the player. A red mark shows on the floor from launch until it lands. In the air it hurts nobody; on landing a burst `2 * radius` wide and 90 high (`SHOT.arcBurstHeight`, `src/game/params.ts`) hurts for `burst` updates. |
 | `eruption` | `at`; `offset` (distance from the player's x at update `at` to the middle of the mark, -800 to 800; 0 is under the player, negative to the left); `width` (of the mark and the blast, 40 to 600); `delay` (updates from the mark appearing to the blast, whole number 8 to 200); `burst` (updates the blast stays live, whole number 3 to 30) | A red mark appears on the floor at update `at`, centred on the player's x at that moment plus `offset` (kept inside the arena, edges between x = 0 and 1280). The mark is fixed and never follows the player. `delay` updates later a blast fills the mark's width from the floor up to 220 (`ERUPTION.height`, `src/game/params.ts`) for `burst` updates. A jump peaks near 163, so a jump does not clear it: step out of the mark or dash through. Eruptions ignore platforms and cover. |
 
@@ -195,6 +196,10 @@ Dividing by `n + 1` keeps `p` strictly between 0 and 1: the boss is already off 
 **The shockwave is an ordinary hit window.** Nothing special is needed: write a `hits` entry that starts at or after the leap's `to` and measures from the boss's centre, which is now at the landing x (the Hound's is `from` 52, `to` 58, `x0` 0, `x1` 200, `top` 60: a low box the player can jump, or stay out of). The checker only requires it to lie inside the active updates; that it starts at or after `to` is up to you (a window that starts earlier would hurt the player at floor level while the boss is still in the air, away from the bar). Hit windows are measured from the floor, not from the lifted body, so they are never lifted.
 
 **The body is lifted.** While the boss is in the air its body box is `lift` units above the floor, so the player's swing misses it. The swing of a player standing on the floor covers heights of about 8 to 88 above the floor, so it misses whenever `lift` is above about 88; a player who is in the air can reach higher. With the Hound's numbers, `lift` is above 88 from the third to the twentieth flight update; the first two and last two updates are low enough to hit. After the landing the boss can be hit again.
+
+**`leap`: the hover (`hang`).** With `hang: h` the flight of `n = to - from` updates is a rise, a hold at the top and a fall: `n - h` updates are spent rising and falling (each half of them, the fall taking the extra one when odd) and the boss stays at `height` for `h` updates, with the same first-update and last-update rules as the plain arc (off the floor on the first update, still up on the last, down at `to`). The landing x is fixed at take-off exactly as before and the boss slides toward it evenly the whole time, so the hover is a warning as well as a wait. Bolts fired during the hover leave from the boss's lifted body. `hang` is not scaled by any dial (like the flight itself). The renderer draws small springs under the feet of a hovering attack's wind-up (`attackMarks` in `src/ui/look/figures.ts`).
+
+**`both`: strikes on both sides.** A hit window with `both: true` is mirrored behind the boss, so a landing or a spin has no safe side. Its cover cutting is done per side (`hitBoxesFor` in `src/game/geometry.ts`), and the drawn landing bar has two spans (`landingSpans` in `src/ui/render.ts`).
 
 **Ending a leap early.** Every way an attack can end also puts the boss back on the floor (`landBoss`): the attack finishing, a counter, a phase change and the end of the fight (a victory or a defeat, so the boss never hangs in the air behind the summary). It drops straight down at the x it has at that moment, and the take-off and landing points are forgotten. A counter cannot cut a flight short (its window is in the wind-up, and a leap starts after the wind-up), but a phase change or the end of the fight can.
 
@@ -292,6 +297,27 @@ The mix is `bite` 3, `rush` 2, `slip` 2, `pounce` 3; a chain of two follows an a
 **The mix.** Phase 1: `hammer-fist` 3, `backhand` 2, `fissure` 2, `twin-quake` 2, gap 50, no chaining, walk speed 150. Phase 2 (Landslide): the same attacks with `fissure` and `twin-quake` at 3, opening with `fissure`, gap 32, a chain of two with chance 0.35, walk speed 185. `predictability` is 0.25.
 
 **Fairness measured** (`tests/tremor-brute.test.ts`): every warning is at least 21 updates and every mark's delay at least 21; an idle player loses at every preset on eight seeds; a player standing still in either corner is hurt; stepping out of the marks avoids the Fissure and the Twin Quake while standing still does not, and a jump does not clear a blast; a scripted player who knows the answers wins all eight seeds at Normal without being hit (so it is probably on the easy side for a perfect player; tune from play).
+
+## 3a-quater. The varied attacks of the five archetype bosses
+
+Added 2026-09-29 (design in `docs/superpowers/specs/2026-09-29-variety-design.md`, first guess, to be tuned from play). Each of the Quill Warden, Cinder Golem, Veil Dancer, Gale Reaver and Brass Sentinel gained attacks that use the new fields (`both`, `hang`, bolt `aim`; bolt `dir: back` is built but no boss uses it yet) and the existing shots, all `mustDodge` except the Sentinel's counterable spin.
+
+| Boss | New attack | What it does |
+|---|---|---|
+| Quill Warden | Feather Volley | Three low bolts, 6 updates apart: jump them all. |
+| Quill Warden | Sky Lance | Leaps 190 high, hangs 12 updates while firing a bolt, then drives down on the player's position. |
+| Cinder Golem | Cinder Lob | A lobbed arc (`shots` kind `arc`) from the raised arm. |
+| Cinder Golem | Furnace Stomp | A short hovering hop and a stomp that hurts on both sides. |
+| Veil Dancer | Needle Fan | Three aimed bolts at the player's body, 6 updates apart. |
+| Veil Dancer | Falling Veil | Hangs 14 updates 200 high, then lands on the player with a strike on both sides. |
+| Gale Reaver | Gale Cyclone | A spin that hurts on both sides. |
+| Gale Reaver | Updraft Dive | Rises 230 high, hangs 8, dives on the player. |
+| Gale Reaver | Retreating Gust | Backs away fast (a `back` dash) while firing two bolts forward at the player, so the gap opens as the bolts fly. |
+| Brass Sentinel | Brass Cannon | One big slow bolt (50 wide) fired from the raised arm. |
+| Brass Sentinel | Spin Cycle | A counterable spin that hurts on both sides. |
+| Brass Sentinel | Piston Drop | Jumps and hangs 10 updates, then drops on the player. |
+
+Every new attack is drawn differently from the others at the moment before it starts (its pose plus the marks of section "Movement skills" and `attackMarks`), so it can be read before it hits. `tests/variety-fairness.test.ts` checks that each new attack hurts a player who stands still and that a single well-timed dash or jump avoids it. This changed the five bosses' numbers, so `GAME_VERSION` is 0.6.0.
 
 ## 3b. The boss generator
 

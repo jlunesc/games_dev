@@ -7,7 +7,7 @@
  * World y grows downward and a figure stands with its feet at the given y (the player) or on the floor, `lift` up
  * (a boss). Shapes are listed back to front: the first is drawn first.
  */
-import type { BossDef, Pose } from '../../bosses/schema';
+import type { AttackDef, BossDef, Pose } from '../../bosses/schema';
 import { PLAYER, WORLD } from '../../game/params';
 import type { GameState } from '../../game/state';
 import { armRect, bossDrawBox, type Rect } from './pose';
@@ -186,6 +186,15 @@ interface BossPose {
   poseAmount: number;
   /** A crouch-pose attack is still winding up on the floor (the drawn box is shorter). */
   crouching: boolean;
+  /** What the running attack will do beyond its pose: hovering, striking both sides, and the shots it fires. */
+  marks: AttackMarks | null;
+}
+
+/** The style of the running attack as the figure shows it while it winds up and is active. */
+interface AttackMarks {
+  hover: boolean;
+  both: boolean;
+  shots: { kind: 'bolt' | 'arc' | 'eruption'; aimed: boolean; back: boolean }[];
 }
 
 function bossPose(state: GameState, boss: BossDef): BossPose {
@@ -223,7 +232,19 @@ function bossPose(state: GameState, boss: BossDef): BossPose {
     posing,
     poseAmount: !posing ? 0 : winding ? 0.4 + 0.6 * windP : 1,
     crouching: box.crouching,
+    marks: attack !== undefined && posing ? marksOf(attack) : null,
   };
+}
+
+function marksOf(attack: AttackDef): AttackMarks | null {
+  const hover = attack.leap?.hang !== undefined;
+  const both = attack.hits.some((h) => h.both === true);
+  const shots = (attack.shots ?? []).map((shot) => ({
+    kind: shot.kind,
+    aimed: shot.kind === 'bolt' && shot.aim === true,
+    back: shot.kind === 'bolt' && shot.dir === 'back',
+  }));
+  return hover || both || shots.length > 0 ? { hover, both, shots } : null;
 }
 
 /** A rectangle given by a forward span `dx0..dx1` from the centre (forward is the way the boss faces), mirrored with the facing. */
@@ -1192,6 +1213,69 @@ function genericFigure(bp: BossPose, colors: { body: string; accent: string; glo
 }
 
 /**
+ * Small signs on the figure that tell what the running attack will do: springs under the feet for a hover, a flare
+ * behind the body for a strike on both sides, and a row of pips over the head for the shots (a ring round a pip for an
+ * aimed bolt, behind the boss for a bolt fired backwards, a triangle for a lobbed shot, a bar for an eruption).
+ * Everything stays inside the figure's box plus its margin.
+ */
+function attackMarks(bp: BossPose): Primitive[] {
+  const m = bp.marks;
+  if (m === null) return [];
+  const out: Primitive[] = [];
+  const t = LOOK.mark;
+  if (m.hover) {
+    for (const side of [-1, 1]) {
+      out.push(forwardRect(bp, side * bp.w * 0.32 - 7, side * bp.w * 0.32 + 7, bp.feet - t.springHeight, t.springHeight, t.spring));
+    }
+  }
+  if (m.both) {
+    const y = bp.top + bp.h * 0.25;
+    out.push(
+      forwardPoly(
+        bp,
+        [
+          [-bp.w / 2 + 2, y],
+          [-bp.w / 2 - t.flareLength, y + bp.h * 0.15],
+          [-bp.w / 2 + 2, y + bp.h * 0.3],
+        ],
+        t.flare,
+      ),
+    );
+  }
+  const shots = m.shots.slice(0, t.maxPips);
+  const ahead = shots.filter((x) => !x.back);
+  const behind = shots.filter((x) => x.back);
+  const row = (list: typeof shots, sign: 1 | -1): void => {
+    list.forEach((shot, i) => {
+      const dx = sign * (bp.w * 0.18 + i * t.pipSpacing);
+      const y = bp.top - t.pipLift;
+      const x = bp.cx + bp.f * dx;
+      if (shot.aimed) out.push({ kind: 'circle', x, y, r: t.pipRadius + 3, color: t.aimRing });
+      if (shot.kind === 'arc') {
+        out.push(
+          forwardPoly(
+            bp,
+            [
+              [dx - t.pipRadius - 1, y + t.pipRadius],
+              [dx + t.pipRadius + 1, y + t.pipRadius],
+              [dx, y - t.pipRadius - 1],
+            ],
+            t.pip,
+          ),
+        );
+      } else if (shot.kind === 'eruption') {
+        out.push({ kind: 'rect', x: x - t.pipRadius, y: y - t.pipRadius, w: t.pipRadius * 2, h: t.pipRadius * 2, color: t.pip });
+      } else {
+        out.push({ kind: 'circle', x, y, r: t.pipRadius, color: t.pip });
+      }
+    });
+  };
+  row(ahead, 1);
+  row(behind, -1);
+  return out;
+}
+
+/**
  * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster, `tremor-brute` a hunched bruiser, `cinder-golem` a walking furnace, `quill-warden` a heron-like lancer, `veil-dancer` a masked dancer in a veil,
  * `gale-reaver` a forward-leaning wind-runner, `brass-sentinel` an armoured knight, anything else a generic block); the animation from the tick, the boss mode, the running attack's pose, the facing and
  * the lift. It fits inside the box `bossDrawBox` reports (crouch shortening and lift included), widened for the head,
@@ -1213,15 +1297,15 @@ export function bossFigure(
     case 'tremor-brute':
       return tremorBruteFigure(bp, colors);
     case 'cinder-golem':
-      return cinderGolemFigure(bp, colors);
+      return [...cinderGolemFigure(bp, colors), ...attackMarks(bp)];
     case 'quill-warden':
-      return quillWardenFigure(bp, colors);
+      return [...quillWardenFigure(bp, colors), ...attackMarks(bp)];
     case 'veil-dancer':
-      return veilDancerFigure(bp, colors);
+      return [...veilDancerFigure(bp, colors), ...attackMarks(bp)];
     case 'gale-reaver':
-      return galeReaverFigure(bp, colors);
+      return [...galeReaverFigure(bp, colors), ...attackMarks(bp)];
     case 'brass-sentinel':
-      return brassSentinelFigure(bp, colors);
+      return [...brassSentinelFigure(bp, colors), ...attackMarks(bp)];
     default:
       return genericFigure(bp, colors);
   }

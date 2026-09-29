@@ -67,7 +67,7 @@ describe('buildExport', () => {
     expect(parsed.schemaVersion).toBe(STATS_SCHEMA_VERSION);
     expect(parsed.schemaVersion).toBe(4);
     expect(parsed.gameVersion).toBe(GAME_VERSION);
-    expect(parsed.gameVersion).toBe('0.5.1');
+    expect(parsed.gameVersion).toBe('0.6.0');
     expect(parsed.exportedAt).toBe(NOW.toISOString());
     expect(parsed.fights).toEqual([fight]);
   });

@@ -1,10 +1,10 @@
 import type { AttackDef, BossDef, ShotDef } from '../bosses/schema';
 import { DT } from '../engine/time';
-import { WORLD } from './params';
+import { PLAYER, WORLD } from './params';
 import type { GameState, ShotState } from './state';
 
-/** Where the boss's shots come from: just in front of it. */
-const muzzleX = (s: GameState, boss: BossDef): number => s.boss.x + s.boss.facing * (boss.width / 2);
+/** Where a shot leaving the boss towards `dir` starts: at that edge of its body. */
+const muzzleX = (s: GameState, boss: BossDef, dir: 1 | -1): number => s.boss.x + dir * (boss.width / 2);
 
 /** The x an arc will land on, fixed at launch and kept inside the arena (the same targeting as a leap). */
 function arcLanding(s: GameState, boss: BossDef, shot: Extract<ShotDef, { kind: 'arc' }>): number {
@@ -39,21 +39,39 @@ export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef): void
       });
       continue;
     }
-    const x = muzzleX(s, boss);
     if (def.kind === 'bolt') {
+      // Fired from the boss's body: a hovering boss fires from up in the air.
+      const lift = def.height + b.lift;
+      let dir: 1 | -1 = def.dir === 'back' ? (b.facing === 1 ? -1 : 1) : b.facing;
+      let speed = def.speed;
+      let climb = 0;
+      if (def.aim === true) {
+        // A straight line at the player's body as it is now. Square roots are exact in every engine, so a replay agrees.
+        const dx = s.player.x - muzzleX(s, boss, b.facing);
+        const dy = WORLD.floorY - s.player.y + PLAYER.height / 2 - (lift + def.size / 2);
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length > 1) {
+          dir = dx === 0 ? b.facing : dx > 0 ? 1 : -1;
+          speed = (def.speed * Math.abs(dx)) / length;
+          climb = (def.speed * dy) / length;
+        }
+      }
+      const x = muzzleX(s, boss, dir);
       s.shots.push({
         kind: 'bolt',
         attackId: attack.id,
         originTick,
         x,
-        lift: def.height,
-        dir: b.facing,
+        lift,
+        dir,
         originX: x,
         size: def.size,
-        speed: def.speed,
+        speed,
+        climb,
       });
     } else {
-      const launchLift = boss.height * 0.6;
+      const x = muzzleX(s, boss, b.facing);
+      const launchLift = boss.height * 0.6 + b.lift;
       s.shots.push({
         kind: 'arc',
         attackId: attack.id,
@@ -91,8 +109,11 @@ export function moveShots(s: GameState, boss: BossDef): void {
   for (const shot of s.shots) {
     if (shot.kind === 'bolt') {
       shot.x += shot.dir * shot.speed * DT;
+      shot.lift += shot.climb * DT;
       const outside = shot.x + shot.size / 2 < 0 || shot.x - shot.size / 2 > WORLD.width;
-      if (outside || stoppedByCover(shot, boss)) continue;
+      // A bolt flying down is gone once it reaches the floor; one flying up is gone above the world.
+      const landed = shot.climb < 0 && shot.lift < 0;
+      if (outside || landed || shot.lift > WORLD.height || stoppedByCover(shot, boss)) continue;
     } else if (shot.kind === 'eruption') {
       shot.age += 1;
       if (shot.age >= shot.delay + shot.burst) continue;

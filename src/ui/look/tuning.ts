@@ -179,6 +179,40 @@ export const LOOK = {
     eruptionCore: '#ffd27a',
   },
 
+  // ---- The look of a boss's strike (see attackfx.ts): the shape drawn inside each live hit box ----
+  slash: {
+    edge: '#ff7a5a',
+    core: '#fff1c9',
+    /** The plain box behind the shape, so the real reach is always shown, and the shape's own opacity. */
+    boxAlpha: 0.16,
+    shapeAlpha: 0.9,
+    /** A hit box on the floor no taller than this is drawn as spikes, one spike about `spikeWidth` wide, every other one `spikeShort` shorter. */
+    lowHeight: 90,
+    spikeWidth: 42,
+    spikeShort: 0.35,
+    /** A box at least this many times wider than tall is a spear; `spearBody` is how much of its height the spear's base takes. */
+    spearRatio: 2.2,
+    spearBody: 0.7,
+    /** How much of a crescent's depth is hollowed out on the boss's side (0 to 1). */
+    crescentInner: 0.55,
+  },
+
+  // ---- Signs on a boss that show what its attack will do (see `attackMarks` in figures.ts) ----
+  mark: {
+    /** A pip for each shot, a ring round it when aimed. Up to `maxPips` are shown, `pipSpacing` apart, `pipLift` above the head. */
+    pip: '#fff1c9',
+    aimRing: '#e0403a',
+    maxPips: 5,
+    pipSpacing: 13,
+    pipLift: 12,
+    pipRadius: 4,
+    /** Springs under the feet of a hovering attack, and the flare behind the body of a strike on both sides. */
+    spring: '#fff1c9',
+    springHeight: 8,
+    flare: '#b48cff',
+    flareLength: 18,
+  },
+
   // ---- Floor, platforms and cover (copied from the old render.ts colours) ----
   floor: '#2a2a3a',
   floorLine: '#8a8aa0',

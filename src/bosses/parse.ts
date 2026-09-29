@@ -79,6 +79,10 @@ function hitWindow(value: unknown, path: string): HitWindow {
   if (hit.to <= hit.from) fail(path, '"to" must be after "from"');
   if (hit.x1 <= hit.x0) fail(path, '"x1" must be greater than "x0"');
   if (hit.top <= hit.bottom) fail(path, '"top" must be greater than "bottom"');
+  if (o.both !== undefined) {
+    if (typeof o.both !== 'boolean') fail(`${path}.both`, 'expected true or false');
+    hit.both = o.both;
+  }
   return hit;
 }
 
@@ -102,6 +106,15 @@ function shotList(value: unknown, path: string, windup: number, active: number):
         size: num(o.size, `${at}.size`, { min: 10, max: 80 }),
         speed: num(o.speed, `${at}.speed`, { min: 100, max: 1600 }),
       };
+      if (o.dir !== undefined) {
+        if (o.dir !== 'forward' && o.dir !== 'back') fail(`${at}.dir`, 'must be "forward" or "back"');
+        bolt.dir = o.dir;
+      }
+      if (o.aim !== undefined) {
+        if (typeof o.aim !== 'boolean') fail(`${at}.aim`, 'expected true or false');
+        if (o.aim && o.dir !== undefined) fail(`${at}.dir`, 'an aimed bolt picks its own way');
+        bolt.aim = o.aim;
+      }
       return bolt;
     }
     if (kind === 'eruption') {
@@ -198,6 +211,10 @@ function attack(value: unknown, path: string): AttackDef {
     }
     if (to <= from || from < windup || to > windup + active) {
       fail(`${path}.leap`, 'must lie inside the active updates');
+    }
+    if (l.hang !== undefined) {
+      leap.hang = num(l.hang, `${path}.leap.hang`, { min: 1, integer: true });
+      if (leap.hang > to - from - 2) fail(`${path}.leap.hang`, 'must leave at least one update to rise and one to fall');
     }
     if (move !== undefined && from < move.to && move.from < to) {
       fail(`${path}.leap`, 'must not overlap the move');

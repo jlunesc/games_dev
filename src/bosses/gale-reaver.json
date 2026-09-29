@@ -44,6 +44,42 @@
       "range": { "min": 150, "max": 260 },
       "move": { "from": 24, "to": 34, "speed": 1400 },
       "hits": [{ "from": 24, "to": 34, "x0": 0, "x1": 100, "bottom": 0, "top": 100 }]
+    },
+    {
+      "id": "gale-cyclone",
+      "name": "Gale Cyclone",
+      "pose": "sideways",
+      "class": "mustDodge",
+      "windup": 22,
+      "active": 8,
+      "recovery": 22,
+      "range": { "min": 40, "max": 140 },
+      "hits": [{ "from": 22, "to": 30, "x0": 0, "x1": 150, "bottom": 0, "top": 110, "both": true }]
+    },
+    {
+      "id": "updraft-dive",
+      "name": "Updraft Dive",
+      "pose": "crouch",
+      "class": "mustDodge",
+      "windup": 24,
+      "active": 36,
+      "recovery": 20,
+      "range": { "min": 110, "max": 380 },
+      "leap": { "from": 24, "to": 54, "height": 230, "target": "player", "hang": 8 },
+      "hits": [{ "from": 54, "to": 60, "x0": 0, "x1": 130, "bottom": 0, "top": 110 }]
+    },
+    {
+      "id": "retreating-gust",
+      "name": "Retreating Gust",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 22,
+      "active": 14,
+      "recovery": 18,
+      "range": { "min": 60, "max": 420 },
+      "move": { "from": 22, "to": 32, "speed": 1000, "dir": "back" },
+      "hits": [],
+      "shots": [{ "kind": "bolt", "at": 30, "height": 40, "size": 30, "speed": 900 }, { "kind": "bolt", "at": 34, "height": 40, "size": 30, "speed": 900 }]
     }
   ],
   "phases": [
@@ -53,7 +89,10 @@
       "attacks": [
         { "id": "wind-slash", "weight": 3 },
         { "id": "gale-jab", "weight": 3 },
-        { "id": "tempest-rush", "weight": 2 }
+        { "id": "tempest-rush", "weight": 2 },
+        { "id": "gale-cyclone", "weight": 2 },
+        { "id": "updraft-dive", "weight": 2 },
+        { "id": "retreating-gust", "weight": 2 }
       ],
       "gap": 35,
       "maxChain": 2,

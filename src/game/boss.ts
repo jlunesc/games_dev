@@ -232,6 +232,23 @@ function leapLanding(s: GameState, boss: BossDef, leap: LeapDef): number {
 }
 
 /**
+ * The height of a hovering leap on its `k`th update (1 to `n`): it rises for `n - hang` updates split in two, stays at
+ * `height` for `hang` updates, then falls. Like the plain arc it is off the floor on the first update and still up
+ * on the last, and it slows towards the top and speeds up on the way down.
+ */
+function hoverLift(height: number, n: number, hang: number, k: number): number {
+  const rise = Math.floor((n - hang) / 2);
+  const fall = n - hang - rise;
+  if (k <= rise) {
+    const q = k / (rise + 1);
+    return height * (1 - (1 - q) * (1 - q));
+  }
+  if (k <= rise + hang) return height;
+  const q = (k - rise - hang) / (fall + 1);
+  return height * (1 - q * q);
+}
+
+/**
  * Moves the boss along its leap for the current attack time. It takes off at update `from` (the landing
  * spot is fixed then, so the player can dodge by moving after take-off), flies until `to` and is on the
  * floor at the landing x from update `to` on.
@@ -249,9 +266,10 @@ function updateLeap(s: GameState, boss: BossDef, leap: LeapDef): void {
     }
     // The flight has n = to - from updates; using n + 1 in the divisor keeps p strictly between 0 and 1,
     // so the boss is already off the floor on the first update of the flight and still up on the last.
-    const p = (t - leap.from + 1) / (leap.to - leap.from + 1);
+    const n = leap.to - leap.from;
+    const p = (t - leap.from + 1) / (n + 1);
     b.x = b.leapFromX + (b.leapToX - b.leapFromX) * p;
-    b.lift = 4 * leap.height * p * (1 - p);
+    b.lift = leap.hang === undefined ? 4 * leap.height * p * (1 - p) : hoverLift(leap.height, n, leap.hang, t - leap.from + 1);
   } else if (t >= leap.to && b.leapToX !== null) {
     b.x = b.leapToX;
     landBoss(b);

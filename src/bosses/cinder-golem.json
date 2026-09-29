@@ -46,6 +46,31 @@
       "recovery": 36,
       "range": { "min": 100, "max": 160 },
       "hits": [{ "from": 40, "to": 48, "x0": 0, "x1": 170, "bottom": 0, "top": 180 }]
+    },
+    {
+      "id": "cinder-lob",
+      "name": "Cinder Lob",
+      "pose": "raised",
+      "class": "mustDodge",
+      "windup": 42,
+      "active": 8,
+      "recovery": 34,
+      "range": { "min": 200, "max": 650 },
+      "hits": [],
+      "shots": [{ "kind": "arc", "at": 42, "flight": 52, "peak": 280, "target": "player", "radius": 75, "burst": 8 }]
+    },
+    {
+      "id": "furnace-stomp",
+      "name": "Furnace Stomp",
+      "pose": "down",
+      "class": "mustDodge",
+      "damage": 2,
+      "windup": 46,
+      "active": 30,
+      "recovery": 40,
+      "range": { "min": 60, "max": 220 },
+      "leap": { "from": 46, "to": 68, "height": 110, "target": "forward", "distance": 1, "hang": 6 },
+      "hits": [{ "from": 68, "to": 74, "x0": 0, "x1": 190, "bottom": 0, "top": 70, "both": true }]
     }
   ],
   "phases": [
@@ -55,7 +80,9 @@
       "attacks": [
         { "id": "crag-slam", "weight": 3 },
         { "id": "ground-charge", "weight": 2 },
-        { "id": "fault-slam", "weight": 2 }
+        { "id": "fault-slam", "weight": 2 },
+        { "id": "cinder-lob", "weight": 2 },
+        { "id": "furnace-stomp", "weight": 2 }
       ],
       "gap": 60,
       "maxChain": 1,

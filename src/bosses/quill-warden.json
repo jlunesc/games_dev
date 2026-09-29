@@ -43,6 +43,31 @@
       "recovery": 30,
       "range": { "min": 300, "max": 450 },
       "hits": [{ "from": 34, "to": 42, "x0": 0, "x1": 450, "bottom": 0, "top": 140 }]
+    },
+    {
+      "id": "feather-volley",
+      "name": "Feather Volley",
+      "pose": "raised",
+      "class": "mustDodge",
+      "windup": 30,
+      "active": 14,
+      "recovery": 30,
+      "range": { "min": 330, "max": 700 },
+      "hits": [],
+      "shots": [{ "kind": "bolt", "at": 30, "height": 15, "size": 30, "speed": 650 }, { "kind": "bolt", "at": 36, "height": 15, "size": 30, "speed": 650 }, { "kind": "bolt", "at": 42, "height": 15, "size": 30, "speed": 650 }]
+    },
+    {
+      "id": "sky-lance",
+      "name": "Sky Lance",
+      "pose": "crouch",
+      "class": "mustDodge",
+      "windup": 34,
+      "active": 46,
+      "recovery": 34,
+      "range": { "min": 250, "max": 600 },
+      "leap": { "from": 34, "to": 64, "height": 190, "target": "player", "hang": 12 },
+      "hits": [{ "from": 64, "to": 72, "x0": 0, "x1": 170, "bottom": 0, "top": 120 }],
+      "shots": [{ "kind": "bolt", "at": 50, "height": 0, "size": 34, "speed": 800, "aim": true }]
     }
   ],
   "phases": [
@@ -52,7 +77,9 @@
       "attacks": [
         { "id": "reaching-poke", "weight": 3 },
         { "id": "low-piercer", "weight": 3 },
-        { "id": "overextended-thrust", "weight": 2 }
+        { "id": "overextended-thrust", "weight": 2 },
+        { "id": "feather-volley", "weight": 2 },
+        { "id": "sky-lance", "weight": 2 }
       ],
       "gap": 55,
       "maxChain": 1,

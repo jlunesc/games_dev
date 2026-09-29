@@ -24,8 +24,11 @@ export const STATS_SCHEMA_VERSION = 4;
  * (arena included) from its seed. Named-boss records (Ember Duelist, Ashen Hound) are unaffected.
  * 0.5.1: the Vesper Sage lost its middle cover (it kept the player on one side), so Sage records made by
  * 0.5.0 no longer replay exactly. Every other boss is unchanged.
+ * 0.6.0: the Quill Warden, Cinder Golem, Veil Dancer, Gale Reaver and Brass Sentinel gained new attacks
+ * (hovering leaps, strikes on both sides, back and aimed bolts) and bolt heights are now measured above the
+ * boss's feet, so records of those bosses made by 0.5.1 no longer replay exactly. Other bosses are unchanged.
  */
-export const GAME_VERSION = '0.5.1';
+export const GAME_VERSION = '0.6.0';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {

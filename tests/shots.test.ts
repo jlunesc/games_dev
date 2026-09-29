@@ -25,6 +25,7 @@ const mkBolt = (over: Partial<BoltState> = {}): BoltState => ({
   originX: 520,
   size: 30,
   speed: 600,
+  climb: 0,
   ...over,
 });
 

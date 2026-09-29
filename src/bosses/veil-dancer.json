@@ -57,6 +57,30 @@
       "range": { "min": 60, "max": 300 },
       "move": { "from": 20, "to": 28, "speed": 1200, "dir": "back" },
       "hits": []
+    },
+    {
+      "id": "needle-fan",
+      "name": "Needle Fan",
+      "pose": "sideways",
+      "class": "mustDodge",
+      "windup": 26,
+      "active": 16,
+      "recovery": 28,
+      "range": { "min": 200, "max": 600 },
+      "hits": [],
+      "shots": [{ "kind": "bolt", "at": 26, "height": 30, "size": 26, "speed": 900, "aim": true }, { "kind": "bolt", "at": 32, "height": 30, "size": 26, "speed": 900, "aim": true }, { "kind": "bolt", "at": 38, "height": 30, "size": 26, "speed": 900, "aim": true }]
+    },
+    {
+      "id": "falling-veil",
+      "name": "Falling Veil",
+      "pose": "crouch",
+      "class": "mustDodge",
+      "windup": 30,
+      "active": 44,
+      "recovery": 30,
+      "range": { "min": 100, "max": 420 },
+      "leap": { "from": 30, "to": 62, "height": 200, "target": "player", "hang": 14 },
+      "hits": [{ "from": 62, "to": 70, "x0": 0, "x1": 210, "bottom": 0, "top": 130, "both": true }]
     }
   ],
   "phases": [
@@ -67,7 +91,9 @@
         { "id": "piercing-veil", "weight": 2 },
         { "id": "rending-dash", "weight": 2 },
         { "id": "phantom-step", "weight": 2 },
-        { "id": "veil-slip", "weight": 2 }
+        { "id": "veil-slip", "weight": 2 },
+        { "id": "needle-fan", "weight": 2 },
+        { "id": "falling-veil", "weight": 2 }
       ],
       "gap": 45,
       "maxChain": 1,

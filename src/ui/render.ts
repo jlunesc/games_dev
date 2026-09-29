@@ -6,6 +6,7 @@ import { shakeOffset, type FeedbackState } from './feedback';
 import { drawBackground, type BackgroundCache } from './look/background';
 import type { EffectsState } from './look/effects';
 import { bossFigure, drawPrimitives, playerFigure } from './look/figures';
+import { boltTrail, slashShape } from './look/attackfx';
 import { moodFor, type Mood } from './look/moods';
 import { BOSS_COLORS, armRect, bossDrawBox, bossLook, type BossLook, type Rect } from './look/pose';
 import { LOOK } from './look/tuning';
@@ -52,6 +53,8 @@ export interface LandingRing {
   facing: 1 | -1;
   /** True when the attack has no hit windows: the landing hurts nobody and only a small marker is drawn. */
   harmless: boolean;
+  /** True (and only then present) when the shockwave also runs out behind the boss. */
+  both?: true;
 }
 
 /**
@@ -73,6 +76,7 @@ export function landingRing(b: BossState, boss: BossDef): LandingRing | null {
     x1: Math.max(...attack.hits.map((h) => h.x1)),
     facing: b.facing,
     harmless: false,
+    ...(attack.hits.some((h) => h.both === true) ? { both: true as const } : {}),
   };
 }
 
@@ -91,6 +95,14 @@ export function landingSpan(ring: LandingRing): { left: number; right: number } 
   return ring.facing === 1
     ? { left: ring.x + ring.x0, right: ring.x + ring.x1 }
     : { left: ring.x - ring.x1, right: ring.x - ring.x0 };
+}
+
+/** Every floor span a landing ring covers: the one span of `landingSpan`, and the mirrored one behind the boss for a shockwave on both sides. */
+export function landingSpans(ring: LandingRing): { left: number; right: number }[] {
+  const span = landingSpan(ring);
+  if (ring.both !== true) return [span];
+  const other = landingSpan({ ...ring, facing: ring.facing === 1 ? -1 : 1 });
+  return [span, other];
 }
 
 const COLORS = {
@@ -264,10 +276,8 @@ function drawShots(ctx: CanvasRenderingContext2D, state: GameState): void {
     }
     const half = shot.size / 2;
     const cy = WORLD.floorY - shot.lift - half;
-    const trail = shot.size * look.trailLength;
     ctx.fillStyle = look.halo;
-    ctx.globalAlpha = look.trailAlpha;
-    ctx.fillRect(shot.dir === 1 ? shot.x - trail : shot.x, cy - half * 0.5, trail, half);
+    drawPrimitives(ctx, [boltTrail(shot.x, cy, shot.dir, shot.speed, shot.climb, shot.size, look.halo)], look.trailAlpha);
     ctx.globalAlpha = 0.5;
     ctx.beginPath();
     ctx.arc(shot.x, cy, half * look.haloScale, 0, Math.PI * 2);
@@ -300,15 +310,16 @@ function drawBoss(
   // real hit), or a small dim marker when the landing hurts nobody.
   const ring = landingRing(b, boss);
   if (ring !== null) {
-    const span = landingSpan(ring);
     ctx.save();
     ctx.fillStyle = BOSS_COLORS.red;
-    if (ring.harmless) {
-      ctx.globalAlpha = 0.3;
-      ctx.fillRect(span.left, WORLD.floorY - 3, span.right - span.left, 3);
-    } else {
-      ctx.globalAlpha = pulse;
-      ctx.fillRect(span.left, WORLD.floorY - 6, span.right - span.left, 6);
+    for (const span of landingSpans(ring)) {
+      if (ring.harmless) {
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(span.left, WORLD.floorY - 3, span.right - span.left, 3);
+      } else {
+        ctx.globalAlpha = pulse;
+        ctx.fillRect(span.left, WORLD.floorY - 6, span.right - span.left, 6);
+      }
     }
     ctx.restore();
   }
@@ -359,10 +370,19 @@ function drawBoss(
   }
 
   for (const box of activeHitBoxes(b, boss)) {
-    ctx.globalAlpha = 0.5;
+    if (mood === null) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = look.glow ?? COLORS.bossHp;
+      ctx.fillRect(box.x, box.y, box.w, box.h);
+      ctx.globalAlpha = 1;
+      continue;
+    }
+    // The real reach as a faint box, and a shape that suits the strike inside it.
+    ctx.globalAlpha = LOOK.slash.boxAlpha;
     ctx.fillStyle = look.glow ?? COLORS.bossHp;
     ctx.fillRect(box.x, box.y, box.w, box.h);
     ctx.globalAlpha = 1;
+    drawPrimitives(ctx, slashShape(box, box.x + box.w / 2 >= b.x ? 1 : -1), LOOK.slash.shapeAlpha);
   }
 }
 

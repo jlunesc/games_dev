@@ -6,11 +6,17 @@ import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 
 describe('the Cinder Golem file', () => {
-  it('is loaded, has three attacks, no arena and exactly one counterable attack', () => {
+  it('is loaded, has five attacks, no arena and exactly one counterable attack', () => {
     expect(CINDER_GOLEM).toBeDefined();
     expect(CINDER_GOLEM.id).toBe('cinder-golem');
     expect(CINDER_GOLEM.name).toBe('Cinder Golem');
-    expect(CINDER_GOLEM.attacks.map((a) => a.id)).toEqual(['crag-slam', 'ground-charge', 'fault-slam']);
+    expect(CINDER_GOLEM.attacks.map((a) => a.id)).toEqual([
+      'crag-slam',
+      'ground-charge',
+      'fault-slam',
+      'cinder-lob',
+      'furnace-stomp',
+    ]);
     expect(CINDER_GOLEM.arena).toBeUndefined();
     expect(CINDER_GOLEM.attacks.filter((a) => a.class === 'counterable')).toHaveLength(1);
     expect(CINDER_GOLEM.phases).toHaveLength(1);

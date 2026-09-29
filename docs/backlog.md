@@ -93,7 +93,7 @@ Slice A (`docs/superpowers/specs/2026-09-28-projectiles-design.md`) built straig
 - **Shots and platforms.** Platforms affect no shot. A bolt that a platform blocks, or a ceiling, is not built.
 
 The next slices, each its own design conversation (they came out of the owner's wish for different attacks, movements and shapes):
-- **Slice B: flying and hovering.** A boss that leaves the floor for more than a leap, so the player has to deal with attacks from above.
+- **Slice B: flying and hovering (done 2026-09-29, awaiting the owner's play test).** Folded into the variety pass for the five older bosses: a leap can hover (`hang`), a strike can hurt on both sides (`both`), bolts can fire backward or aimed at the player, and each boss got new attacks that use them (`docs/bosses.md` section 3a-quater). Still not built: a boss that stays in the air between attacks, a boss that flies across the arena, and hovering in generated bosses.
 - **Slice C** (ground hazards) is built, see the next section.
 - **Slice D: new figures for the five existing bosses (done 2026-09-29, awaiting the owner's look on the phone).** Look-only (`src/ui/look/figures.ts`, colours in `tuning.ts`, body colours in `moods.ts`). The Cinder Golem is a walking furnace, the Quill Warden a heron-like lancer with a quill crest that fans open in the warning, the Veil Dancer a masked dancer in a gown whose veils flare, the Gale Reaver a forward-leaning runner in a torn cloak with a curved blade, and the Brass Sentinel an armoured knight with a tower shield and a mace. The owner left the looks to the assistant, so every look is a first guess. Only the generic block figure remains, for a boss without a figure of its own (generated bosses).
 
@@ -105,7 +105,7 @@ Slice C (`docs/superpowers/specs/2026-09-29-eruptions-design.md`) built marked f
 - **Eruptions and the arena.** They ignore platforms and cover today; a platform that a blast cannot reach, or a blast that reshapes the arena (the "piece tied to an attack" idea in "Dynamic arena pieces" below), is not built.
 - **Eruptions that follow the player** or a mark that moves before it goes off.
 
-Slices B (flying and hovering) and D (new figures for the five older bosses) are still open, as listed under "Slice A left out" above.
+Slices B and D are done (see above).
 
 ## Dynamic arena pieces (raised 2026-09-22)
 Platforms or cover that are not just static: appearing/disappearing, appearing in reaction to a
