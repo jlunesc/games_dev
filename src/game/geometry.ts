@@ -26,9 +26,15 @@ export function bossBox(b: BossState, boss: BossDef): Box {
   };
 }
 
-/** The area the player's swing hits: in front of the player, centred vertically on the body. */
+/** The area the player's swing hits: in front of the player (centred on the body), straight above the head, or straight below the feet. */
 export function attackBox(p: PlayerState): Box {
-  const { reach, height } = PLAYER.attack;
+  const { reach, height, upDownReach, upDownWidth } = PLAYER.attack;
+  if (p.attackAim === 'up') {
+    return { x: p.x - upDownWidth / 2, y: p.y - PLAYER.height - upDownReach, w: upDownWidth, h: upDownReach };
+  }
+  if (p.attackAim === 'down') {
+    return { x: p.x - upDownWidth / 2, y: p.y, w: upDownWidth, h: upDownReach };
+  }
   const x = p.facing === 1 ? p.x + PLAYER.width / 2 : p.x - PLAYER.width / 2 - reach;
   return { x, y: p.y - PLAYER.height / 2 - height / 2, w: reach, h: height };
 }

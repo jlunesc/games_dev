@@ -1,11 +1,11 @@
 /**
- * The look of the player's swing: a sword that cocks back, sweeps down through the hit box and lowers again, and a
+ * The look of the player's swing: a sword that cocks back, sweeps through the hit box (forward, up or down) and lowers again, and a
  * bright crescent that sweeps through the real hit box and fades. Purely cosmetic and pure: nothing here touches the
  * canvas (`drawPrimitives` draws the shapes) and the crescent always lies inside the box that can hit.
  */
 import { attackBox, attackActive, type Box } from '../../game/geometry';
 import { PLAYER } from '../../game/params';
-import type { GameState } from '../../game/state';
+import type { AttackAim, GameState } from '../../game/state';
 import type { Primitive } from './figures';
 import { LOOK } from './tuning';
 
@@ -33,14 +33,18 @@ function sweepProgress(tick: number): number {
 }
 
 /** The crescent for the box, swept through `progress` of its height, the head thick and the tail thin. */
-function crescent(box: Box, side: 1 | -1, progress: number): Primitive[] {
+function crescent(box: Box, aim: AttackAim, side: 1 | -1, progress: number): Primitive[] {
   if (progress <= 0 || box.w <= 0 || box.h <= 0) return [];
   const s = LOOK.playerSlash;
   const steps = Math.max(2, Math.ceil(s.steps * progress));
   const aNow = -Math.PI / 2 + Math.PI * progress;
+  // `u` runs outward from the body (0 to 1) and `v` across the sweep (0 to 1); an up or down swing sweeps back to front.
   const pt = (depth: number, a: number): Point => {
     const u = depth * Math.cos(a);
-    return [side === 1 ? box.x + u * box.w : box.x + (1 - u) * box.w, box.y + (0.5 + 0.5 * Math.sin(a)) * box.h];
+    const v = 0.5 + 0.5 * Math.sin(a);
+    if (aim === 'up') return [box.x + (side === 1 ? v : 1 - v) * box.w, box.y + (1 - u) * box.h];
+    if (aim === 'down') return [box.x + (side === 1 ? v : 1 - v) * box.w, box.y + u * box.h];
+    return [side === 1 ? box.x + u * box.w : box.x + (1 - u) * box.w, box.y + v * box.h];
   };
   const band = (outer: number, thin: number): Point[] => {
     const outerEdge: Point[] = [];
@@ -60,18 +64,18 @@ function crescent(box: Box, side: 1 | -1, progress: number): Primitive[] {
 }
 
 /** The sword's angle (degrees) at a tick of the swing. */
-function bladeAngle(tick: number): number {
+function bladeAngle(aim: AttackAim, tick: number): number {
   const { startup, active } = PLAYER.attack;
-  const b = LOOK.playerBlade;
+  const b = aim === 'forward' ? LOOK.playerBlade : LOOK.playerBlade[aim];
   if (tick < startup) return lerp(b.windupDeg[0], b.windupDeg[1], clamp01(tick / Math.max(1, startup)));
   if (tick < startup + active) return lerp(b.activeDeg[0], b.activeDeg[1], sweepProgress(tick));
   const recovery = Math.max(1, PLAYER.attack.recovery);
   return lerp(b.recoverDeg[0], b.recoverDeg[1], clamp01((tick - startup - active) / recovery));
 }
 
-function blade(x: number, y: number, side: 1 | -1, tick: number): Primitive[] {
+function blade(x: number, y: number, aim: AttackAim, side: 1 | -1, tick: number): Primitive[] {
   const b = LOOK.playerBlade;
-  const angle = bladeAngle(tick) * RAD;
+  const angle = bladeAngle(aim, tick) * RAD;
   const dx = side * Math.cos(angle);
   const dy = Math.sin(angle);
   const px = x + side * 8;
@@ -117,8 +121,8 @@ export function playerSwing(state: GameState, x: number, y: number): PlayerSwing
   const faded = p.attackTick - startup - active;
   const slashAlpha = faded < 0 ? LOOK.playerSlash.alpha : LOOK.playerSlash.alpha * (1 - faded / LOOK.playerSlash.fadeTicks);
   return {
-    blade: blade(x, y, side, p.attackTick),
-    slash: slashAlpha > 0 ? crescent(box, side, sweepProgress(p.attackTick)) : [],
+    blade: blade(x, y, p.attackAim, side, p.attackTick),
+    slash: slashAlpha > 0 ? crescent(box, p.attackAim, side, sweepProgress(p.attackTick)) : [],
     slashAlpha: Math.max(0, slashAlpha),
     box: attackActive(p) ? box : null,
   };

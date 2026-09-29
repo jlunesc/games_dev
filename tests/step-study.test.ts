@@ -85,6 +85,7 @@ describe('creating a fight without a study', () => {
         invulnerableTicks: 0,
         attackTick: -1,
         attackConnected: false,
+        attackAim: 'forward',
         dashTick: -1,
         dashDir: 1,
         dashCooldown: 0,

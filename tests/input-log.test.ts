@@ -14,6 +14,7 @@ import { withInput } from './helpers';
 /** The fields a fight uses: everything except the menu-only ones. */
 const fightPart = (f: InputFrame) => ({
   moveX: f.moveX,
+  moveY: f.moveY,
   jumpHeld: f.jumpHeld,
   jumpPressed: f.jumpPressed,
   attackPressed: f.attackPressed,
@@ -24,16 +25,28 @@ describe('packing a frame', () => {
   it('round-trips every combination of the fight fields', () => {
     for (const moveX of [-1, 0, 1]) {
       for (let bits = 0; bits < 16; bits++) {
+        for (const moveY of [-1, 0, 1]) {
         const frame = withInput({
           moveX,
+          moveY,
           jumpHeld: (bits & 1) !== 0,
           jumpPressed: (bits & 2) !== 0,
           attackPressed: (bits & 4) !== 0,
           dashPressed: (bits & 8) !== 0,
         });
         expect(unpackFrame(packFrame(frame))).toEqual(frame);
+        }
       }
     }
+  });
+
+  it('keeps the vertical aim in bits 6 and 7, and reads a number from before it existed as no aim', () => {
+    expect(packFrame(withInput({ moveY: -1 }))).toBe(1 + 64);
+    expect(packFrame(withInput({ moveY: 1 }))).toBe(1 + 128);
+    expect(packFrame(withInput({ moveY: NaN }))).toBe(1);
+    for (let packed = 0; packed < 64; packed++) expect(unpackFrame(packed).moveY).toBe(0);
+    expect(unpackFrame(1 + 64).moveY).toBe(-1);
+    expect(unpackFrame(1 + 128).moveY).toBe(1);
   });
 
   it('gives different numbers to different frames, and stores the direction plus one', () => {
@@ -47,7 +60,7 @@ describe('packing a frame', () => {
   });
 
   it('ignores the menu-only fields', () => {
-    const menu = withInput({ moveY: 1, confirm: true, alt: true });
+    const menu = withInput({ confirm: true, alt: true });
     expect(packFrame(menu)).toBe(packFrame(NO_INPUT));
   });
 

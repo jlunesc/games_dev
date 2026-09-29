@@ -8,6 +8,9 @@ export interface Buffered {
   dash: number;
 }
 
+/** Where a swing points. */
+export type AttackAim = 'forward' | 'up' | 'down';
+
 export interface PlayerState {
   /** Horizontal centre and feet height, in world units (y grows downward). */
   x: number;
@@ -26,6 +29,8 @@ export interface PlayerState {
   /** -1 when not attacking, otherwise updates since the swing began (0 on its first update). */
   attackTick: number;
   attackConnected: boolean;
+  /** Where the running swing points: in front, straight up, or straight down (down only when the swing began in the air). */
+  attackAim: AttackAim;
   /** -1 when not dashing, otherwise updates since the dash began (0 on its first update). */
   dashTick: number;
   dashDir: 1 | -1;
@@ -205,6 +210,7 @@ export function createInitialState(boss: BossDef, seed = 1, studyRounds = 0): Ga
       invulnerableTicks: 0,
       attackTick: -1,
       attackConnected: false,
+      attackAim: 'forward',
       dashTick: -1,
       dashDir: 1,
       dashCooldown: 0,

@@ -408,6 +408,14 @@ The player's attack used to be a plain white rectangle. Now the player holds a *
 - [ ] The crescent does not hide the boss or its warnings when you fight close up.
 - [ ] Anything to change: the sword's size, the slash's colour or how long it lingers (`LOOK.playerBlade`, `LOOK.playerSlash` in `src/ui/look/tuning.ts`).
 
+## Swinging up and down
+You can now swing **up** and **down** with no new button. **Hold up on the stick or d-pad and press attack** to swing straight up (on the ground or in the air). **Hold down and press attack while in the air** to swing straight down. On the ground, down + attack is still a normal forward swing. The sword and the slash follow the direction, and the hit area is the box right above your head or right under your feet. Up and down swings never counter, and you keep facing the way you were facing.
+- [ ] Up + attack swings up, on the ground and in the air, and the crescent sweeps back to front over your head.
+- [ ] Down + attack in the air swings down under your feet; on the ground it stays forward.
+- [ ] Holding up while running does not make the run feel different, and a plain attack still swings forward.
+- [ ] Against the Storm Kite, an upward swing reaches it when it hangs above you; a downward swing reaches things under you.
+- [ ] Anything to change: the box size and reach (`PLAYER.attack.upDownReach` and `upDownWidth` in `src/game/params.ts`), or a bounce off the boss on a downward hit (not built yet, say if you want it).
+
 ## Generated backdrops
 Every **Generated** fight now gets its own backdrop, invented fresh from that fight's seed (the same seed always looks the same): a random colour family (reds, greens, teals, purples, browns and so on), two or three layers of shapes (pillars, ridges or spires) at random heights and speeds, and embers, floor and edge in matching colours. The skies stay dark on purpose, so the boss and its warnings stand out. The boss's body colour is picked opposite the sky on the colour wheel. The hand-built bosses keep their own backdrops. The shot and strike colours of a generated boss are still the default ones.
 

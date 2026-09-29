@@ -154,3 +154,6 @@ menu.
 No performance data is saved today: the stats record gameplay (inputs, hits, dodges, timing), never frame time, dropped frames, memory or CPU/GPU cost. The owner asked after playing M5d whether the looks were expensive on the phone; the only answer available was the design-time estimate from M5d's review (well under 1% of a 60Hz frame budget, extrapolated from Node micro-benchmarks, not measured on the device).
 
 Idea: sample real performance during a fight, either shown live (a small debug overlay: frame time, dropped frames) or included in the exported stats (so it can be studied alongside the gameplay data, e.g. correlated with the number of active particles or which boss/arena was in play). Not designed yet: what to sample, at what cost to sample it (the measurement must not itself slow the game), and whether it needs its own settings switch.
+
+## Up and down swings, left out (raised 2026-09-29)
+Built: hold up (ground or air) or down (air only) and press attack (SPEC section 11, "Up and down swings"). Not built: a **bounce off the boss** on a downward hit (a "pogo", as in Hollow Knight), bouncing off spikes or hazards, an up or down counter, a swing that changes the boss's attacks (bosses that can only be hit from above or below), and the fairness bots (`src/bosses/generate/fairness.ts`) using up and down swings.

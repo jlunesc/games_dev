@@ -48,6 +48,22 @@ describe('boxes', () => {
   });
 });
 
+describe('an upward or downward swing', () => {
+  it('hits straight above the head or straight below the feet, centred on the player, whichever way they face', () => {
+    const p = createInitialState(QUIET_BOSS).player;
+    const { upDownReach, upDownWidth } = PLAYER.attack;
+    p.x = 850;
+    p.y = WORLD.floorY;
+    for (const facing of [1, -1] as const) {
+      p.facing = facing;
+      p.attackAim = 'up';
+      expect(attackBox(p)).toEqual({ x: 850 - upDownWidth / 2, y: WORLD.floorY - PLAYER.height - upDownReach, w: upDownWidth, h: upDownReach });
+      p.attackAim = 'down';
+      expect(attackBox(p)).toEqual({ x: 850 - upDownWidth / 2, y: WORLD.floorY, w: upDownWidth, h: upDownReach });
+    }
+  });
+});
+
 describe('predicates', () => {
   it('the attack is active only during its active updates', () => {
     const p = createInitialState(QUIET_BOSS).player;

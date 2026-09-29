@@ -13,7 +13,7 @@ import { step } from '../game/step';
 import type { FightResult } from '../game/summary';
 import { decodeInputs, pushFrame, type InputRun } from './input-log';
 
-export const STATS_SCHEMA_VERSION = 4;
+export const STATS_SCHEMA_VERSION = 5;
 
 /**
  * Bump when a change to the game numbers or a boss file changes how a recorded fight replays.
@@ -29,8 +29,10 @@ export const STATS_SCHEMA_VERSION = 4;
  * boss's feet, so records of those bosses made by 0.5.1 no longer replay exactly. Other bosses are unchanged.
  * 0.6.1: the Ashen Hound lost its platforms and cover (flat arena), so Hound records made by 0.6.0 or earlier no
  * longer replay exactly. Every other boss is unchanged.
+ * 0.7.0: the player can swing up (up held, on the ground or in the air) and down (down held, in the air), so the
+ * recorded input now carries the vertical aim. Records made by 0.6.1 or earlier have no aim and replay exactly as before.
  */
-export const GAME_VERSION = '0.6.1';
+export const GAME_VERSION = '0.7.0';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {

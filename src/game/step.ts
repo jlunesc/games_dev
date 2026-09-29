@@ -75,6 +75,7 @@ export function updatePlayer(
   if (p.buffer.attack > 0 && p.attackTick < 0 && p.dashTick < 0) {
     p.attackTick = 0;
     p.attackConnected = false;
+    p.attackAim = input.moveY < 0 ? 'up' : input.moveY > 0 && !p.onGround ? 'down' : 'forward';
     p.buffer.attack = 0;
   }
 
@@ -155,7 +156,7 @@ export function hurtPlayer(s: GameState, amount: number): void {
 function tryCounter(s: GameState, boss: BossDef, studying: boolean): void {
   const { player: p, boss: b } = s;
   if (studying) return;
-  if (b.mode !== 'attack' || b.attackId === null || p.attackTick !== 0) return;
+  if (b.mode !== 'attack' || b.attackId === null || p.attackTick !== 0 || p.attackAim !== 'forward') return;
   const attack = attackById(boss, b.attackId);
   if (attack.class !== 'counterable') return;
   if (b.attackTick < attack.windup - boss.counter.window || b.attackTick >= attack.windup) return;

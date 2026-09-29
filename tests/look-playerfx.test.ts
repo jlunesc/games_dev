@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EMBER_DUELIST } from '../src/bosses';
 import { attackBox } from '../src/game/geometry';
 import { PLAYER, WORLD } from '../src/game/params';
-import { createInitialState, type GameState } from '../src/game/state';
+import { createInitialState, type AttackAim, type GameState } from '../src/game/state';
 import type { Primitive } from '../src/ui/look/figures';
 import { playerSwing } from '../src/ui/look/playerfx';
 import { LOOK } from '../src/ui/look/tuning';
@@ -12,9 +12,9 @@ const Y = WORLD.floorY;
 const { startup, active, recovery } = PLAYER.attack;
 const total = startup + active + recovery;
 
-function swinging(tick: number, facing: 1 | -1): GameState {
+function swinging(tick: number, facing: 1 | -1, attackAim: AttackAim = 'forward'): GameState {
   const s = createInitialState(EMBER_DUELIST, 1);
-  return { ...s, player: { ...s.player, x: X, y: Y, prevX: X, prevY: Y, facing, attackTick: tick } };
+  return { ...s, player: { ...s.player, x: X, y: Y, prevX: X, prevY: Y, facing, attackTick: tick, attackAim } };
 }
 
 function points(list: Primitive[]): [number, number][] {
@@ -103,6 +103,51 @@ describe('playerSwing', () => {
       const order = (list: [number, number][]) => list.map(([px, py]) => [Math.round(px * 1e6) / 1e6, Math.round(py * 1e6) / 1e6]).sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!);
       const mirror = points(right.blade).map(([px, py]): [number, number] => [2 * X - px, py]);
       expect(order(points(left.blade))).toEqual(order(mirror));
+    }
+  });
+});
+
+describe.each(['up', 'down'] as const)('a swing %s', (aim) => {
+  it('keeps the slash inside the hit box, on either side', () => {
+    for (const facing of [1, -1] as const) {
+      const box = attackBox(swinging(0, facing, aim).player);
+      for (let t = startup; t < total; t++) {
+        const slash = points(playerSwing(swinging(t, facing, aim), X, Y)!.slash);
+        if (t < startup + active + LOOK.playerSlash.fadeTicks) expect(slash.length).toBeGreaterThan(0);
+        for (const [px, py] of slash) {
+          expect(px).toBeGreaterThanOrEqual(box.x - 1e-6);
+          expect(px).toBeLessThanOrEqual(box.x + box.w + 1e-6);
+          expect(py).toBeGreaterThanOrEqual(box.y - 1e-6);
+          expect(py).toBeLessThanOrEqual(box.y + box.h + 1e-6);
+        }
+      }
+    }
+  });
+
+  it('sweeps from the back to the front of the player', () => {
+    for (const facing of [1, -1] as const) {
+      let farthest = -Infinity;
+      for (let t = startup; t < startup + active; t++) {
+        const front = Math.max(...points(playerSwing(swinging(t, facing, aim), X, Y)!.slash).map(([px]) => (px - X) * facing));
+        expect(front).toBeGreaterThan(farthest);
+        farthest = front;
+      }
+    }
+  });
+
+  it('points the sword up (or down) at the middle of the sweep', () => {
+    const swing = playerSwing(swinging(startup + Math.floor(active / 2), 1, aim), X, Y)!;
+    const shoulderY = Y - PLAYER.height + 2 * LOOK.headRadius + 6;
+    const ys = points(swing.blade).map(([, py]) => py - shoulderY);
+    if (aim === 'up') expect(Math.min(...ys)).toBeLessThan(-LOOK.playerBlade.length * 0.8);
+    else expect(Math.max(...ys)).toBeGreaterThan(LOOK.playerBlade.length * 0.8);
+  });
+
+  it('shows the real hit box only while it can hit', () => {
+    for (let t = 0; t < total; t++) {
+      const swing = playerSwing(swinging(t, 1, aim), X, Y)!;
+      if (t >= startup && t < startup + active) expect(swing.box).toEqual(attackBox(swinging(t, 1, aim).player));
+      else expect(swing.box).toBeNull();
     }
   });
 });

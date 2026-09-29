@@ -143,6 +143,9 @@ export const LOOK = {
     windupDeg: [-120, -100],
     activeDeg: [-100, 40],
     recoverDeg: [40, 80],
+    /** The same three angle ranges for a swing straight up and straight down (0 is level in front, negative is up, positive is down). */
+    up: { windupDeg: [-175, -165], activeDeg: [-165, -15], recoverDeg: [-15, 80] },
+    down: { windupDeg: [175, 165], activeDeg: [165, 15], recoverDeg: [15, 80] },
   },
   /**
    * The slash: a crescent inside the real hit box that sweeps from top to bottom over the active ticks, then fades over
