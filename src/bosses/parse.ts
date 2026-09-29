@@ -8,6 +8,9 @@ import type {
   BoltDef,
   BossDef,
   CounterDef,
+  DiveDef,
+  DiveShape,
+  FlightDef,
   HitWindow,
   LeapDef,
   LeapTarget,
@@ -65,6 +68,12 @@ function num(value: unknown, path: string, rule: NumberRule = {}): number {
 const POSES: readonly Pose[] = ['raised', 'sideways', 'back', 'down', 'crouch'];
 
 const LEAP_TARGETS: readonly LeapTarget[] = ['player', 'forward', 'back'];
+const DIVE_SHAPES: readonly DiveShape[] = ['plunge', 'swoop'];
+
+/** The highest a swing can reach (a jump at its peak, the swing box above the body's middle): a resting flight must stay above it. */
+const HIGHEST_SWING = Math.ceil(
+  PLAYER.jumpSpeed ** 2 / (2 * PLAYER.gravity) + PLAYER.height / 2 + PLAYER.attack.height / 2,
+);
 
 function hitWindow(value: unknown, path: string): HitWindow {
   const o = object(value, path);
@@ -221,13 +230,43 @@ function attack(value: unknown, path: string): AttackDef {
     }
   }
 
+  let dive: DiveDef | undefined;
+  if (o.dive !== undefined) {
+    if (leap !== undefined) fail(`${path}.dive`, 'an attack cannot have both a leap and a dive');
+    const d = object(o.dive, `${path}.dive`);
+    const from = num(d.from, `${path}.dive.from`, { min: 0, integer: true });
+    const to = num(d.to, `${path}.dive.to`, { min: 1, integer: true });
+    const shape = text(d.shape, `${path}.dive.shape`);
+    if (!DIVE_SHAPES.includes(shape as DiveShape)) {
+      fail(`${path}.dive.shape`, `must be one of ${DIVE_SHAPES.join(', ')}`);
+    }
+    const target = text(d.target, `${path}.dive.target`);
+    if (!LEAP_TARGETS.includes(target as LeapTarget)) {
+      fail(`${path}.dive.target`, `must be one of ${LEAP_TARGETS.join(', ')}`);
+    }
+    dive = { from, to, shape: shape as DiveShape, target: target as LeapTarget };
+    if (target !== 'player') dive.distance = num(d.distance, `${path}.dive.distance`, { min: 1 });
+    if (to <= from || from < windup || to > windup + active) {
+      fail(`${path}.dive`, 'must lie inside the active updates');
+    }
+    if (shape === 'swoop') {
+      dive.low = num(d.low, `${path}.dive.low`, { min: 1, integer: true });
+      if (dive.low > to - from - 2) fail(`${path}.dive.low`, 'must leave at least one update to fall and one to climb');
+    } else if (d.low !== undefined) {
+      fail(`${path}.dive.low`, 'only a swoop has "low"');
+    }
+    if (move !== undefined && from < move.to && move.from < to) {
+      fail(`${path}.dive`, 'must not overlap the move');
+    }
+  }
+
   const shots = o.shots === undefined ? undefined : shotList(o.shots, `${path}.shots`, windup, active);
   if (shots !== undefined && cls !== 'mustDodge') {
     fail(`${path}.class`, 'an attack with shots must be "mustDodge"');
   }
 
-  if (hits.length === 0 && move === undefined && leap === undefined && shots === undefined) {
-    fail(`${path}.hits`, 'needs at least one hit window, a move, a leap or shots');
+  if (hits.length === 0 && move === undefined && leap === undefined && dive === undefined && shots === undefined) {
+    fail(`${path}.hits`, 'needs at least one hit window, a move, a leap, a dive or shots');
   }
 
   const def: AttackDef = {
@@ -247,6 +286,7 @@ function attack(value: unknown, path: string): AttackDef {
     ...def,
     ...(move === undefined ? {} : { move }),
     ...(leap === undefined ? {} : { leap }),
+    ...(dive === undefined ? {} : { dive }),
     ...(shots === undefined ? {} : { shots }),
   };
 }
@@ -344,6 +384,14 @@ function arena(value: unknown, path: string): ArenaDef {
   return { platforms, covers };
 }
 
+function flight(value: unknown, path: string, bossHeight: number): FlightDef {
+  const o = object(value, path);
+  const height = num(o.height, `${path}.height`, { min: HIGHEST_SWING + 10 });
+  const rise = num(o.rise, `${path}.rise`, { min: 20, max: 1000 });
+  if (height + bossHeight > WORLD.floorY - 20) fail(`${path}.height`, 'the boss must fit inside the arena when it hangs this high');
+  return { height, rise };
+}
+
 /** Checks a boss file and returns it typed. Throws a `BossFormatError` naming the first problem found. */
 export function parseBoss(data: unknown): BossDef {
   const o = object(data, 'boss');
@@ -402,11 +450,22 @@ export function parseBoss(data: unknown): BossDef {
 
   const parsedArena = o.arena === undefined ? undefined : arena(o.arena, 'boss.arena');
 
+  const bossHeight = num(o.height, 'boss.height', { min: 1 });
+  const parsedFlight = o.flight === undefined ? undefined : flight(o.flight, 'boss.flight', bossHeight);
+  attacks.forEach((a, i) => {
+    if (a.dive !== undefined && parsedFlight === undefined) {
+      fail(`boss.attacks[${i}].dive`, 'only a boss with "flight" can dive');
+    }
+    if (a.leap !== undefined && parsedFlight !== undefined) {
+      fail(`boss.attacks[${i}].leap`, 'a boss with "flight" dives instead of leaping');
+    }
+  });
+
   return {
     id: text(o.id, 'boss.id'),
     name: text(o.name, 'boss.name'),
     width: num(o.width, 'boss.width', { min: 1 }),
-    height: num(o.height, 'boss.height', { min: 1 }),
+    height: bossHeight,
     startX: num(o.startX, 'boss.startX', { min: 0 }),
     maxHp: num(o.maxHp, 'boss.maxHp', { min: 1, integer: true }),
     spacing,
@@ -416,6 +475,7 @@ export function parseBoss(data: unknown): BossDef {
     transitionTicks: num(o.transitionTicks, 'boss.transitionTicks', { min: 0, integer: true }),
     attacks,
     phases,
+    ...(parsedFlight === undefined ? {} : { flight: parsedFlight }),
     ...(parsedArena === undefined ? {} : { arena: parsedArena }),
   };
 }

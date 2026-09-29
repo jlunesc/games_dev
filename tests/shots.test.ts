@@ -184,7 +184,7 @@ describe('the life of a shot', () => {
   it('is cleared by a phase change', () => {
     const boss = quiet(shooter([bolt()]));
     const s = withShots(boss, mkBolt(), mkBolt({ originTick: 2 }));
-    beginTransition(s);
+    beginTransition(s, boss);
     expect(s.shots).toEqual([]);
   });
 

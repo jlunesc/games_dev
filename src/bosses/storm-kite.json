@@ -1,0 +1,100 @@
+{
+  "id": "storm-kite",
+  "name": "Storm Kite",
+  "width": 120,
+  "height": 70,
+  "startX": 900,
+  "maxHp": 22,
+  "spacing": { "min": 220, "max": 480 },
+  "approachTimeout": 45,
+  "predictability": 0.25,
+  "flight": { "height": 320, "rise": 260 },
+  "counter": { "window": 12, "range": 200, "staggerTicks": 60, "damageMultiplier": 2 },
+  "transitionTicks": 60,
+  "attacks": [
+    {
+      "id": "plunge",
+      "name": "Plunge",
+      "pose": "raised",
+      "class": "mustDodge",
+      "windup": 30,
+      "active": 32,
+      "recovery": 44,
+      "range": { "min": 0, "max": 500 },
+      "dive": { "from": 30, "to": 56, "shape": "plunge", "target": "player" },
+      "hits": [{ "from": 56, "to": 62, "x0": 0, "x1": 120, "bottom": 0, "top": 110, "both": true }]
+    },
+    {
+      "id": "swoop",
+      "name": "Swoop",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 32,
+      "active": 46,
+      "recovery": 30,
+      "range": { "min": 260, "max": 480 },
+      "dive": { "from": 32, "to": 78, "shape": "swoop", "target": "forward", "distance": 800, "low": 18 },
+      "hits": [{ "from": 46, "to": 64, "x0": -30, "x1": 90, "bottom": 0, "top": 100 }]
+    },
+    {
+      "id": "bolt-volley",
+      "name": "Bolt Volley",
+      "pose": "down",
+      "class": "mustDodge",
+      "windup": 26,
+      "active": 30,
+      "recovery": 36,
+      "range": { "min": 0, "max": 900 },
+      "hits": [],
+      "shots": [
+        { "kind": "bolt", "at": 26, "height": 0, "size": 26, "speed": 520, "aim": true },
+        { "kind": "bolt", "at": 38, "height": 0, "size": 26, "speed": 520, "aim": true },
+        { "kind": "bolt", "at": 50, "height": 0, "size": 26, "speed": 520, "aim": true }
+      ]
+    },
+    {
+      "id": "snap-plunge",
+      "name": "Snap Plunge",
+      "pose": "raised",
+      "class": "mustDodge",
+      "windup": 24,
+      "active": 22,
+      "recovery": 34,
+      "range": { "min": 0, "max": 400 },
+      "dive": { "from": 24, "to": 40, "shape": "plunge", "target": "player" },
+      "hits": [{ "from": 40, "to": 46, "x0": 0, "x1": 120, "bottom": 0, "top": 110, "both": true }]
+    }
+  ],
+  "phases": [
+    {
+      "name": "Circling",
+      "startsAtHpFraction": 1,
+      "attacks": [
+        { "id": "plunge", "weight": 3 },
+        { "id": "swoop", "weight": 3 },
+        { "id": "bolt-volley", "weight": 2 }
+      ],
+      "gap": 60,
+      "maxChain": 1,
+      "chainChance": 0,
+      "walkSpeed": 200,
+      "retreatSpeed": 150
+    },
+    {
+      "name": "Tempest",
+      "startsAtHpFraction": 0.5,
+      "opening": "swoop",
+      "attacks": [
+        { "id": "plunge", "weight": 2 },
+        { "id": "swoop", "weight": 3 },
+        { "id": "bolt-volley", "weight": 2 },
+        { "id": "snap-plunge", "weight": 3 }
+      ],
+      "gap": 36,
+      "maxChain": 2,
+      "chainChance": 0.3,
+      "walkSpeed": 240,
+      "retreatSpeed": 180
+    }
+  ]
+}

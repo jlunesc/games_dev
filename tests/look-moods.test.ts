@@ -63,6 +63,24 @@ describe('the moods', () => {
   });
 });
 
+describe('the Storm Kite mood', () => {
+  it('is a stormy dusk with its own colours, apart from every other boss', () => {
+    const kite = MOODS['storm-kite']!;
+    expect(kite.bodyColor).toBe(LOOK.bossBodyKite);
+    const key = (m: typeof kite): string => [m.skyTop, m.skyBottom, m.floor, m.accent, ...m.layers.map((l) => l.color)].join();
+    for (const [id, mood] of Object.entries(MOODS)) {
+      if (id !== 'storm-kite') expect(key(mood), id).not.toBe(key(kite));
+    }
+  });
+
+  it('has its own palette of attack colours', () => {
+    const p = LOOK.palette['storm-kite']!;
+    expect(p).toBeDefined();
+    for (const c of [p.edge, p.core, p.halo]) expect(c).toMatch(HEX);
+    expect(p).not.toEqual(LOOK.palette.default);
+  });
+});
+
 describe('the look tuning', () => {
   it('has the caps and effect counts as positive whole numbers', () => {
     expect(LOOK.maxParticles).toBe(160);

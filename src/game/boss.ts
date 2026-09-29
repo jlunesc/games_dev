@@ -1,4 +1,4 @@
-import type { AttackDef, BossDef, LeapDef, PhaseDef } from '../bosses/schema';
+import type { AttackDef, BossDef, DiveDef, FlightDef, LeapDef, LeapTarget, PhaseDef } from '../bosses/schema';
 import { DT } from '../engine/time';
 import { WORLD } from './params';
 import { nextRandom } from './rng';
@@ -30,10 +30,28 @@ export function landBoss(b: BossState): void {
   b.lift = 0;
   b.leapFromX = null;
   b.leapToX = null;
+  b.diveFromLift = null;
 }
 
-function enterGap(b: BossState): void {
+/**
+ * An attack ended or was cut short: forgets the leap or dive. A boss that walks is back on the floor; a boss that
+ * flies keeps its height (after a plunge it is low, and climbs back on its own, see `settleLift`).
+ */
+function endMotion(b: BossState, boss: BossDef): void {
+  const lift = b.lift;
   landBoss(b);
+  if (boss.flight !== undefined) b.lift = lift;
+}
+
+/** A boss that flies climbs (or sinks) back to its resting height at its own speed. */
+function settleLift(b: BossState, flight: FlightDef): void {
+  const step = flight.rise * DT;
+  if (b.lift < flight.height) b.lift = Math.min(flight.height, b.lift + step);
+  else if (b.lift > flight.height) b.lift = Math.max(flight.height, b.lift - step);
+}
+
+function enterGap(b: BossState, boss: BossDef): void {
+  endMotion(b, boss);
   b.mode = 'gap';
   b.modeTick = 0;
   b.attackId = null;
@@ -154,7 +172,7 @@ function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef): void {
   const p = s.player;
   const id = b.pendingAttackId;
   if (id === null) {
-    enterGap(b);
+    enterGap(b, boss);
     return;
   }
   const attack = attackById(boss, id);
@@ -178,11 +196,11 @@ function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef): void {
 function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   const b = s.boss;
   // Defensive: a leap that did not reach its `to` before the attack ended must not leave the boss floating.
-  landBoss(b);
+  endMotion(b, boss);
   if (s.study.active) {
     // The last demonstration's shots may still be flying: the study lasts until they are gone (see updateGap).
     if (s.study.queue.length === 0 && s.shots.length === 0) endStudy(s);
-    enterGap(b);
+    enterGap(b, boss);
     return;
   }
   if (b.chainLeft > 0) {
@@ -198,13 +216,13 @@ function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
     }
   }
   b.chainLeft = 0;
-  enterGap(b);
+  enterGap(b, boss);
 }
 
 function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   const b = s.boss;
   if (b.attackId === null) {
-    enterGap(b);
+    enterGap(b, boss);
     return;
   }
   const attack = attackById(boss, b.attackId);
@@ -216,12 +234,13 @@ function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
     moveBoss(b, boss, direction, move.speed);
   }
   if (attack.leap !== undefined) updateLeap(s, boss, attack.leap);
+  if (attack.dive !== undefined) updateDive(s, boss, attack.dive);
   spawnShots(s, boss, attack);
   if (b.attackTick >= attackLength(attack)) finishAttack(s, boss, phase);
 }
 
 /** The x a leap will land on, fixed at take-off and kept inside the arena. */
-function leapLanding(s: GameState, boss: BossDef, leap: LeapDef): number {
+function leapLanding(s: GameState, boss: BossDef, leap: { target: LeapTarget; distance?: number }): number {
   const b = s.boss;
   const half = boss.width / 2;
   let x = s.player.x;
@@ -276,8 +295,57 @@ function updateLeap(s: GameState, boss: BossDef, leap: LeapDef): void {
   }
 }
 
+/**
+ * The height of a dive on its `k`th update (1 to `n`), from the height `from` it took off at. A plunge falls faster and
+ * faster and is still a little up on the last update. A swoop falls the same way for half of the updates that are not
+ * spent low, skims the floor for `low` updates, then climbs quickly at first and is still a little below `from` on the
+ * last update. From update `to` on the boss is at the end height (the floor for a plunge, `from` for a swoop).
+ */
+function diveLift(dive: DiveDef, from: number, n: number, k: number): number {
+  if (dive.shape === 'plunge') {
+    const q = k / (n + 1);
+    return from * (1 - q * q);
+  }
+  const low = dive.low ?? 0;
+  const fall = Math.floor((n - low) / 2);
+  const climb = n - low - fall;
+  if (k <= fall) {
+    const q = k / (fall + 1);
+    return from * (1 - q * q);
+  }
+  if (k <= fall + low) return 0;
+  const q = (k - fall - low) / (climb + 1);
+  return from * (1 - (1 - q) * (1 - q));
+}
+
+/**
+ * Moves a flying boss along its dive for the current attack time, the way `updateLeap` moves a leaping one: the landing
+ * x and the starting height are fixed at update `from`, so the player can dodge by moving after that.
+ */
+function updateDive(s: GameState, boss: BossDef, dive: DiveDef): void {
+  const b = s.boss;
+  const t = b.attackTick;
+  if (t >= dive.from && t < dive.to) {
+    if (b.leapFromX === null || b.leapToX === null || b.diveFromLift === null) {
+      b.leapFromX = b.x;
+      b.leapToX = leapLanding(s, boss, dive);
+      b.diveFromLift = b.lift;
+    }
+    const n = dive.to - dive.from;
+    const k = t - dive.from + 1;
+    b.x = b.leapFromX + (b.leapToX - b.leapFromX) * (k / (n + 1));
+    b.lift = diveLift(dive, b.diveFromLift, n, k);
+  } else if (t >= dive.to && b.leapToX !== null && b.diveFromLift !== null) {
+    b.x = b.leapToX;
+    b.lift = dive.shape === 'plunge' ? 0 : b.diveFromLift;
+    b.leapFromX = null;
+    b.leapToX = null;
+    b.diveFromLift = null;
+  }
+}
+
 /** After the powering-up pause the boss opens with the new phase's opening attack, if it has one. */
-function finishTransition(s: GameState, phase: PhaseDef): void {
+function finishTransition(s: GameState, boss: BossDef, phase: PhaseDef): void {
   const b = s.boss;
   if (phase.opening !== undefined) {
     b.pendingAttackId = phase.opening;
@@ -285,15 +353,15 @@ function finishTransition(s: GameState, phase: PhaseDef): void {
     b.mode = 'approach';
     b.modeTick = 0;
   } else {
-    enterGap(b);
+    enterGap(b, boss);
   }
 }
 
 /** The boss moves on to the next phase: it drops what it was doing and powers up, unhurtable. */
-export function beginTransition(s: GameState): void {
+export function beginTransition(s: GameState, boss: BossDef): void {
   const b = s.boss;
   b.phase += 1;
-  landBoss(b);
+  endMotion(b, boss);
   b.mode = 'transition';
   b.modeTick = 0;
   b.attackId = null;
@@ -310,6 +378,9 @@ export function updateBoss(s: GameState, boss: BossDef): void {
   const phase = boss.phases[b.phase];
   if (phase === undefined) return;
   b.modeTick += 1;
+  if (boss.flight !== undefined && (b.mode === 'gap' || b.mode === 'approach' || b.mode === 'transition')) {
+    settleLift(b, boss.flight);
+  }
   switch (b.mode) {
     case 'gap':
       updateGap(s, boss, phase);
@@ -321,10 +392,10 @@ export function updateBoss(s: GameState, boss: BossDef): void {
       updateAttack(s, boss, phase);
       break;
     case 'stagger':
-      if (b.modeTick >= boss.counter.staggerTicks) enterGap(b);
+      if (b.modeTick >= boss.counter.staggerTicks) enterGap(b, boss);
       break;
     case 'transition':
-      if (b.modeTick >= boss.transitionTicks) finishTransition(s, phase);
+      if (b.modeTick >= boss.transitionTicks) finishTransition(s, boss, phase);
       break;
   }
 }

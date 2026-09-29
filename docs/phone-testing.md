@@ -380,6 +380,27 @@ A new choice on the **Boss** row, last in the list: **Tremor Brute**, a wide hun
 - Does it stay close enough to feel like a brawler, or does it feel far away?
 - Is 26 health too little? (A player who knows every attack can beat it in about 15 to 20 seconds in the tests.)
 
+## Flight and the Storm Kite (rest of slice B)
+A new choice on the **Boss** row, last in the list: **Storm Kite**, a winged bird under a stormy dusk sky. It **hangs high above you** and follows you from side to side, out of reach, then comes down to attack. You can only hit it while it is low.
+
+### What to expect
+- **Plunge**: it raises its wings, then a red ring appears on the floor where you stood and it drops onto it, slamming both sides. Leave the ring. It stays on the floor a moment afterwards, and that is when you hit it.
+- **Swoop**: it pulls its wings back, then sweeps across the whole arena, skimming the floor in the middle of the pass. Jump over it or dash through it.
+- **Bolt Volley**: it hangs with its head down and fires three bolts at you from above. Step aside.
+- From half health it gets quicker, adds a **Snap Plunge** (a fast plunge; a dash is the safest answer) and can chain two attacks.
+- After every attack it climbs back up. Do not chase it: wait for it to come down.
+
+### Checklist
+- [ ] Storm Kite is the last choice on the Boss row and Fight starts it.
+- [ ] Swings under it while it hangs do nothing; swings after a plunge land.
+- [ ] The ring for the Plunge is easy to see and there is time to leave it.
+- [ ] You can tell the Plunge from the Swoop from its wings before it moves.
+- [ ] The Swoop can be jumped or dashed, and the pass is not too wide or too quick.
+- [ ] The bolts can be sidestepped.
+- [ ] The Kite looks different from the other bosses, and its attacks have their own blue-white colour.
+- [ ] In the study, the dives and bolts are shown and do not hurt.
+- [ ] Stats save and export, and in the file that fight's `bossId` says `"storm-kite"`.
+
 ## Stats and export (M3b)
 ### What is recorded
 The game now keeps a record of every fight you play: which boss and difficulty, and the exact buttons you pressed on every step of the fight. From that the game works out the numbers we will study together: how long you took to react to each attack, whether you dodged, got hit or countered, how you moved, and whether you punished the boss after its attacks. A finished fight (a win or a loss) and a fight you leave after it started are saved by themselves, and the summary ends with "Fight saved (3 on this device)." (the number is how many fights are saved). A fight you leave before it started is not saved.

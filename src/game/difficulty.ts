@@ -193,6 +193,11 @@ function adjustAttack(attack: AttackDef, boss: BossDef, d: Dials): AttackDef {
     // The parser needs a distance of at least 1, so a small distance at a low range must not fall below it.
     if (attack.leap.distance !== undefined) next.leap.distance = Math.max(1, attack.leap.distance * d.range);
   }
+  if (attack.dive !== undefined) {
+    // Like a leap: only the timing shifts, and the range dial sets how far it goes. Its shape and length stay.
+    next.dive = { ...attack.dive, from: attack.dive.from + shift, to: attack.dive.to + shift };
+    if (attack.dive.distance !== undefined) next.dive.distance = Math.max(1, attack.dive.distance * d.range);
+  }
   if (attack.shots !== undefined) {
     // A bolt's height and size and an arc's flight and peak are not scaled by any dial: a bolt that can be jumped
     // stays one that can be jumped. Timing shifts with the warning; speed scales a bolt; range scales an arc's reach

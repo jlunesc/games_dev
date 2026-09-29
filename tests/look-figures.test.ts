@@ -5,6 +5,7 @@ import {
   CINDER_GOLEM,
   GALE_REAVER,
   QUILL_WARDEN,
+  STORM_KITE,
   TREMOR_BRUTE,
   VEIL_DANCER,
   VESPER_SAGE,
@@ -778,6 +779,88 @@ describe('bossFigure: the Tremor Brute', () => {
       TREMOR_BRUTE.attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), TREMOR_BRUTE, BOSS_COLORS))),
     );
     expect(shapes.size).toBe(TREMOR_BRUTE.attacks.length);
+  });
+});
+
+describe('bossFigure: the Storm Kite', () => {
+  const HIGH = STORM_KITE.flight!.height;
+  const kiteBounds = (s: GameState): Bounds => {
+    const box = bossDrawBox(s.boss, STORM_KITE);
+    return {
+      left: s.boss.x - STORM_KITE.width / 2 - FIGURE_MARGIN,
+      right: s.boss.x + STORM_KITE.width / 2 + FIGURE_MARGIN,
+      top: box.top - FIGURE_MARGIN,
+      bottom: box.top + box.height,
+    };
+  };
+  const kiteStates = (): GameState[] => {
+    const out: GameState[] = [];
+    const start = base(STORM_KITE);
+    for (const facing of [1, -1] as const) {
+      for (const lift of [0, 90, HIGH]) {
+        for (const tick of [0, 11, 22, 33, 88]) {
+          for (const mode of MODES) {
+            if (mode !== 'attack') {
+              out.push(at(withBoss(start, { mode, facing, lift, x: 700, attackId: null }), tick));
+              continue;
+            }
+            for (const attack of STORM_KITE.attacks) {
+              const end = attack.windup + attack.active;
+              for (const attackTick of [0, attack.dive?.from ?? 1, attack.windup - 1, (attack.dive?.from ?? 1) + 5, attack.dive?.to ?? end, end, end + 3]) {
+                out.push(at(withBoss(start, { mode, facing, lift, x: 700, attackId: attack.id, attackTick }), tick));
+              }
+            }
+          }
+        }
+      }
+    }
+    return out;
+  };
+
+  it('fits its drawn box plus a margin, high up and on the floor, in every state', () => {
+    for (const s of kiteStates()) expectInside(bossFigure(s, STORM_KITE, BOSS_COLORS), kiteBounds(s));
+  });
+
+  it('has shapes at its resting height and at the floor', () => {
+    for (const lift of [0, HIGH]) {
+      const s = withBoss(base(STORM_KITE), { lift, x: 700, facing: 1 });
+      expect(bossFigure(s, STORM_KITE, BOSS_COLORS).length).toBeGreaterThan(5);
+    }
+  });
+
+  it('mirrors when the facing flips', () => {
+    for (const s of kiteStates()) {
+      if (s.boss.facing !== 1) continue;
+      const left = withBoss(s, { facing: -1 });
+      expectSame(bossFigure(left, STORM_KITE, BOSS_COLORS), mirrored(bossFigure(s, STORM_KITE, BOSS_COLORS), s.boss.x));
+    }
+  });
+
+  it('flaps its wings while it hangs', () => {
+    const idle = withBoss(base(STORM_KITE), { mode: 'gap', lift: HIGH, x: 700, facing: 1 });
+    const shapes = new Set([0, 11, 22, 33].map((t) => JSON.stringify(bossFigure(at(idle, t), STORM_KITE, BOSS_COLORS))));
+    expect(shapes.size).toBeGreaterThan(2);
+  });
+
+  it('shows a different pose for each attack as it winds up', () => {
+    const early = withBoss(base(STORM_KITE), { mode: 'attack', facing: 1, x: 700, lift: HIGH, attackTick: 0 });
+    const shapes = new Set(
+      STORM_KITE.attacks
+        .filter((a) => a.id !== 'snap-plunge')
+        .map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), STORM_KITE, BOSS_COLORS))),
+    );
+    expect(shapes.size).toBe(STORM_KITE.attacks.length - 1);
+  });
+
+  it('folds its wings and tucks its head as it dives', () => {
+    const plunge = STORM_KITE.attacks.find((a) => a.id === 'plunge')!;
+    const wind = withBoss(base(STORM_KITE), { mode: 'attack', facing: 1, x: 700, lift: HIGH, attackId: plunge.id, attackTick: plunge.windup - 1 });
+    const diving = withBoss(wind, { attackTick: plunge.dive!.from + 6, lift: 120 });
+    const span = (s: GameState): number => {
+      const b = spread(bossFigure(s, STORM_KITE, BOSS_COLORS).filter((p) => p.kind === 'poly'));
+      return b.right - b.left;
+    };
+    expect(span(diving)).toBeLessThan(span(wind));
   });
 });
 

@@ -61,11 +61,13 @@ export interface LandingRing {
  * Where the running leap will land and which side and how far its shockwave reaches. The real shockwave is
  * one-sided (the hit windows run from the landing spot towards the way the boss faces, and the boss does not turn
  * during an attack), so this reports the smallest `x0` and the largest `x1` of the attack's hit windows and the
- * facing. An attack with no hit windows is `harmless`. Null when no leap is running.
+ * facing. An attack with no hit windows is `harmless`. Null when no leap is running, and for a swoop.
  */
 export function landingRing(b: BossState, boss: BossDef): LandingRing | null {
   if (b.leapToX === null) return null;
   const attack = b.attackId === null ? undefined : boss.attacks.find((a) => a.id === b.attackId);
+  // A swoop's end point is not a landing: it skims the floor and climbs away again.
+  if (attack?.dive?.shape === 'swoop') return null;
   if (attack === undefined || attack.hits.length === 0) {
     // Harmless: a marker centred on the landing spot and as wide as the boss.
     return { x: b.leapToX, x0: -boss.width / 2, x1: boss.width / 2, facing: b.facing, harmless: true };

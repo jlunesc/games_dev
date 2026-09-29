@@ -183,6 +183,22 @@ export const MOODS: Record<string, Mood> = {
     accent: '#e8785a',
     bodyColor: LOOK.bossBodyBrute,
   },
+  'storm-kite': {
+    id: 'storm-kite',
+    skyTop: '#0a0c1c',
+    skyBottom: '#4a3a62',
+    layers: [
+      { shape: 'ridge', color: '#3a3560', speed: FAR, heightFraction: 0.42, seed: 111 },
+      { shape: 'spires', color: '#251f45', speed: MID, heightFraction: 0.4, seed: 112 },
+      { shape: 'ridge', color: '#14122e', speed: NEAR, heightFraction: 0.3, seed: 113 },
+    ],
+    ember: '#9fc4ff',
+    floor: '#171a30',
+    floorLine: '#6f8fd8',
+    floorGlow: '#5a9cff',
+    accent: '#7fb0ff',
+    bodyColor: LOOK.bossBodyKite,
+  },
 };
 
 /** The mood for a boss id; an unknown id gets the neutral one. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BRASS_SENTINEL, CINDER_GOLEM, GALE_REAVER, QUILL_WARDEN, VEIL_DANCER } from '../src/bosses';
+import { BRASS_SENTINEL, CINDER_GOLEM, GALE_REAVER, QUILL_WARDEN, STORM_KITE, VEIL_DANCER } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import type { Box } from '../src/game/geometry';
 import { WORLD } from '../src/game/params';
@@ -132,8 +132,28 @@ describe('where a leap with a strike on both sides lands', () => {
   });
 });
 
+describe('where a dive lands', () => {
+  const dive = (id: string): { b: GameState['boss']; boss: typeof STORM_KITE } => {
+    const s = createInitialState(STORM_KITE, 1);
+    const attack = STORM_KITE.attacks.find((a) => a.id === id)!;
+    return { boss: STORM_KITE, b: { ...s.boss, mode: 'attack', attackId: id, attackTick: attack.dive!.from + 3, leapToX: 400, lift: 200 } };
+  };
+
+  it('shows no landing for a swoop, which only skims the floor', () => {
+    const { b, boss } = dive('swoop');
+    expect(landingRing(b, boss)).toBeNull();
+  });
+
+  it('shows the landing of a plunge, on both sides', () => {
+    const { b, boss } = dive('plunge');
+    const ring = landingRing(b, boss)!;
+    expect(ring.x).toBe(400);
+    expect(ring.both).toBe(true);
+  });
+});
+
 describe('the colours of a boss attacks', () => {
-  const ids = ['quill-warden', 'cinder-golem', 'veil-dancer', 'gale-reaver', 'brass-sentinel', 'tremor-brute'];
+  const ids = ['quill-warden', 'cinder-golem', 'veil-dancer', 'gale-reaver', 'brass-sentinel', 'tremor-brute', 'storm-kite'];
 
   it('each boss with its own figure has its own set, different from the default and from every other boss', () => {
     const seen = new Set<string>();

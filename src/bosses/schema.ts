@@ -52,6 +52,25 @@ export interface LeapDef {
   hang?: number;
 }
 
+/** `plunge`: drops onto the target and stays low. `swoop`: dives, skims along the floor, then climbs back to where it started. */
+export type DiveShape = 'plunge' | 'swoop';
+
+/**
+ * A dive, for a boss that flies (`BossDef.flight`): from update `from` to `to` it moves from wherever it hangs to a
+ * landing x fixed at update `from` (`target` and `distance` work as for a leap). A plunge falls, faster and faster, to
+ * the floor and stays there (the boss rises again only after the attack ends). A swoop falls for a while, skims the
+ * floor for `low` updates, then climbs back to the height it started from, sliding along the whole time.
+ */
+export interface DiveDef {
+  from: number;
+  to: number;
+  shape: DiveShape;
+  target: LeapTarget;
+  distance?: number;
+  /** Updates spent at floor level (a swoop only): the rest of the flight is split into the fall and the climb. */
+  low?: number;
+}
+
 /**
  * A bolt: appears at the boss's edge at update `at` (counted like hit windows) and flies the way the boss faces (or
  * the opposite way for `dir: 'back'`). `height` is its bottom edge above the boss's feet (the floor for a boss on the
@@ -114,6 +133,8 @@ export interface AttackDef {
   range: { min: number; max: number };
   move?: AttackMove;
   leap?: LeapDef;
+  /** A dive. Only for a boss with `flight`; an attack may not have both a `leap` and a `dive`. */
+  dive?: DiveDef;
   /** Shots fired during the active updates; they outlive the attack. Only a `mustDodge` attack may have them. */
   shots?: ShotDef[];
   /** May be empty only when the attack has a `move`, a `leap` or `shots` (a reposition-only or shooting attack). */
@@ -164,6 +185,16 @@ export interface ArenaDef {
   covers: ArenaPiece[];
 }
 
+/**
+ * A boss that stays in the air: it starts, and rests between attacks, `height` units above the floor (high enough that
+ * no swing reaches it), and climbs back to that height at `rise` units per second whenever it is lower and not
+ * attacking. It can only be hit while it is low, after a dive.
+ */
+export interface FlightDef {
+  height: number;
+  rise: number;
+}
+
 export interface BossDef {
   id: string;
   name: string;
@@ -182,6 +213,8 @@ export interface BossDef {
   transitionTicks: number;
   attacks: AttackDef[];
   phases: PhaseDef[];
+  /** Present for a boss that flies (see `FlightDef`); absent for a boss that walks. */
+  flight?: FlightDef;
   /** Platforms and cover in the arena. Absent means a bare arena. */
   arena?: ArenaDef;
 }

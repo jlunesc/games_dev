@@ -187,6 +187,8 @@ interface BossPose {
   poseAmount: number;
   /** A crouch-pose attack is still winding up on the floor (the drawn box is shorter). */
   crouching: boolean;
+  /** The running attack's dive, when it has one: the ticks it runs between and its shape. */
+  dive: { from: number; to: number; shape: 'plunge' | 'swoop' } | null;
   /** What the running attack will do beyond its pose: hovering, striking both sides, and the shots it fires. */
   marks: AttackMarks | null;
 }
@@ -233,6 +235,7 @@ function bossPose(state: GameState, boss: BossDef): BossPose {
     posing,
     poseAmount: !posing ? 0 : winding ? 0.4 + 0.6 * windP : 1,
     crouching: box.crouching,
+    dive: attack?.dive !== undefined ? { from: attack.dive.from, to: attack.dive.to, shape: attack.dive.shape } : null,
     marks: attack !== undefined && posing ? marksOf(attack) : null,
   };
 }
@@ -1199,6 +1202,87 @@ function brassSentinelFigure(bp: BossPose, colors: { body: string; accent: strin
   return out;
 }
 
+/**
+ * The Storm Kite: a bird seen from the side. It flaps gently while it hangs, lifts its wings for a plunge, sweeps them
+ * back for a swoop, lowers them for the volley, and tucks them and points its beak down during a dive. Drawn round the
+ * body's centre in local coordinates (forward, up) and then tilted and shrunk as a whole, so the folded dive is the same
+ * bird, not another one.
+ */
+function stormKiteFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
+  const k = LOOK.kite;
+  const { w, h, top, headR, rise } = bp;
+  const pose = bp.attackPose;
+  const amount = bp.posing ? bp.poseAmount : 0;
+  const fold = kiteFold(bp);
+  const flap = Math.sin((TAU * bp.t) / k.flapTicks);
+  const grounded = !bp.airborne && pose === null;
+
+  let elev = grounded ? k.groundElev + 0.06 * flap : k.restElev + k.flapSwing * flap;
+  let sweep = 0;
+  let pitch = 0;
+  if (pose === 'raised') {
+    elev = mix(elev, k.raisedElev + 0.06 * flap, amount);
+    pitch = k.raisedPitch * amount;
+  } else if (pose === 'back') {
+    elev = mix(elev, k.backElev, amount);
+    sweep = amount;
+  } else if (pose === 'down') {
+    elev = mix(elev, k.downElev, amount);
+    pitch = k.downPitch * amount;
+  } else if (pose !== null) {
+    elev = mix(elev, 0.2, amount);
+  }
+  elev = mix(elev, k.foldElev, fold);
+  sweep = mix(sweep, 1, fold);
+  pitch = mix(pitch, k.divePitch, fold);
+
+  const scale = mix(1, k.diveScale, fold);
+  const cy = top + h * mix(0.55, 0.42, fold) - rise;
+  const cos = Math.cos(pitch);
+  const sin = Math.sin(pitch);
+  const at = (x: number, y: number): [number, number] => [(x * cos - y * sin) * scale, cy + (x * sin + y * cos) * scale];
+  const poly = (points: [number, number][], color: string): Primitive => forwardPoly(bp, points.map(([x, y]) => at(x, y)), color);
+
+  const length = Math.min(k.wingLength, w * 0.4);
+  const wing = (lift: number, back: number, color: string): Primitive => {
+    const rootF: [number, number] = [0.12 * w, -0.16 * h];
+    const rootB: [number, number] = [-0.22 * w, -0.1 * h];
+    const reach = length * (0.3 + 0.7 * sweep) * Math.cos(lift);
+    const tip: [number, number] = [-reach - back, rootF[1] - length * Math.sin(lift) * (1 - 0.3 * sweep)];
+    const lead: [number, number] = [mix(rootF[0], tip[0], 0.55), mix(rootF[1], tip[1], 0.55) - 5];
+    const notch: [number, number] = [mix(tip[0], rootB[0], 0.45), mix(tip[1], rootB[1], 0.45) + 5];
+    return poly([rootF, lead, tip, notch, rootB], color);
+  };
+
+  const out: Primitive[] = [];
+  out.push(wing(elev - 0.25, 10, k.wingFar));
+  out.push(poly([[-0.22 * w, -0.04 * h], [-0.5 * w, -0.12 * h], [-0.42 * w, 0.02 * h], [-0.52 * w, 0.16 * h], [-0.2 * w, 0.08 * h]], colors.body));
+  out.push(poly([[-0.28 * w, 0], [-0.1 * w, -0.22 * h], [0.18 * w, -0.2 * h], [0.26 * w, 0], [0.1 * w, 0.22 * h], [-0.12 * w, 0.2 * h]], colors.body));
+  out.push(poly([[-0.1 * w, 0.06 * h], [0.16 * w, 0.02 * h], [0.08 * w, 0.2 * h], [-0.08 * w, 0.18 * h]], k.belly));
+  for (const dx of [-0.02 * w, 0.1 * w]) out.push(poly([[dx, 0.16 * h], [dx + 0.05 * w, 0.16 * h], [dx + 0.03 * w, 0.4 * h]], k.beak));
+  out.push(wing(elev, 0, k.wing));
+
+  const headX = 0.3 * w;
+  const headY = -0.12 * h;
+  const r = headR * 0.9;
+  const [hx, hy] = at(headX, headY);
+  out.push(poly([[0.26 * w, headY - r * 0.8], [0.16 * w, headY - r - 14], [0.2 * w, headY - r * 0.5]], colors.body));
+  out.push({ kind: 'circle', x: bp.cx + bp.f * hx, y: hy, r: r * scale, color: colors.body });
+  out.push(poly([[headX + r * 0.6, headY - 3], [headX + r + 16, headY + 3], [headX + r * 0.6, headY + 7]], k.beak));
+  const [ex, ey] = at(headX + r * 0.25, headY - r * 0.2);
+  out.push({ kind: 'circle', x: bp.cx + bp.f * ex, y: ey, r: 3, color: colors.glow ?? k.eye });
+  return out;
+}
+
+/** 0 to 1: how tightly the kite has tucked its wings for a dive (a plunge stays tucked; a swoop opens out to skim). */
+function kiteFold(bp: BossPose): number {
+  const d = bp.dive;
+  if (d === null || !bp.posing || bp.attackTick < d.from || bp.attackTick >= d.to) return 0;
+  const ramp = clamp01((bp.attackTick - d.from + 1) / 4);
+  const falling = (bp.attackTick - d.from) / Math.max(1, d.to - d.from) < 0.33;
+  return ramp * (d.shape === 'plunge' || falling ? 1 : 0.2);
+}
+
 /** Any other boss: a body block as wide and tall as its box, a head, an eye, and the weapon arm. Sized from `width` and `height`. */
 function genericFigure(bp: BossPose, colors: { body: string; accent: string; glow: string | null }): Primitive[] {
   const { w, top, feet, headR, rise, lean } = bp;
@@ -1279,7 +1363,7 @@ function attackMarks(bp: BossPose, bossId: string): Primitive[] {
 
 /**
  * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster, `tremor-brute` a hunched bruiser, `cinder-golem` a walking furnace, `quill-warden` a heron-like lancer, `veil-dancer` a masked dancer in a veil,
- * `gale-reaver` a forward-leaning wind-runner, `brass-sentinel` an armoured knight, anything else a generic block); the animation from the tick, the boss mode, the running attack's pose, the facing and
+ * `gale-reaver` a forward-leaning wind-runner, `brass-sentinel` an armoured knight, `storm-kite` a winged bird that hangs high and dives, anything else a generic block); the animation from the tick, the boss mode, the running attack's pose, the facing and
  * the lift. It fits inside the box `bossDrawBox` reports (crouch shortening and lift included), widened for the head,
  * tail, snout, arm and blade, so what the player sees is what can hurt them.
  */
@@ -1308,6 +1392,8 @@ export function bossFigure(
       return [...galeReaverFigure(bp, colors), ...attackMarks(bp, boss.id)];
     case 'brass-sentinel':
       return [...brassSentinelFigure(bp, colors), ...attackMarks(bp, boss.id)];
+    case 'storm-kite':
+      return [...stormKiteFigure(bp, colors), ...attackMarks(bp, boss.id)];
     default:
       return genericFigure(bp, colors);
   }

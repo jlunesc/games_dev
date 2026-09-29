@@ -358,7 +358,7 @@ describe('attacks with no hit window', () => {
     const b = copy();
     b.attacks[0]!.hits = [];
     rejects(b, 'boss.attacks[0].hits');
-    expect(() => parseBoss(b)).toThrow('needs at least one hit window, a move, a leap or shots');
+    expect(() => parseBoss(b)).toThrow('needs at least one hit window, a move, a leap, a dive or shots');
   });
 });
 

@@ -6,6 +6,7 @@ import galeReaverRaw from './gale-reaver.json';
 import { parseBoss } from './parse';
 import quillWardenRaw from './quill-warden.json';
 import type { BossDef } from './schema';
+import stormKiteRaw from './storm-kite.json';
 import rawTrainee from './trainee.json';
 import tremorBruteRaw from './tremor-brute.json';
 import veilDancerRaw from './veil-dancer.json';
@@ -38,6 +39,9 @@ export const VESPER_SAGE = parseBoss(vesperSageRaw);
 /** The Tremor Brute: a close-range bruiser whose slams mark the floor for eruptions. Checked at load like the Duelist. */
 export const TREMOR_BRUTE = parseBoss(tremorBruteRaw);
 
+/** The Storm Kite: a bird that hangs above the arena and dives at the player; it can only be hit while it is low. Checked at load like the Duelist. */
+export const STORM_KITE = parseBoss(stormKiteRaw);
+
 /**
  * The Trainee: a plain, generous, hand-built boss (two `mustDodge` attacks, no leap, no counter,
  * no arena). Checked at load like the Duelist and the Hound. Not part of `BOSSES` and not offered
@@ -57,6 +61,7 @@ export const BOSSES: readonly BossDef[] = [
   BRASS_SENTINEL,
   VESPER_SAGE,
   TREMOR_BRUTE,
+  STORM_KITE,
 ];
 
 /** The boss with this id; an unknown id (for example from old stored choices) falls back to the first boss. */

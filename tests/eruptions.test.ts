@@ -108,7 +108,7 @@ describe('a floor eruption', () => {
     const b = boss();
     const s = createInitialState(b, 1);
     s.shots = [{ kind: 'eruption', attackId: 'shoot', originTick: 1, x: 500, lift: 0, age: 10, width: 140, delay: 30, burst: 6 }];
-    beginTransition(s);
+    beginTransition(s, b);
     expect(s.shots).toEqual([]);
   });
 

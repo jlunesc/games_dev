@@ -95,6 +95,7 @@ describe('creating a fight without a study', () => {
         lift: 0,
         leapFromX: null,
         leapToX: null,
+        diveFromLift: null,
         facing: -1,
         hp: DUELIST.maxHp,
         phase: 0,

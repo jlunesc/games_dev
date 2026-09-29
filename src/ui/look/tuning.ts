@@ -148,6 +148,31 @@ export const LOOK = {
   sentinelSteel: '#5a5f6e',
   /** The hide of the Tremor Brute. */
   bossBodyBrute: '#7a5040',
+  /** The Storm Kite: a storm-blue body, paler near wing, darker far wing, a pale belly, an amber beak and an electric eye. */
+  bossBodyKite: '#3f5a9a',
+  kite: {
+    wing: '#7fa6e8',
+    wingFar: '#2c4173',
+    belly: '#cfe4ff',
+    beak: '#f0c860',
+    eye: '#eaf6ff',
+    /** How long a wing is (never more than 0.4 of the boss's width), world units, and ticks for one full flap. */
+    wingLength: 46,
+    flapTicks: 44,
+    /** Wing angle above level (radians): hanging, and the flap swing either side of it; wings raised; swept back; low for the volley; drooping on the floor; folded in a dive. */
+    restElev: 0.35,
+    flapSwing: 0.55,
+    raisedElev: 1.15,
+    backElev: 0.1,
+    downElev: -0.35,
+    groundElev: -0.55,
+    foldElev: -0.4,
+    /** Nose-down tilt (radians) at the bottom of a dive and for the volley, nose-up tilt for the raised wings, and how much a diving body shrinks. */
+    divePitch: 0.8,
+    downPitch: 0.25,
+    raisedPitch: -0.2,
+    diveScale: 0.75,
+  },
   /** The body while staggered (every boss), the glows: powering up, counterable attack, must-dodge attack. */
   bossStaggerBody: '#7fd6ff',
   bossPowerGlow: '#ffffff',
@@ -219,6 +244,7 @@ export const LOOK = {
     'gale-reaver': { edge: '#5fd6c8', core: '#e6fffb', halo: '#3fb8b0' },
     'brass-sentinel': { edge: '#e8b84a', core: '#fff4d0', halo: '#d8a030' },
     'tremor-brute': { edge: '#d0703a', core: '#ffd8a8', halo: '#a04a30' },
+    'storm-kite': { edge: '#7fd0ff', core: '#eaf6ff', halo: '#4a8cff' },
   } as Record<string, { edge: string; core: string; halo: string }>,
 
   // ---- Floor, platforms and cover (copied from the old render.ts colours) ----

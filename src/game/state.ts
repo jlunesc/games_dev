@@ -43,11 +43,13 @@ export type BossMode = 'gap' | 'approach' | 'attack' | 'stagger' | 'transition';
 export interface BossState {
   /** Horizontal centre, in world units; the boss always stands on the floor. */
   x: number;
-  /** Height of the boss's feet above the floor, in world units (0 on the floor; above 0 only during a leap). */
+  /** Height of the boss's feet above the floor, in world units (0 on the floor; above 0 during a leap, and for a boss that flies whenever it hangs in the air). */
   lift: number;
   /** Where the running leap took off and where it will land (x); both null when no leap is running. */
   leapFromX: number | null;
   leapToX: number | null;
+  /** The height the running dive took off from (null when no dive is running). */
+  diveFromLift: number | null;
   facing: 1 | -1;
   hp: number;
   /** Index into the boss definition's phases. */
@@ -210,9 +212,10 @@ export function createInitialState(boss: BossDef, seed = 1, studyRounds = 0): Ga
     },
     boss: {
       x: boss.startX,
-      lift: 0,
+      lift: boss.flight?.height ?? 0,
       leapFromX: null,
       leapToX: null,
+      diveFromLift: null,
       facing: -1,
       hp: boss.maxHp,
       phase: 0,

@@ -195,7 +195,7 @@ function resolvePlayerAttack(s: GameState, boss: BossDef, studying: boolean): vo
     return;
   }
   const next = boss.phases[b.phase + 1];
-  if (next !== undefined && b.hp <= boss.maxHp * next.startsAtHpFraction) beginTransition(s);
+  if (next !== undefined && b.hp <= boss.maxHp * next.startsAtHpFraction) beginTransition(s, boss);
 }
 
 /** The boss's active hit boxes hurt a player who is not untouchable, for the damage of the attack that is landing. */

@@ -44,6 +44,7 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 | `attacks` | The list of attacks the boss can perform, whatever the phase. | at least one; ids must be unique |
 | `phases` | The phases in order. | at least one |
 | `arena` | Platforms and cover standing in the arena. Optional; absent means a bare arena (the Duelist has none). See "Arena" below. | an object, see below |
+| `flight` (optional) | `{ height, rise }`: the boss hangs in the air. `height` is how high its feet are above the floor when it rests (it starts there and comes back to it after every attack and phase change); `rise` is how fast it climbs or sinks back to it, in units per second. While it hangs it cannot be hit by the player's swing (see "Flight and dives"). | `height` at least the highest reach of a jumping swing plus 10 (worked out from the player's numbers, 254 today), and the body's top at most 20 under the ceiling; `rise` from 20 to 1000. A boss with `flight` may have a `dive` but no `leap`. |
 
 ### Arena
 The optional `arena` object describes scenery for the fight. It has two optional lists, `platforms` and `covers` (absent means empty; once parsed, both lists are always present). This section covers the file format; how platforms and cover behave in the fight is in "The arena in the fight" below.
@@ -115,6 +116,7 @@ A counter happens when the player's attack swing **starts** (the first update of
 | `move` (optional) | `{ from, to, speed, dir }`: the boss moves at `speed` units per second while `from <= t < to`. `dir` is `forward` (the way it faces) or `back` (away from the way it faces, still facing forward); when absent it is `forward`. Stops at the arena wall. | `from`, `to` whole numbers; the range must lie inside the active updates; `speed` at least 1; `dir`, when present, `forward` or `back` |
 | `leap` (optional) | `{ from, to, height, target, distance, hang }`: the boss leaps in an arc while `from <= t < to`, peaking `height` units above the floor. With `hang` it rises, stays at the top for `hang` updates (a hover) and then falls, sliding toward the landing x the whole time (see "Movement skills"). The landing x is fixed at take-off (update `from`) and does not follow the player afterwards. `target` says where it lands: `player` (the player's x at update `from`), `forward` or `back` (`distance` units in front of or behind the boss's x at update `from`). `distance` is required for `forward` and `back`, and ignored (dropped) for `player`. | `from` whole number at least 0, `to` whole number at least 1 and after `from`, both inside the active updates; `height` at least 1; `target` one of `player`, `forward`, `back`; `distance` at least 1 for `forward`/`back`; `hang` (optional) a whole number from 1 to `to - from - 2`. An attack may have both a `move` and a `leap`, but their update ranges must not overlap (both change the boss's x). |
 | `shots` (optional) | Bolts, lobbed arcs and floor eruptions the boss fires (section "Shots" below). | 1 to 8 entries; the attack must be `mustDodge` |
+| `dive` (optional) | `{ from, to, shape, target, distance, low }`: a boss with `flight` comes down and goes back up (see "Flight and dives"). `from` and `to` and `target` and `distance` work as in `leap`; `shape` is `plunge` or `swoop`; `low` (swoop only) is how many updates it skims the floor. | needs a `flight` on the boss; `from` whole number at least 0, `to` whole number after `from`, both inside the active updates; `shape` one of `plunge`, `swoop`; `target` one of `player`, `forward`, `back`; `distance` at least 1 for `forward`/`back`; `low` a whole number from 1 to `to - from - 2`, required for `swoop`, rejected for `plunge`. An attack may not have both a `leap` and a `dive`, and a `dive` may not overlap a `move`. |
 | `hits` | The hurt boxes (next section). May be empty only when the attack has a `move`, a `leap` or `shots` (an attack that only repositions the boss or only shoots). | at least one, unless there is a `move`, a `leap` or `shots` |
 
 The whole attack lasts `windup + active + recovery` updates. The boss does not turn during an attack: it faces the way it faced when the attack started.
@@ -299,6 +301,44 @@ The mix is `bite` 3, `rush` 2, `slip` 2, `pounce` 3; a chain of two follows an a
 **The mix.** Phase 1: `hammer-fist` 3, `backhand` 2, `fissure` 2, `twin-quake` 2, gap 50, no chaining, walk speed 150. Phase 2 (Landslide): the same attacks with `fissure` and `twin-quake` at 3, opening with `fissure`, gap 32, a chain of two with chance 0.35, walk speed 185. `predictability` is 0.25.
 
 **Fairness measured** (`tests/tremor-brute.test.ts`): every warning is at least 21 updates and every mark's delay at least 21; an idle player loses at every preset on eight seeds; a player standing still in either corner is hurt; stepping out of the marks avoids the Fissure and the Twin Quake while standing still does not, and a jump does not clear a blast; a scripted player who knows the answers wins all eight seeds at Normal without being hit (so it is probably on the easy side for a perfect player; tune from play).
+
+## 3a-quinquies. Flight and dives, and the Storm Kite
+
+`flight` and `dive` are the last of the "slice B" ideas: a boss that stays in the air between attacks. They are checked in `parseBoss` (`flight`, and the `dive` part of the attack checker), run in `src/game/boss.ts` (`updateDive`, `diveLift`, `settleLift`) and scaled in `src/game/difficulty.ts` (`applyDials`). Only the Storm Kite uses them; generated bosses never do.
+
+**Hanging.** A boss with `flight: { height, rise }` starts with its feet `height` above the floor (`BossState.lift`). The player's swing is a box (90 reach, 80 tall, centred on the body), so it hits only what overlaps it: while the boss hangs above the highest reach of a jumping swing (about 244), nothing the player does can touch it. The checker requires `height` to be at least that reach plus 10, worked out from the player's numbers (`HIGHEST_SWING` in `parse.ts`), so a change to the jump or the swing that would make a hanging boss reachable is caught. It walks (sideways, in the air) exactly as a walking boss does: `spacing`, `approachTimeout`, `walkSpeed` and `retreatSpeed` are used as they are.
+
+**Coming back up.** After every attack, and during a phase change, the boss climbs (or sinks) back to `height` at `rise` units per second. A `stagger` (a counter) puts a boss on the floor, but a flying boss should have no counterable attack.
+
+**`dive`.** Like a leap, a dive starts at update `from` (counted from the start of the attack), fixes where it lands at that moment, and is over at update `to`. With `n = to - from` and, on each update, `k = t - from + 1`:
+
+| Shape | Height | x |
+|---|---|---|
+| `plunge` | Falls from its starting height to the floor, slowly at first and then faster (`start * (1 - q^2)`, `q = k / (n + 1)`). At `to` it is on the floor at the landing x and **stays on the floor until the attack ends**, then climbs back. | Slides evenly to the landing x. |
+| `swoop` | Falls for `floor((n - low) / 2)` updates, skims the floor for `low` updates, then climbs back to its starting height by update `to`. | Slides evenly to the landing x. |
+
+The landing x follows the same rules as a leap (`player` = the player's x at `from`; `forward`/`back` = `distance` units from the boss). A plunge needs `target: player` in practice (that is the marker); a swoop uses `forward` with a long `distance` so it crosses the arena. The landing ring (a red ring on the floor) is drawn for a plunge, from `from` on, and not for a swoop.
+
+**Where it can be hit.** Only while it is low: after a plunge lands (through the rest of the attack and while it climbs), and while a swoop skims (when it is also hurting anything in front of it). Hit windows are measured from the floor and from the boss's centre, so a strike window at the landing (`from` at or after `to`) is the slam.
+
+**Dials.** `readability` shifts a dive's `from` and `to` with the wind-up (so the warning changes and the length does not); `range` multiplies a dive's `distance` (at least 1). Speed, frequency and the rest do not touch a dive; `low`, `flight.height` and `flight.rise` are not scaled by any dial.
+
+**`GAME_VERSION`.** Not bumped: no existing boss changed, and a record replays by boss id.
+
+### The Storm Kite
+
+`src/bosses/storm-kite.json`: a winged bird (120 wide, 70 tall, 22 health, two phases: Circling and Tempest from half health, no arena). It hangs 320 above the floor (rise 260), follows the player sideways and comes down to attack. Its numbers are a **first guess**, to be tuned from the owner's play test.
+
+| Attack | Class | Pose | What it does | What it trains |
+|---|---|---|---|---|
+| Plunge | red | raised | 30 updates of wind-up, then a marker appears where you stand and it falls onto it (26 updates), slamming a box 120 to each side, 110 high, for 6 updates. It then sits on the floor for the rest of the attack. | Leaving the marker after it appears, then hitting the Kite while it is low. |
+| Swoop | red | back | 32 updates of wind-up, then it sweeps across the arena (800) in 46 updates, skimming the floor for 18, hurting a box 90 in front and 30 behind, 100 high. Starts 260 to 480 away. | Jumping (or dashing) over the pass. |
+| Bolt Volley | red | down | 26 updates of wind-up, then three bolts aimed at you from above, at 12-update intervals. | Sidestepping aimed bolts. |
+| Snap Plunge (phase 2) | red | (plunge) | 24 updates of wind-up, then a quicker plunge (16 updates); the slam is the same. | Dashing out of it. |
+
+**The mix.** Phase 1 (Circling): `plunge` 3, `swoop` 3, `bolt-volley` 2, gap 60, no chaining, walk speed 200. Phase 2 (Tempest): opening `swoop`, `plunge` 2, `swoop` 3, `bolt-volley` 2, `snap-plunge` 3, gap 36, a chain of two with chance 0.3, walk speed 240. `predictability` is 0.25.
+
+**Fairness measured** (`tests/storm-kite.test.ts`): every warning is at least 21 updates; a hanging Kite cannot be hit by a jumping swing under it; an idle player loses at every preset on eight seeds; a player standing still in either corner is hurt; a plunge is avoided by moving away after take-off, a swoop by a jump or a dash; and a scripted player who knows the answers wins all eight seeds at Normal with at most two hits (so, like the Brute, it may be on the easy side for a perfect player; tune from play).
 
 ## 3a-quater. The varied attacks of the five archetype bosses
 
