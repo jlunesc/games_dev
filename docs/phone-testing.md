@@ -487,6 +487,39 @@ Android can clear a browser's data by itself (for example when the phone is shor
 - [ ] Nothing pauses or stutters when a fight ends and is saved.
 - [ ] On a long fight (2 minutes or more) note whether the game pauses for a moment when the fight ends; how long?
 
+## Two bosses in one fight (Hound and Sage)
+A new choice on the **Boss** row, after the single bosses and before Generated: **Hound and Sage**. The Ashen Hound (a low, fast beast that dashes and leaps) and the Vesper Sage (a caster that keeps its distance and fires bolts and lobbed arcs) fight you together, on the Hound's flat floor. The point of the mode is to read two threats at once: who is about to attack, and where to stand between them.
+
+### What to expect
+- **Two health bars** at the top right, stacked: the Hound's on top and the Sage's under it, each in its boss's colour with its name. You have to bring both to zero.
+- **Turns**: the two bosses never attack at the same time. While one is walking up to an attack, attacking, or has its bolts still in the air, the other waits (it may still walk about). A small pulsing triangle above one boss shows who holds the turn, so you can tell who is about to attack.
+- **Your sword** hurts only the nearest boss in reach, one boss per swing. Counters work on whichever boss you counter.
+- **When one boss falls**: it drops out of the fight, its shots disappear, its health bar dims, and the other boss gets angrier: it waits less between attacks and walks faster. The fight ends when both are at zero.
+- **Study** is not used with this pair: Fight starts the real fight straight away, whatever the Study row says. With the pair chosen, the Study row reads "Off (pairs)" and left and right do nothing on it (a pair has no study yet). Easy, Normal, Hard and Tweak change both bosses at once.
+- The health numbers and the angry-survivor numbers are first guesses. Please say what they feel like.
+
+### Checklist
+- [ ] Hound and Sage is on the Boss row (after the single bosses, before Generated), the menu remembers it after closing and reopening the app, and Fight starts it.
+- [ ] With Hound and Sage chosen, the Study row reads "Off (pairs)" and left and right do nothing on it.
+- [ ] Both bosses are on screen at the start and stay in view during the fight, including when one is in a corner and the other is next to you. Neither hides behind the other for long.
+- [ ] The two health bars are readable at arm's length on the phone: you can tell which is which by colour and name, and read how much is left on each without stopping to look.
+- [ ] The turn marker is easy to see without being distracting, and it moves to the other boss when the turn changes. You can tell who is about to attack from it before the warning starts.
+- [ ] You never see the two bosses attack at the same time. One boss's bolts do not overlap with the other boss's attack.
+- [ ] A swing near both bosses hits only the nearer one, and the health bar of that boss goes down.
+- [ ] When the first boss falls, its bar dims, its shots vanish, and the survivor is clearly quicker (shorter waits, faster walking), but its warnings are still long enough to react to.
+- [ ] The fight ends in victory only when both bars are at zero.
+- [ ] After a win, a loss and leaving with the top button, the summary appears and shows the health left of each boss.
+- [ ] Stats save and export. In the file, that fight's `bossId` says `"hound-and-sage"`, `study` is 0, and the analysis has two entries in `bosses`.
+- [ ] Redo and Fight again work on the pair the same way as on a single boss.
+- [ ] The phone stays smooth (no stutter) with both bosses, their effects and the turn marker on screen.
+
+### Questions about the pair
+- On Normal, is the fight too short, too long or about right? (Each boss has 60% of its usual health, so the whole fight is about as long as one solo boss and a half.)
+- Is it clear whom to hit first and where to stand? Did you catch yourself watching only one boss?
+- Is the angry survivor too easy, right, or a wall?
+- Did one of the two bosses feel like it did most of the work?
+- Did the Sage's bolts and the Hound's rushes ever feel like they came at once, even though only one boss attacks at a time?
+
 ## Redo after a fight
 - [ ] After a win or a loss, the summary shows three choices under the result: Redo, Fight again and Back to the menu. Tapping works, and so does the controller (up and down, bottom button to pick, the other button goes back to the menu).
 - [ ] The Redo row says which dial it will change and by how much, and whether it is a bit harder (after a win) or a bit easier (after a loss).
