@@ -141,6 +141,13 @@ Constraints stated by the owner:
 - **Chosen**: hand the context over through files in the repo: `docs/SPEC.md` (full spec) and `CLAUDE.md` (short project instructions that point to it). Claude Code reads CLAUDE.md at the start of every session. Docs note that long CLAUDE.md files use more context and may reduce adherence, so the detail lives in the spec.
 - This file is extra context and is deliberately not referenced from CLAUDE.md, to avoid loading it every session.
 
+### 3.17 Sound and music (2026-09-29)
+- **LOCKED** (owner): improve all the sound: better fight sounds, a sound for each attack shape, and music. Not menu sounds. One master volume. Everything generated in code (Web Audio), no audio files. Music is layered and follows the fight (bass and pad first, drums from phase 2 or half health, a lead from the last phase or a quarter health, stings on a win or loss, a key and tempo per boss, only the pad in the study).
+- **Reverses** the "no music in v1" of 3.13.
+- **Alternatives**: recorded or sampled sound files (rejected: licensing and download size, and the owner wanted it generated); a single looping track (rejected: does not follow the fight); a separate Music switch (not asked for, left open).
+- **Reasoning**: sound is a second way to read a telegraph, which helps training; layers that follow health tell the player how the fight is going without looking.
+- Design in `docs/superpowers/specs/2026-09-29-sound-design.md`.
+
 ## 4. Stats (v1)
 
 The owner asked for as much information as possible, as a first version to complete while testing. The full list is in `SPEC.md` section 9. In short: per fight (boss, parameters, result, duration, phase reached, HP, damage, accuracy), per boss attack occurrence (type, phase, timing, distance, outcome, reaction time, dodge margin, what the player was doing), player behavior (input log, positions, range time, punish windows, heals), and derived measures (hit rate per attack, learning curve, fatigue, death causes).

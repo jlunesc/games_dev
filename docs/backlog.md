@@ -50,7 +50,7 @@ Order of the next steps (owner, 2026-09-21): the study phase (M5b, built), the a
 **Built in M5d** (awaiting the owner's look on the phone; `docs/SPEC.md` section 11, checklist and tweak guide in `docs/phone-testing.md`): a layered background with a mood per boss, impact effects and particles, animated figures for the player, the Ember Duelist and the Ashen Hound (and a generic one for any other boss; every hand-made boss has since got its own, see slice D below), and the Effects switch in Settings. All numbers are in `src/ui/look/tuning.ts`.
 
 Look ideas that are **not built**, only listed:
-- **Clearer attack warnings**: a stronger, earlier or more distinct sign that an attack is coming (a ring pulse or a flash when a warning starts, a brighter ground marker, a sound cue), so the pose and glow are not the only telegraph. Not chosen by the owner for M5d. Related: the Hound has no arm, so its body shows the attack pose (jaw open for the bite, rearing for the rush and the slip, crouch for the pounce); if these are hard to read, stronger versions or a separate sign would help.
+- **Clearer attack warnings**: a stronger, earlier or more distinct sign that an attack is coming (a ring pulse or a flash when a warning starts, a brighter ground marker, a sound cue), so the pose and glow are not the only telegraph. Not chosen by the owner for M5d. Related: the Hound has no arm, so its body shows the attack pose (jaw open for the bite, rearing for the rush and the slip, crouch for the pounce); if these are hard to read, stronger versions or a separate sign would help. The sound part is now covered by the attack sounds (M7, "Sound, left out" below).
 - **A HUD redesign**: the hearts and the boss health bar are still the plain rectangles from M1. Not chosen by the owner for M5d.
 - **Effects specific to each boss's attacks**: for example embers thrown by the Duelist's slam, a dust line along the floor for the Hound's rush, a trail behind the Duelist's lunge. M5d has only the general effects (sparks, rings, dust, dash trail, bursts).
 - **Sprite art later**: replacing the geometric shapes with pixel-art sprites (a possible upgrade kept open by the locked style, `docs/SPEC.md` section 8). Art is separate from fight logic, so this can be done without touching how a fight plays.
@@ -167,3 +167,13 @@ Built: two bosses in one fight as a named pair, first pair Hound and Sage (`docs
 - **Bosses that move with or shield each other, or share attacks.**
 - **A fairness check for pairs in the generator**: `checkFairness` and its skilled bot (`src/bosses/generate/fairness.ts`) work on one boss and read only the primary. Pairs are checked by `tests/hound-and-sage.test.ts` (an idle player loses, the turn rule holds, both bosses get turns, a player who cannot die and only chases and swings can win); there is no scripted player that dodges a pair, so "a good player can win without being hit" is not checked for pairs.
 - **A partner's arena in hit windows**: `resolveBossHits` in `src/game/step.ts` cuts a partner's hit windows with the partner's own `arena.covers`, while the player and shots use the primary boss's arena. Hound and Sage have no arena, so it does not matter for the first pair; a pair of bosses with different arenas would need this settled.
+
+## Sound, left out (raised 2026-09-29)
+Built: fight sounds, attack-specific sounds and layered music, all generated in code, with one master Volume (`docs/SPEC.md` section 11, "Sound and music (M7)"; checklist in `docs/phone-testing.md`). Not built:
+- **A separate Music switch**: music cannot be turned off alone (OPEN in the spec).
+- **Menu and UI sounds**: taps, moving through menus, the summary screen.
+- **Music on the summary screen**: today it stops with the win or loss sting.
+- **A hand-composed track per boss**: the score is a short chord loop per key, so bosses differ by key, mode and tempo, not by melody.
+- **Sound files or samples**, and **reverb or spatial sound**: kept out for the phone's budget and because everything is generated in code.
+- **Distinct sounds per boss for the same event** (each boss having its own hit or death sound): sounds vary by attack shape and pair position, not by boss.
+- **Sound in the stats or the fairness checks**: sound reads the game only and is not recorded.
