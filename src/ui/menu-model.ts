@@ -1,7 +1,7 @@
 import { BOSS_CHOICES, bossChoiceName } from '../bosses';
 import { PRESETS } from '../game/difficulty';
 import { wrap, type NavAction } from './nav';
-import { isCustom, nextStudy, selectPreset, studyLabel, type Prefs } from './prefs';
+import { isCustom, nextStudy, selectPreset, studyLabelFor, type Prefs } from './prefs';
 
 export type MenuItemId = 'fight' | 'boss' | 'difficulty' | 'study' | 'tweak' | 'stats' | 'settings' | 'test';
 
@@ -48,7 +48,7 @@ export function menuRows(model: MenuModel): MenuRow[] {
     { id: 'fight', label: 'Fight' },
     { id: 'boss', label: 'Boss', value: bossChoiceName(model.prefs.bossId) },
     { id: 'difficulty', label: 'Difficulty', value: difficultyLabel(model.prefs) },
-    { id: 'study', label: 'Study', value: studyLabel(model.prefs.study) },
+    { id: 'study', label: 'Study', value: studyLabelFor(model.prefs.bossId, model.prefs.study) },
     { id: 'tweak', label: 'Tweak difficulty' },
     { id: 'stats', label: 'Stats' },
     { id: 'settings', label: 'Settings' },
