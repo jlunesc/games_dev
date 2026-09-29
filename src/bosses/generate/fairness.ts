@@ -140,11 +140,25 @@ function runSkilled(boss: BossDef, seed: number): SkilledRun {
 }
 
 /**
+ * The boss without its shot attacks, for the skilled bot to fight. A boss with no shots is returned as it is;
+ * null when removing them would leave a phase with nothing to do.
+ */
+function withoutShots(boss: BossDef): BossDef | null {
+  if (!boss.attacks.some((a) => a.shots !== undefined)) return boss;
+  const attacks = boss.attacks.filter((a) => a.shots === undefined);
+  const ids = new Set(attacks.map((a) => a.id));
+  const phases = boss.phases.map((phase) => ({ ...phase, attacks: phase.attacks.filter((a) => ids.has(a.id)) }));
+  if (phases.some((phase) => phase.attacks.length === 0)) return null;
+  return { ...boss, attacks, phases };
+}
+
+/**
  * General fairness checker: works on any `BossDef`, with no knowledge of how it was built. Runs a
  * small, cheap bot battery over two fixed seeds (never derived from the boss being checked):
  * - an idle player must always lose, for both seeds (proves the boss cannot stall);
  * - a scripted skilled bot must win without ever taking damage, for at least one of the two seeds
- *   (proves the boss is beatable and its attacks are readable).
+ *   (proves the boss is beatable and its attacks are readable), fighting the boss without its shot attacks
+ *   because the bot cannot dodge those.
  * Both checks must finish inside their update caps; a stalled fight is itself a failure.
  */
 export function checkFairness(boss: BossDef): FairnessResult {
@@ -167,7 +181,12 @@ export function checkFairness(boss: BossDef): FairnessResult {
     }
   }
 
-  const skilledRuns = GEN.fairnessSeeds.map((seed) => ({ seed, run: runSkilled(boss, seed) }));
+  // The skilled bot cannot dodge shots or eruptions, so it fights the boss without them (the strikes, dashes
+  // and leaps it can read). A boss made of nothing else has nothing to check here.
+  const skilledBoss = withoutShots(boss);
+  if (skilledBoss === null) return { fair: reasons.length === 0, reasons };
+
+  const skilledRuns = GEN.fairnessSeeds.map((seed) => ({ seed, run: runSkilled(skilledBoss, seed) }));
   const cleanWin = skilledRuns.some(({ run }) => run.finished && run.won && !run.tookDamage);
   if (!cleanWin) {
     const unfinished = skilledRuns.filter(({ run }) => !run.finished);

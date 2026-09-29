@@ -195,3 +195,48 @@ describe('the skilled bot against a cover in its walking path', () => {
     expect(result.fair).toBe(true);
   });
 });
+
+describe('a boss with shot attacks', () => {
+  const volley = {
+    id: 'volley',
+    name: 'Volley',
+    pose: 'raised' as const,
+    class: 'mustDodge' as const,
+    damage: 1,
+    windup: 24,
+    active: 4,
+    recovery: 24,
+    range: { min: 0, max: 700 },
+    hits: [],
+    shots: [{ kind: 'bolt' as const, at: 24, height: 20, size: 30, speed: 600 }],
+  };
+  const withVolley = (weights: number[]) => {
+    const boss = baseBoss();
+    boss.attacks = [...boss.attacks, volley];
+    boss.phases = [{ ...boss.phases[0]!, attacks: [{ id: 'poke', weight: weights[0]! }, { id: 'volley', weight: weights[1]! }] }];
+    return boss;
+  };
+
+  it('still lets the skilled bot be checked on its strikes: the shots do not fail it', () => {
+    const result = checkFairness(withVolley([1, 1]));
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('is still failed when an idle player would not lose (a lone backward bolt never reaches a player)', () => {
+    const boss = baseBoss();
+    const back = { ...volley, shots: [{ ...volley.shots[0]!, dir: 'back' as const }], hits: [], range: { min: 0, max: 700 } };
+    boss.attacks = [back];
+    boss.phases = [{ ...boss.phases[0]!, attacks: [{ id: 'volley', weight: 1 }] }];
+    const result = checkFairness(boss);
+    expect(result.fair).toBe(false);
+    expect(result.reasons.some((r) => r.includes('idle'))).toBe(true);
+  });
+
+  it('is not failed for lack of a skilled run when it is made of nothing but shots', () => {
+    const boss = baseBoss();
+    boss.attacks = [volley];
+    boss.phases = [{ ...boss.phases[0]!, attacks: [{ id: 'volley', weight: 1 }] }];
+    const result = checkFairness(boss);
+    expect(result.reasons.some((r) => /skilled/i.test(r))).toBe(false);
+  });
+});

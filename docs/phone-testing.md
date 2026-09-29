@@ -417,6 +417,25 @@ You can now swing **up** and **down** with no new button. **Hold up on the stick
 - [ ] A downward hit on the boss bounces you up (the **pogo**), once per swing, and a miss does not. Bounce too high or too low? `PLAYER.attack.pogoSpeed` (760; a full jump is 900).
 - [ ] Anything to change: the box size and reach (`PLAYER.attack.upDownReach` and `upDownWidth` in `src/game/params.ts`).
 
+## Generated bosses with shots (Phase 3, first round)
+Pick **Generated** in the Boss row and fight several times: each fight is a new boss, and now each of its attacks can be a strike, a dash, a leap, a shot or an eruption, with equal chance.
+
+### What to expect
+- Some bosses fire **bolts** (one to three in a row; a later bolt can be aimed at you or fly backward), or **lob an arc** that lands where you stood when it left. Some raise **red floor marks** that blast up after a short delay (the first mark is under you). Some bosses are all melee and some are nearly all casters, but one attack is always a gold counterable strike, dash or leap.
+- Every attack still shows its wind-up first (at least about 0.3 s) before anything can hurt you.
+- Nothing about the sword changes: it does nothing to shots.
+
+### Checklist
+- [ ] Over ten fights you see bolts, arcs and eruptions in generated bosses, not only strikes, dashes and leaps.
+- [ ] A volley's bolts and an eruption's marks can always be read and dodged: nothing hurts before you could see it coming.
+- [ ] Bolts that fly backward or are aimed at you feel fair, not like a trick.
+- [ ] A boss made mostly of shots is still beatable: you can get close and hit it between attacks.
+- [ ] The banner "This generated boss couldn't be checked as fair" is not much more common than before.
+- [ ] Nothing stutters when several bolts and marks are on screen at once.
+
+### Questions
+- Which of the five kinds feels too common or too rare? Are eruption marks too slow or too quick, are bolts too fast?
+
 ## Generated backdrops
 Every **Generated** fight now gets its own backdrop, invented fresh from that fight's seed (the same seed always looks the same): a random colour family (reds, greens, teals, purples, browns and so on), two or three layers of shapes (pillars, ridges or spires) at random heights and speeds, and embers, floor and edge in matching colours. The skies stay dark on purpose, so the boss and its warnings stand out. The boss's body colour is picked opposite the sky on the colour wheel. The hand-built bosses keep their own backdrops. The shot and strike colours of a generated boss are still the default ones.
 

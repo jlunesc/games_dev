@@ -140,9 +140,10 @@ describe("a generated boss's arena", () => {
 describe('the tallest-piece hit-box guarantee', () => {
   /** The tallest attack hit (by `top`), matching how `generateBoss` picks the one it boosts. */
   function tallestHit(boss: ReturnType<typeof generateBoss>) {
-    let best = boss.attacks[0]!.hits[0]!;
-    let bestAttack = boss.attacks[0]!;
-    for (const a of boss.attacks) {
+    const strikes = boss.attacks.filter((a) => a.hits.length > 0);
+    let best = strikes[0]!.hits[0]!;
+    let bestAttack = strikes[0]!;
+    for (const a of strikes) {
       for (const h of a.hits) {
         if (h.top > best.top) {
           best = h;
@@ -180,5 +181,36 @@ describe('the tallest-piece hit-box guarantee', () => {
     const { hit, attack } = tallestHit(boss);
     expect(hit.top).toBeGreaterThan(tallestPiece);
     expect(hit.x1).toBeGreaterThanOrEqual(attack.range.max + 60);
+  });
+});
+
+describe('generated shot attacks', () => {
+  it('appear in some bosses and not others, and the counterable attack is never one of them', () => {
+    let withShots = 0;
+    let withoutShots = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+      const boss = generateBoss(seed);
+      const counterable = boss.attacks.filter((a) => a.class === 'counterable');
+      expect(counterable).toHaveLength(1);
+      expect(counterable[0]!.shots).toBeUndefined();
+      expect(counterable[0]!.hits.length).toBeGreaterThan(0);
+      if (boss.attacks.some((a) => a.shots !== undefined)) withShots++;
+      else withoutShots++;
+    }
+    expect(withShots).toBeGreaterThan(50);
+    expect(withoutShots).toBeGreaterThan(5);
+  });
+
+  it('still gives the tallest arena piece a reachable strike when the first attack has no hit window', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 600 && checked < 5; seed++) {
+      const boss = generateBoss(seed);
+      const pieces = [...(boss.arena?.platforms ?? []), ...(boss.arena?.covers ?? [])];
+      if (pieces.length === 0 || boss.attacks[0]!.hits.length > 0) continue;
+      checked++;
+      const tallest = Math.max(...pieces.map((p) => p.height));
+      expect(boss.attacks.some((a) => a.hits.some((h) => h.top > tallest))).toBe(true);
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });

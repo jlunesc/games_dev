@@ -1,37 +1,19 @@
 import { nextRandom } from '../../game/rng';
-import type { AttackDef, HitWindow, Pose } from '../schema';
+import type { AttackDef, HitWindow, Pose, ShotDef } from '../schema';
+import { type Draw, pick, uniform, uniformInt } from './draw';
+import { buildArc, buildBolts, buildEruptions, type ShotPlan } from './shots';
 import { GEN } from './tuning';
 
-/** The three effects a generated attack can have. The generator never invents a new kind. */
-export type EffectKind = 'hit' | 'move' | 'leap';
+export type { Draw };
 
-/** A value drawn from the stream, and the stream's state after drawing it. */
-export interface Draw<T> {
-  value: T;
-  state: number;
-}
+/** The effects a generated attack can have. The generator never invents a new kind. */
+export type EffectKind = 'hit' | 'move' | 'leap' | 'shot' | 'eruption';
+
+const MELEE_KINDS: readonly EffectKind[] = ['hit', 'move', 'leap'];
+const ALL_KINDS: readonly EffectKind[] = ['hit', 'move', 'leap', 'shot', 'eruption'];
 
 /** Poses used for a `hit` or `move` attack. `'crouch'` is reserved for a `leap` (the jump cue). */
 const HIT_POSES: readonly Pose[] = ['raised', 'sideways', 'back', 'down'];
-
-/** Draws a uniform float in `[min, max]` and advances the stream. */
-function uniform(state: number, min: number, max: number): Draw<number> {
-  const draw = nextRandom(state);
-  return { value: min + draw.value * (max - min), state: draw.state };
-}
-
-/** Draws a uniform integer in `[min, max]` and advances the stream. */
-function uniformInt(state: number, min: number, max: number): Draw<number> {
-  const draw = uniform(state, min, max);
-  return { value: Math.round(draw.value), state: draw.state };
-}
-
-/** Picks one of `options` with equal chance and advances the stream. */
-function pick<T>(state: number, options: readonly T[]): Draw<T> {
-  const draw = nextRandom(state);
-  const index = Math.min(options.length - 1, Math.floor(draw.value * options.length));
-  return { value: options[index]!, state: draw.state };
-}
 
 /** Builds the one `HitWindow` shared by the `hit` and `move` cases, and by a leap's landing shockwave. */
 function buildHit(state: number, from: number, to: number): Draw<HitWindow> {
@@ -57,9 +39,10 @@ function buildHit(state: number, from: number, to: number): Draw<HitWindow> {
 export function generateAttack(state: number, id: string, counterable: boolean): Draw<AttackDef> {
   let s = state;
 
-  const kindDraw = nextRandom(s);
+  // Only a must-dodge attack can have shots, so the counterable one is always a strike, a dash or a leap.
+  const kindDraw = pick(s, counterable ? MELEE_KINDS : ALL_KINDS);
   s = kindDraw.state;
-  const kind: EffectKind = kindDraw.value < 1 / 3 ? 'hit' : kindDraw.value < 2 / 3 ? 'move' : 'leap';
+  const kind = kindDraw.value;
 
   let pose: Pose;
   if (kind === 'leap') {
@@ -86,11 +69,12 @@ export function generateAttack(state: number, id: string, counterable: boolean):
   s = rangeMinDraw.state;
   const rangeSpanDraw = uniform(s, GEN.rangeSpanMin, GEN.rangeSpanMax);
   s = rangeSpanDraw.state;
-  const range = { min: rangeMinDraw.value, max: rangeMinDraw.value + rangeSpanDraw.value };
+  let range = { min: rangeMinDraw.value, max: rangeMinDraw.value + rangeSpanDraw.value };
 
   let hits: HitWindow[];
   let move: AttackDef['move'];
   let leap: AttackDef['leap'];
+  let shots: ShotDef[] | undefined;
 
   if (kind === 'hit') {
     const hitDraw = buildHit(s, windup, windup + active);
@@ -118,6 +102,20 @@ export function generateAttack(state: number, id: string, counterable: boolean):
     const hitDraw = buildHit(s, windup, windup + active);
     s = hitDraw.state;
     hits = [hitDraw.value];
+  } else if (kind === 'shot' || kind === 'eruption') {
+    // A shot attack starts from a distance, and the shots come out of its own timing: no hit window at all.
+    range = { min: 0, max: range.max + GEN.shotRangeBonus };
+    let plan: Draw<ShotPlan>;
+    if (kind === 'eruption') {
+      plan = buildEruptions(s, windup);
+    } else {
+      const bolts = nextRandom(s);
+      plan = bolts.value < 0.5 ? buildBolts(bolts.state, windup) : buildArc(bolts.state, windup, active);
+    }
+    s = plan.state;
+    shots = plan.value.shots;
+    active = plan.value.active;
+    hits = [];
   } else {
     windup = Math.max(windup, GEN.leapWindupMin);
 
@@ -152,6 +150,7 @@ export function generateAttack(state: number, id: string, counterable: boolean):
     hits,
     ...(move === undefined ? {} : { move }),
     ...(leap === undefined ? {} : { leap }),
+    ...(shots === undefined ? {} : { shots }),
   };
 
   return { value: def, state: s };

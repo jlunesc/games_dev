@@ -95,9 +95,11 @@ export function generateBoss(seed: number): BossDef {
     : [...arenaDraw.value.platforms, ...arenaDraw.value.covers];
   const tallestPiece = pieces.length === 0 ? 0 : Math.max(...pieces.map((p) => p.height));
   if (tallestPiece > 0) {
-    let tallestHit = attacks[0]!.hits[0]!;
-    let tallestHitAttack = attacks[0]!;
-    for (const a of attacks) {
+    // A shot-only attack has no hit window; the counterable attack always has one, so a strike exists.
+    const strikes = attacks.filter((a) => a.hits.length > 0);
+    let tallestHit = strikes[0]!.hits[0]!;
+    let tallestHitAttack = strikes[0]!;
+    for (const a of strikes) {
       for (const h of a.hits) {
         if (h.top > tallestHit.top) {
           tallestHit = h;

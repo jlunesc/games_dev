@@ -79,7 +79,12 @@ describe('generateAttack', () => {
       for (let seed = 1; seed <= 2000; seed++) {
         const { value: attack } = generateAttack(seed, `attack-${seed}`, counterable);
 
-        if (attack.leap === undefined && attack.move === undefined) {
+        if (attack.shots !== undefined) {
+          // shot or eruption kind: no hit window, no move, no leap
+          expect(attack.hits).toEqual([]);
+          expect(attack.move).toBeUndefined();
+          expect(attack.leap).toBeUndefined();
+        } else if (attack.leap === undefined && attack.move === undefined) {
           // hit kind
           expect(attack.hits.length).toBeGreaterThan(0);
         } else if (attack.leap === undefined) {
@@ -97,6 +102,66 @@ describe('generateAttack', () => {
         }
       }
     }
+  });
+
+  it('picks every kind with about equal chance for a must-dodge attack, and never a shot for the counterable one', () => {
+    const counts = { hit: 0, move: 0, leap: 0, bolt: 0, arc: 0, eruption: 0 };
+    const N = 3000;
+    for (let seed = 1; seed <= N; seed++) {
+      const counterable = generateAttack(seed, 'c', true).value;
+      expect(counterable.shots).toBeUndefined();
+      const a = generateAttack(seed, 'a', false).value;
+      const kind = a.shots?.[0]?.kind ?? (a.leap ? 'leap' : a.move ? 'move' : 'hit');
+      counts[kind]++;
+    }
+    const shots = counts.bolt + counts.arc;
+    for (const n of [counts.hit, counts.move, counts.leap, shots, counts.eruption]) {
+      expect(n / N).toBeGreaterThan(0.17);
+      expect(n / N).toBeLessThan(0.23);
+    }
+    expect(counts.bolt).toBeGreaterThan(0);
+    expect(counts.arc).toBeGreaterThan(0);
+  });
+
+  it('builds shots a standing player cannot ignore, with a warning as long as any other attack', () => {
+    let sawAimed = 0;
+    let sawBack = 0;
+    for (let seed = 1; seed <= 3000; seed++) {
+      const { value: attack } = generateAttack(seed, `attack-${seed}`, false);
+      if (attack.shots === undefined) continue;
+      expect(attack.class).toBe('mustDodge');
+      expect(attack.windup).toBeGreaterThanOrEqual(GEN.windupMin);
+      expect(attack.range.min).toBe(0);
+      expect(attack.active).toBeGreaterThanOrEqual(GEN.activeMin);
+      expect(attack.active).toBeLessThanOrEqual(GEN.activeMax);
+      for (const shot of attack.shots) {
+        expect(shot.at).toBeGreaterThanOrEqual(attack.windup);
+        expect(shot.at).toBeLessThan(attack.windup + attack.active);
+      }
+      const first = attack.shots[0]!;
+      if (first.kind === 'bolt') {
+        // The first bolt goes straight ahead, low enough to reach a player standing still.
+        expect(first.dir).toBeUndefined();
+        expect(first.aim).toBeUndefined();
+        expect(first.height).toBeLessThan(96);
+        for (const shot of attack.shots) {
+          if (shot.kind !== 'bolt') continue;
+          if (shot.aim === true) sawAimed++;
+          if (shot.dir === 'back') sawBack++;
+        }
+      } else if (first.kind === 'arc') {
+        expect(first.target).toBe('player');
+        expect(first.flight).toBeGreaterThanOrEqual(GEN.windupMin);
+      } else {
+        // The first mark is right under the player and shows long enough to step out of.
+        expect(first.offset).toBe(0);
+        for (const shot of attack.shots) {
+          if (shot.kind === 'eruption') expect(shot.delay).toBeGreaterThanOrEqual(GEN.windupMin);
+        }
+      }
+    }
+    expect(sawAimed).toBeGreaterThan(0);
+    expect(sawBack).toBeGreaterThan(0);
   });
 
   it('is deterministic: the same starting state reproduces the same attack and returned state', () => {

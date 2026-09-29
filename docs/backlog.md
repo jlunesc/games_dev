@@ -90,13 +90,13 @@ except where the archetype's brief explicitly called for going past them (the Wa
 
 ## Slice A left out: more on projectiles, and the slices after it (raised 2026-09-28)
 Slice A (`docs/superpowers/specs/2026-09-28-projectiles-design.md`) built straight bolts, lobbed arcs and the Vesper Sage. Left out on purpose:
-- **Shots in generated bosses.** The generator does not draw `shots` yet, and its fairness check has no notion of them.
+- ~~Shots in generated bosses~~ **Built 2026-09-29 (game version 0.8.0)**: bolts (aimed and backward too) and lobbed arcs, `docs/bosses.md` section 3b. The fairness check stays cheap: the skilled bot is not taught to dodge them.
 - **Cutting or deflecting a shot.** Today the swing does nothing to a shot (dodge only). Slicing a bolt, or knocking it back at the boss, is a possible addition.
 - **More shot paths:** homing orbs and rolling ground waves.
 - **Shots and platforms.** Platforms affect no shot. A bolt that a platform blocks, or a ceiling, is not built.
 
 The next slices, each its own design conversation (they came out of the owner's wish for different attacks, movements and shapes):
-- **Slice B: flying and hovering (done 2026-09-29, awaiting the owner's play test).** Folded into the variety pass for the five older bosses: a leap can hover (`hang`), a strike can hurt on both sides (`both`), bolts can fire backward or aimed at the player, and each boss got new attacks that use them (`docs/bosses.md` section 3a-quater). **Rest of slice B done 2026-09-29 (awaiting the owner's play test):** the Storm Kite hangs in the air between attacks (`flight`) and comes down in a plunge or a swoop across the arena (`dive`), `docs/bosses.md` section 3a-quinquies. Still not built: hovering or flying in generated bosses.
+- **Slice B: flying and hovering (done 2026-09-29, awaiting the owner's play test).** Folded into the variety pass for the five older bosses: a leap can hover (`hang`), a strike can hurt on both sides (`both`), bolts can fire backward or aimed at the player, and each boss got new attacks that use them (`docs/bosses.md` section 3a-quater). **Rest of slice B done 2026-09-29 (awaiting the owner's play test):** the Storm Kite hangs in the air between attacks (`flight`) and comes down in a plunge or a swoop across the arena (`dive`), `docs/bosses.md` section 3a-quinquies. Still not built: hovering, flying or diving in generated bosses (a later round).
 - **Slice C** (ground hazards) is built, see the next section.
 - **Slice D: new figures for the five existing bosses (done 2026-09-29, awaiting the owner's look on the phone).** Look-only (`src/ui/look/figures.ts`, colours in `tuning.ts`, body colours in `moods.ts`). The Cinder Golem is a walking furnace, the Quill Warden a heron-like lancer with a quill crest that fans open in the warning, the Veil Dancer a masked dancer in a gown whose veils flare, the Gale Reaver a forward-leaning runner in a torn cloak with a curved blade, and the Brass Sentinel an armoured knight with a tower shield and a mace. The owner left the looks to the assistant, so every look is a first guess. Only the generic block figure remains, for a boss without a figure of its own (generated bosses).
 
@@ -104,7 +104,7 @@ The next slices, each its own design conversation (they came out of the owner's 
 Slice C (`docs/superpowers/specs/2026-09-29-eruptions-design.md`) built marked floor eruptions and the Tremor Brute. Left out on purpose:
 - **Lingering zones.** Ground that stays dangerous for seconds (fire, poison) instead of a short blast.
 - **Rolling ground waves** and **marches of eruptions** that travel outward from the boss.
-- **Eruptions in generated bosses.** The generator does not draw them, and its fairness check has no notion of them.
+- ~~Eruptions in generated bosses~~ **Built 2026-09-29 (game version 0.8.0)**, together with shots.
 - **Eruptions and the arena.** They ignore platforms and cover today; a platform that a blast cannot reach, or a blast that reshapes the arena (the "piece tied to an attack" idea in "Dynamic arena pieces" below), is not built.
 - **Eruptions that follow the player** or a mark that moves before it goes off.
 

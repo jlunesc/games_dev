@@ -39,6 +39,50 @@ export const GEN = {
   leapDistanceMin: 200,
   leapDistanceMax: 400,
 
+  /**
+   * Shots and eruptions (first guesses, tune from play). A shot attack can start from a distance, so its
+   * range opens at 0 and reaches `shotRangeBonus` further than a strike's would.
+   */
+  shotRangeBonus: 250,
+  /** Bolt volley: how many bolts, the gap between them (updates), and each bolt's size and speed. */
+  boltCountMin: 1,
+  boltCountMax: 3,
+  boltGapMin: 6,
+  boltGapMax: 9,
+  /** All heights are below the top of a standing player (96), so a forward bolt always threatens an idle player. */
+  boltHeightMin: 0,
+  boltHeightMax: 80,
+  boltSizeMin: 24,
+  boltSizeMax: 40,
+  boltSpeedMin: 450,
+  boltSpeedMax: 800,
+  /** Chance a bolt after the first is aimed at the player, and (of the rest) fired backward. */
+  boltAimChance: 0.25,
+  boltBackChance: 0.15,
+  /** Lobbed arc that lands on the player's spot at launch. */
+  arcFlightMin: 30,
+  arcFlightMax: 50,
+  arcPeakMin: 200,
+  arcPeakMax: 320,
+  arcRadiusMin: 60,
+  arcRadiusMax: 90,
+  arcBurstMin: 6,
+  arcBurstMax: 10,
+  /** Floor eruptions: the first mark is under the player; extra marks sit to either side of the player's spot. */
+  eruptionCountMin: 1,
+  eruptionCountMax: 3,
+  eruptionGapMin: 4,
+  eruptionGapMax: 9,
+  eruptionWidthMin: 120,
+  eruptionWidthMax: 180,
+  /** The mark shows for this many updates before the blast: the warning the player has to leave it. */
+  eruptionDelayMin: 26,
+  eruptionDelayMax: 44,
+  eruptionBurstMin: 6,
+  eruptionBurstMax: 10,
+  eruptionSideMin: 200,
+  eruptionSideMax: 340,
+
   rangeMinMin: 40,
   rangeMinMax: 240,
   rangeSpanMin: 120,

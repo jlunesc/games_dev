@@ -33,8 +33,10 @@ export const STATS_SCHEMA_VERSION = 5;
  * recorded input now carries the vertical aim. Records made by 0.6.1 or earlier have no aim and replay exactly as before.
  * 0.7.1: a downward swing that hits the boss bounces the player up (the pogo), so records made by 0.7.0 with a
  * downward hit no longer replay exactly. Records without a downward hit replay as before.
+ * 0.8.0: generated bosses now draw shot and eruption attacks too, so the same seed makes a different boss and
+ * records of generated bosses made by 0.7.1 or earlier no longer replay exactly. Hand-built bosses are unchanged.
  */
-export const GAME_VERSION = '0.7.1';
+export const GAME_VERSION = '0.8.0';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {
