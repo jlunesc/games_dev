@@ -1,3 +1,4 @@
+import type { Pose } from '../../bosses/schema';
 import type { Volume } from '../settings';
 
 /** Engine numbers. Every value here is a first guess to be tuned on the phone. */
@@ -28,7 +29,20 @@ export type VoiceName =
   | 'defeat'
   | 'fall'
   | 'warningGold'
-  | 'warningRed';
+  | 'warningRed'
+  | 'swell'
+  | 'charge'
+  | 'whoosh'
+  | 'strike'
+  | 'leapUp'
+  | 'slam'
+  | 'diveDown'
+  | 'shotLaunch'
+  | 'arcLaunch'
+  | 'arcLand'
+  | 'eruptionMark'
+  | 'eruptionBlast'
+  | 'boltPass';
 
 /**
  * One layer of a sound: a tone (an oscillator gliding from `from` to `to` Hz) or a burst of the shared noise through a
@@ -98,6 +112,53 @@ export const RECIPES: Record<VoiceName, readonly Part[]> = {
     { tone: 'sawtooth', from: 330, to: 260, seconds: 0.16, volume: 0.11 },
     { noise: 'bandpass', freq: 250, seconds: 0.1, volume: 0.05 },
   ],
+  // The wind-up swell; the pitch is multiplied by the pose (see POSE_PITCH).
+  swell: [{ tone: 'triangle', from: 220, to: 330, seconds: 0.3, volume: 0.1 }],
+  // A shooter charging: a rising whine.
+  charge: [
+    { tone: 'sine', from: 180, to: 520, seconds: 0.35, volume: 0.1 },
+    { tone: 'triangle', from: 360, to: 1040, seconds: 0.35, volume: 0.04 },
+  ],
+  // A rising whoosh for a dash or a lunge.
+  whoosh: [{ noise: 'bandpass', freq: 400, to: 2400, q: 1, seconds: 0.22, volume: 0.13 }],
+  // The moment the danger becomes real: a falling swipe.
+  strike: [
+    { noise: 'bandpass', freq: 1600, to: 600, q: 0.9, seconds: 0.1, volume: 0.14 },
+    { tone: 'sawtooth', from: 300, to: 150, seconds: 0.08, volume: 0.08 },
+  ],
+  leapUp: [
+    { tone: 'triangle', from: 200, to: 700, seconds: 0.25, volume: 0.12 },
+    { noise: 'bandpass', freq: 500, to: 1500, seconds: 0.2, volume: 0.07 },
+  ],
+  // A heavy landing.
+  slam: [
+    { tone: 'sine', from: 110, to: 38, seconds: 0.3, volume: 0.34 },
+    { noise: 'lowpass', freq: 1200, to: 150, seconds: 0.3, volume: 0.22 },
+  ],
+  // A falling whistle.
+  diveDown: [{ tone: 'sine', from: 1400, to: 350, seconds: 0.4, volume: 0.1 }],
+  shotLaunch: [
+    { tone: 'square', from: 500, to: 300, seconds: 0.1, volume: 0.09 },
+    { noise: 'bandpass', freq: 2000, seconds: 0.06, volume: 0.05 },
+  ],
+  arcLaunch: [
+    { tone: 'triangle', from: 240, to: 520, seconds: 0.18, volume: 0.1 },
+    { noise: 'lowpass', freq: 800, seconds: 0.1, volume: 0.06 },
+  ],
+  arcLand: [
+    { tone: 'sine', from: 130, to: 50, seconds: 0.22, volume: 0.26 },
+    { noise: 'lowpass', freq: 1000, to: 200, seconds: 0.2, volume: 0.16 },
+  ],
+  // A soft low tick: the floor is about to erupt.
+  eruptionMark: [
+    { tone: 'sine', from: 90, seconds: 0.18, volume: 0.09 },
+    { noise: 'lowpass', freq: 300, seconds: 0.15, volume: 0.05 },
+  ],
+  eruptionBlast: [
+    { noise: 'lowpass', freq: 1800, to: 200, seconds: 0.4, volume: 0.26 },
+    { tone: 'sawtooth', from: 90, to: 40, seconds: 0.35, volume: 0.2 },
+  ],
+  boltPass: [{ noise: 'bandpass', freq: 900, to: 600, seconds: 0.12, volume: 0.05 }],
 };
 
 /** When more sounds arrive than the voice cap allows, the higher number wins. */
@@ -112,4 +173,26 @@ export const PRIORITY: Record<VoiceName, number> = {
   hit: 7,
   dash: 4,
   studyHit: 3,
+  swell: 6,
+  charge: 6,
+  whoosh: 6,
+  strike: 5,
+  leapUp: 6,
+  slam: 7,
+  diveDown: 6,
+  shotLaunch: 5,
+  arcLaunch: 5,
+  arcLand: 6,
+  eruptionMark: 4,
+  eruptionBlast: 7,
+  boltPass: 2,
 };
+
+/** The wind-up swell is pitched by the pose, so the ear can tell a raised arm from a crouch. */
+export const POSE_PITCH: Record<Pose, number> = { raised: 1.5, sideways: 1, back: 0.8, down: 0.7, crouch: 0.6 };
+
+/** In a pair fight, boss 0 sounds this far left and every other boss this far right (-1 is full left, 1 full right). */
+export const PAIR_PAN = 0.35;
+
+/** A bolt within `range` world units of the player counts as passing by; the sound pans `pan` toward its side. */
+export const SHOT_PASS = { range: 90, pan: 0.5 } as const;
