@@ -7,6 +7,7 @@ import { drawBackground, type BackgroundCache } from './look/background';
 import type { EffectsState } from './look/effects';
 import { bossFigure, drawPrimitives, playerFigure } from './look/figures';
 import { attackPalette, boltTrail, slashShape } from './look/attackfx';
+import { playerSwing } from './look/playerfx';
 import { moodFor, type Mood } from './look/moods';
 import { BOSS_COLORS, armRect, bossDrawBox, bossLook, type BossLook, type Rect } from './look/pose';
 import { LOOK } from './look/tuning';
@@ -414,12 +415,26 @@ function drawPlayer(
     ctx.globalAlpha = 1;
   }
 
-  if (attackActive(p)) {
-    const box = attackBox(p);
-    ctx.globalAlpha = 0.7;
-    ctx.fillStyle = COLORS.slash;
-    ctx.fillRect(box.x, box.y, box.w, box.h);
-    ctx.globalAlpha = 1;
+  if (mood === null) {
+    if (attackActive(p)) {
+      const box = attackBox(p);
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = COLORS.slash;
+      ctx.fillRect(box.x, box.y, box.w, box.h);
+      ctx.globalAlpha = 1;
+    }
+    return;
+  }
+  const swing = playerSwing(state, x, y);
+  if (swing !== null) {
+    if (swing.box !== null) {
+      ctx.globalAlpha = LOOK.playerSlash.boxAlpha;
+      ctx.fillStyle = COLORS.slash;
+      ctx.fillRect(swing.box.x, swing.box.y, swing.box.w, swing.box.h);
+      ctx.globalAlpha = 1;
+    }
+    drawPrimitives(ctx, swing.slash, swing.slashAlpha);
+    drawPrimitives(ctx, swing.blade, blinking ? 0.35 : 1);
   }
 }
 

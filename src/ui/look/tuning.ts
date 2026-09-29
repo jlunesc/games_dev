@@ -129,6 +129,28 @@ export const LOOK = {
   playerAccent: '#7fd6ff',
   playerDashAccent: '#7fd6ff',
 
+  // ---- The player's sword and slash (see playerfx.ts) ----
+  /**
+   * The sword: its length and width, steel, outline and grip colours, and the angle it points at (degrees, 0 straight ahead,
+   * negative up, positive down) while winding up, sweeping through the active part of the swing, and lowering in recovery.
+   */
+  playerBlade: {
+    length: 58,
+    width: 10,
+    steel: '#f4f8ff',
+    outline: '#2a3550',
+    grip: '#7fd6ff',
+    windupDeg: [-120, -100],
+    activeDeg: [-100, 40],
+    recoverDeg: [40, 80],
+  },
+  /**
+   * The slash: a crescent inside the real hit box that sweeps from top to bottom over the active ticks, then fades over
+   * `fadeTicks`. `inner` is how thin the head of the crescent is (0 to 1, higher is thinner). The faint box behind it
+   * (`boxAlpha`) shows the real reach, like the bosses' strikes do.
+   */
+  playerSlash: { edge: '#7fd6ff', core: '#ffffff', inner: 0.5, steps: 8, fadeTicks: 6, alpha: 0.95, boxAlpha: 0.12 },
+
   // ---- Figures: bosses ----
   bossHeadRadius: 16,
   bossTailLength: 60,

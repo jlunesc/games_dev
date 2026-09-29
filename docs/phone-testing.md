@@ -401,6 +401,13 @@ A new choice on the **Boss** row, last in the list: **Storm Kite**, a winged bir
 - [ ] In the study, the dives and bolts are shown and do not hurt.
 - [ ] Stats save and export, and in the file that fight's `bossId` says `"storm-kite"`.
 
+## The player's sword and slash
+The player's attack used to be a plain white rectangle. Now the player holds a **sword** that is raised behind the head while the swing starts, sweeps down in front, and lowers again. A bright **crescent** (light blue edge, white middle) sweeps top to bottom through the hit area and fades out over a few frames. A faint box shows the real reach for the frames that can hit, the same way the bosses' strikes do. The timing and reach of the attack are exactly as before.
+- [ ] The swing is easy to see and feels connected to the hit (the boss reacts when the crescent is at its widest).
+- [ ] The sword is easy to see against the body and the backdrop, on both sides.
+- [ ] The crescent does not hide the boss or its warnings when you fight close up.
+- [ ] Anything to change: the sword's size, the slash's colour or how long it lingers (`LOOK.playerBlade`, `LOOK.playerSlash` in `src/ui/look/tuning.ts`).
+
 ## Generated backdrops
 Every **Generated** fight now gets its own backdrop, invented fresh from that fight's seed (the same seed always looks the same): a random colour family (reds, greens, teals, purples, browns and so on), two or three layers of shapes (pillars, ridges or spires) at random heights and speeds, and embers, floor and edge in matching colours. The skies stay dark on purpose, so the boss and its warnings stand out. The boss's body colour is picked opposite the sky on the colour wheel. The hand-built bosses keep their own backdrops. The shot and strike colours of a generated boss are still the default ones.
 
