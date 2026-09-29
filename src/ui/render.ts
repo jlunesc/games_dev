@@ -518,6 +518,9 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState, fight: FightDe
     ctx.fillStyle = COLORS.hud;
     ctx.fillRect(24 + i * 30, 24, 22, 22);
   }
+  ctx.font = '600 16px system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
   for (const bar of healthBars(state, fight)) {
     ctx.globalAlpha = bar.dim ? LOOK.hud.fallenAlpha : 1;
     ctx.fillStyle = COLORS.hudBack;
@@ -526,9 +529,6 @@ function drawHud(ctx: CanvasRenderingContext2D, state: GameState, fight: FightDe
     ctx.fillRect(bar.fill.x, bar.fill.y, bar.fill.w, bar.fill.h);
     ctx.fillStyle = COLORS.hud;
     for (const tick of bar.ticks) ctx.fillRect(tick.x, tick.y, tick.w, tick.h);
-    ctx.font = '600 16px system-ui, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
     ctx.fillText(bar.name, bar.nameX, bar.nameY);
   }
   ctx.globalAlpha = 1;

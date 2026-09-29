@@ -475,6 +475,8 @@ A pair puts two existing bosses in the same fight (bosses take turns; the sword 
 
 A pair adds no attacks and no arena of its own. To use one, `resolveFight(id, seed)` (`src/bosses/resolve.ts`) turns a pair id into a fight: each boss with its health scaled, plus the enrage. A boss id or `generated` gives a fight of one boss, exactly as before. The difficulty dials apply to both bosses at once (`applyDialsToFight`). The pair is not judged for fairness by the generator's checker; each pair is hand-tuned and checked with scripted players, like the Ashen Hound.
 
+Changing the numbers in a pair file (health scales, enrage) changes how recorded fights of that pair replay, so it needs a `GAME_VERSION` bump in `src/stats/record.ts`, exactly like changing a boss file (`docs/stats.md` section 9).
+
 To add a pair: create `src/bosses/<id>.json`, load it in `src/bosses/pairs.ts` (`parsePair(raw, knownBoss)`) and add it to `PAIRS`, then add a test like the ones for Hound and Sage in `tests/pair-parse.test.ts`. The Boss row picks it up with no other change.
 
 ## 6. Ideas not built yet
