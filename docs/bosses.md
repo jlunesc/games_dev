@@ -241,7 +241,9 @@ The boss is always in one of five modes (`BossState.mode` in `src/game/state.ts`
 | Slip | back | 18 updates of wind-up, then it runs forward at 1400 for 10 updates (about 233 units), with **no hit window**: it never hurts, and often ends up behind the player. Starts from 40 to 240 away. | Not reacting to everything. It has the same pose as the rush and a shorter wind-up, so it is a look-alike; the player is expected to tell it apart from the rush by the distance and the timing, or to dash needlessly. It also repositions the boss. |
 | Pounce | crouch | 30 updates of crouch, then a leap to where the player stood at take-off (22 updates in the air, up to 220 high), then a shockwave box along the floor for 6 updates: 200 long on the side the boss faces, 60 high. Starts from 200 to 420 away. | Reading a landing spot (the red bar) and either jumping the low shockwave or stepping out of the bar. |
 
-**The Hound's arena** (M5c, first guess, to be tuned from the owner's play test). Two platforms and one cover:
+**Removed 2026-09-29 (owner request): the Hound now fights in a flat arena, with no platforms and no cover.** The rest of this section describes the arena it had, which the tests still build for the Hound (`HOUND_ARENA` in `tests/ashen-hound.test.ts`) to keep proving how platforms and cover cut and stop a boss's attacks. `GAME_VERSION` is 0.6.1.
+
+**The Hound's old arena** (M5c, first guess, to be tuned from the owner's play test). Two platforms and one cover:
 
 | Piece | x (centre) | width | height |
 |---|---|---|---|

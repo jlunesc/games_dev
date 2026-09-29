@@ -128,6 +128,8 @@ A soft shadow on the floor shows where the Hound is while it is in the air.
 - Did anything look wrong while it was in the air (the jump, the shadow, the bar, the body)?
 
 ## The arena (M5c)
+*(Update 2026-09-29: the Ashen Hound's ledges and wall were removed at the owner's request; its arena is flat like the Duelist's. The checklist below is kept for the generated bosses, which still get scenery.)*
+
 The Ashen Hound's fight now has a **scenery**: two **ledges** (raised platforms) and one **wall** (a low pillar) standing in the arena. The Ember Duelist's arena is still completely flat and plays exactly as before. Everything in the arena is a first guess, and this test is to find out how it feels.
 
 ### What is in the arena

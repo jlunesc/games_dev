@@ -250,14 +250,26 @@ function extremeDials(): Dials[] {
   return list;
 }
 
+/** The Hound with an arena of two platforms and a cover, made for the test (the real Hound has none). */
+const HOUND_IN_ARENA: BossDef = {
+  ...ASHEN_HOUND,
+  arena: {
+    platforms: [
+      { x: 330, width: 200, height: 90 },
+      { x: 950, width: 200, height: 90 },
+    ],
+    covers: [{ x: 640, width: 60, height: 100 }],
+  },
+};
+
 describe('applyDials with an arena', () => {
   it('keeps the arena exactly, at Normal and at every dial extreme', () => {
-    expect(ASHEN_HOUND.arena).toBeDefined();
+    expect(HOUND_IN_ARENA.arena).toBeDefined();
     expect(DUELIST.arena).toBeUndefined();
-    expect(applyDials(ASHEN_HOUND, NORMAL_DIALS).arena).toEqual(ASHEN_HOUND.arena);
+    expect(applyDials(HOUND_IN_ARENA, NORMAL_DIALS).arena).toEqual(HOUND_IN_ARENA.arena);
     for (const dial of DIALS) {
       for (const value of [dial.min, dial.max]) {
-        expect(applyDials(ASHEN_HOUND, only({ [dial.id]: value })).arena).toEqual(ASHEN_HOUND.arena);
+        expect(applyDials(HOUND_IN_ARENA, only({ [dial.id]: value })).arena).toEqual(HOUND_IN_ARENA.arena);
       }
     }
     expect(applyDials(DUELIST, NORMAL_DIALS)).not.toHaveProperty('arena');

@@ -10,10 +10,23 @@ import { analyzeRun } from '../src/stats/analyze';
 import { updatesWith, windupUpdates } from './boss-helpers';
 import { run, withInput } from './helpers';
 
+/** The arena the Hound used to have. The real Hound has none now; these tests keep proving how an arena cuts and stops a Hound's attacks. */
+const HOUND_ARENA: NonNullable<BossDef['arena']> = {
+  platforms: [
+    { x: 330, width: 200, height: 90 },
+    { x: 950, width: 200, height: 90 },
+  ],
+  covers: [{ x: 640, width: 60, height: 100 }],
+};
+
+/** The Hound placed in that arena. */
+const HOUND_IN_ARENA: BossDef = { ...ASHEN_HOUND, arena: HOUND_ARENA };
+
 /** The real Hound using only attack `id`, from any distance, never walking, starting a new attack one update after the last. */
-function solo(id: string): BossDef {
+function solo(id: string, withArena = false): BossDef {
   return {
     ...ASHEN_HOUND,
+    ...(withArena ? { arena: HOUND_ARENA } : {}),
     spacing: { min: 0, max: 1e9 },
     attacks: ASHEN_HOUND.attacks.map((a) => ({ ...a, range: { min: 0, max: 1e9 } })),
     phases: ASHEN_HOUND.phases.map((p) => ({
@@ -86,22 +99,18 @@ describe('the Hound\'s two special attacks', () => {
   });
 });
 
-describe('the Hound\'s arena', () => {
-  it('is in the file: two platforms and a cover', () => {
-    expect(ASHEN_HOUND.arena).toEqual({
-      platforms: [
-        { x: 330, width: 200, height: 90 },
-        { x: 950, width: 200, height: 90 },
-      ],
-      covers: [{ x: 640, width: 60, height: 100 }],
-    });
+describe('the Hound has a flat arena', () => {
+  it('has no platforms and no cover in the file', () => {
+    expect(ASHEN_HOUND.arena).toBeUndefined();
   });
+});
 
+describe('an arena for the Hound (a test setup)', () => {
   it('is kept exactly at every dial extreme', () => {
     for (const dial of DIALS) {
       for (const value of [dial.min, dial.max]) {
         const dials: Dials = { ...NORMAL_DIALS, [dial.id]: value };
-        expect(applyDials(ASHEN_HOUND, dials).arena).toEqual(ASHEN_HOUND.arena);
+        expect(applyDials(HOUND_IN_ARENA, dials).arena).toEqual(HOUND_ARENA);
       }
     }
   });
@@ -114,8 +123,7 @@ describe('the Hound\'s arena', () => {
     arena: boolean,
     standingHeight = 0,
   ): { boss: BossDef; state: GameState } {
-    const { arena: _arena, ...bare } = solo(id);
-    const boss: BossDef = arena ? solo(id) : bare;
+    const boss: BossDef = solo(id, arena);
     const state = createInitialState(boss, 1);
     state.boss.x = bossX;
     state.boss.facing = bossX > playerX ? -1 : 1;
@@ -339,7 +347,7 @@ const camper: Bot = (_n, prev) => {
 
 describe('a player who camps on a platform cannot make the Hound unbeatable', () => {
   const camp = (seed: number) => {
-    const boss = applyDials(ASHEN_HOUND, presetDials('normal'));
+    const boss = applyDials(HOUND_IN_ARENA, presetDials('normal'));
     const start = createInitialState(boss, seed);
     let s = start;
     let platformUpdates = 0;
@@ -371,7 +379,7 @@ const wallCamper: Bot = (_n, prev) => {
 
 describe('a player who camps on top of the wall cannot make the Hound unbeatable', () => {
   const camp = (seed: number) => {
-    const boss = applyDials(ASHEN_HOUND, presetDials('normal'));
+    const boss = applyDials(HOUND_IN_ARENA, presetDials('normal'));
     const start = createInitialState(boss, seed);
     let s = start;
     let wallUpdates = 0;

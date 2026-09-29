@@ -466,6 +466,9 @@ describe('the update loop of the app with a study, replayed', () => {
 });
 
 describe('the update loop of the app in an arena, replayed', () => {
+  /** Seeds whose generated boss has an arena. */
+  const ARENA_SEEDS = [5];
+
   /** A player who runs right, jumps a lot (onto the cover and the platform) and swings and dashes now and then. */
   const climber = (f: number): InputFrame =>
     withInput({
@@ -476,17 +479,17 @@ describe('the update loop of the app in an arena, replayed', () => {
       dashPressed: f % 53 === 0,
     });
 
-  it.each(CASES)('$name: a long fight against a Hound with an arena replays and analyzes faithfully', (c) => {
-    for (const seed of [21, 22]) {
+  it.each(CASES)('$name: a long fight against a generated boss with an arena replays and analyzes faithfully', (c) => {
+    for (const seed of ARENA_SEEDS) {
       const played = playLikeTheApp({
         ...c,
         seed,
         deltas: messyDeltas(seed),
-        bossDef: ASHEN_HOUND,
+        bossDef: resolveBoss('generated', seed).boss,
         player: climber,
         leaveAfterFrames: 2400,
       });
-      expect(played.record.bossId).toBe('ashen-hound');
+      expect(played.record.bossId).toBe('generated');
       expect(played.boss.arena).toBeDefined();
       expect(played.framesWithoutUpdate).toBeGreaterThan(0);
       expect(played.record.ticks).toBeGreaterThan(300);
@@ -500,10 +503,10 @@ describe('the update loop of the app in an arena, replayed', () => {
     const played = playLikeTheApp({
       presetId: 'normal',
       dials: presetDials('normal'),
-      seed: 8,
+      seed: ARENA_SEEDS[0]!,
       study: 1,
-      deltas: messyDeltas(8),
-      bossDef: ASHEN_HOUND,
+      deltas: messyDeltas(ARENA_SEEDS[0]!),
+      bossDef: resolveBoss('generated', ARENA_SEEDS[0]!).boss,
       player: climber,
       leaveAfterFrames: 2400,
     });
@@ -516,9 +519,9 @@ describe('the update loop of the app in an arena, replayed', () => {
     const played = playLikeTheApp({
       presetId: 'normal',
       dials: presetDials('normal'),
-      seed: 4,
+      seed: ARENA_SEEDS[0]!,
       deltas: messyDeltas(9),
-      bossDef: ASHEN_HOUND,
+      bossDef: resolveBoss('generated', ARENA_SEEDS[0]!).boss,
       player: passive,
     });
     expect(played.result).toBe('defeat');

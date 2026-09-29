@@ -234,6 +234,7 @@ After `ticks` steps the state is the one the fight ended in (or the state the st
 - **Game version 0.5.0: generated arenas (M6a).** Drawing an arena is one more random choice the generator makes, so it reorders the whole random stream: a `"generated"` record made by game version 0.4.0 no longer reproduces the same boss (arena included) from its seed. As with the 0.4.0 bump, only `"generated"` records are affected; the Ember Duelist and Ashen Hound are unchanged.
 - **Game version 0.5.1: the Vesper Sage without its cover.** The Sage's middle wall was removed because it kept the player on one side of the arena, so Vesper Sage records made by 0.5.0 no longer replay exactly. Every other boss is unchanged.
 - **Game version 0.6.0: the variety pass.** The Quill Warden, Cinder Golem, Veil Dancer, Gale Reaver and Brass Sentinel gained new attacks (hovering leaps, strikes on both sides, aimed bolts) and bolt heights are measured above the boss's feet, so records of those five bosses made by 0.5.1 no longer replay exactly. The schema stays 4 (the export's shape is unchanged; `shotsFired` counts the new bolts). Other bosses, including the Ember Duelist, replay as before.
+- **Game version 0.6.1: the Ashen Hound without its arena.** The Hound's two platforms and its cover were removed (owner request), so Hound records made by 0.6.0 or earlier no longer replay exactly (their stored analysis stays valid). The schema stays 4. Every other boss replays as before.
 
 ## 10. Derived later, not stored
 

@@ -5,8 +5,18 @@ import type { ArcState } from '../src/game/state';
 import { arcFloorMark, arenaRects, eruptionMark } from '../src/ui/render';
 
 describe('arenaRects', () => {
-  it('gives the Hound\'s platforms (14 thick, top at the floor minus their height) and its cover (floor to top)', () => {
-    const { platforms, covers } = arenaRects(ASHEN_HOUND);
+  it('gives the platforms (14 thick, top at the floor minus their height) and the cover (floor to top)', () => {
+    const boss = {
+      ...ASHEN_HOUND,
+      arena: {
+        platforms: [
+          { x: 330, width: 200, height: 90 },
+          { x: 950, width: 200, height: 90 },
+        ],
+        covers: [{ x: 640, width: 60, height: 100 }],
+      },
+    };
+    const { platforms, covers } = arenaRects(boss);
     expect(WORLD.floorY).toBe(640);
     expect(platforms).toEqual([
       { x: 230, y: 550, w: 200, h: 14 },

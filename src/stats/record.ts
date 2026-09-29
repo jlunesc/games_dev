@@ -27,8 +27,10 @@ export const STATS_SCHEMA_VERSION = 4;
  * 0.6.0: the Quill Warden, Cinder Golem, Veil Dancer, Gale Reaver and Brass Sentinel gained new attacks
  * (hovering leaps, strikes on both sides, back and aimed bolts) and bolt heights are now measured above the
  * boss's feet, so records of those bosses made by 0.5.1 no longer replay exactly. Other bosses are unchanged.
+ * 0.6.1: the Ashen Hound lost its platforms and cover (flat arena), so Hound records made by 0.6.0 or earlier no
+ * longer replay exactly. Every other boss is unchanged.
  */
-export const GAME_VERSION = '0.6.0';
+export const GAME_VERSION = '0.6.1';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {
