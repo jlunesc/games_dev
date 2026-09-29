@@ -52,6 +52,10 @@ describe('cues from the game events', () => {
     expect(fromEvents(['bossDefeated'])).toEqual(['fall']);
   });
 
+  it('gives the killing blow the defeat sound only, not the buzzing hurt sound as well', () => {
+    expect(fromEvents(['playerHit', 'playerDefeated'])).toEqual(['defeat']);
+  });
+
   it('merges identical cues, so two boss events in one update do not double up', () => {
     expect(fromEvents(['bossDefeated', 'bossDown'])).toEqual(['fall']);
     expect(fromEvents(['bossHit', 'bossHit'])).toEqual(['hit']);
