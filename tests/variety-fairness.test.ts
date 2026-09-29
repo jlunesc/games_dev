@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BRASS_SENTINEL, CINDER_GOLEM, GALE_REAVER, QUILL_WARDEN, VEIL_DANCER } from '../src/bosses';
+import { BRASS_SENTINEL, CINDER_GOLEM, GALE_REAVER, QUILL_WARDEN, TREMOR_BRUTE, VEIL_DANCER } from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { DIALS, NORMAL_DIALS, applyDials, presetDials, type Dials } from '../src/game/difficulty';
@@ -63,18 +63,13 @@ function lostTo(base: BossDef, id: string, distance: number, input: (n: number) 
 }
 
 const NEW_ATTACKS: [BossDef, string][] = [
-  [QUILL_WARDEN, 'feather-volley'],
-  [QUILL_WARDEN, 'sky-lance'],
   [CINDER_GOLEM, 'cinder-lob'],
   [CINDER_GOLEM, 'furnace-stomp'],
   [VEIL_DANCER, 'needle-fan'],
-  [VEIL_DANCER, 'falling-veil'],
+  [VEIL_DANCER, 'twin-cut'],
   [GALE_REAVER, 'gale-cyclone'],
-  [GALE_REAVER, 'updraft-dive'],
-  [GALE_REAVER, 'retreating-gust'],
-  [BRASS_SENTINEL, 'brass-cannon'],
   [BRASS_SENTINEL, 'spin-cycle'],
-  [BRASS_SENTINEL, 'piston-drop'],
+  [TREMOR_BRUTE, 'floor-wave'],
 ];
 
 describe('every new attack has an answer', () => {

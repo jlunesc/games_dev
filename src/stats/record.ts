@@ -35,8 +35,11 @@ export const STATS_SCHEMA_VERSION = 6;
  * downward hit no longer replay exactly. Records without a downward hit replay as before.
  * 0.8.0: generated bosses now draw shot and eruption attacks too, so the same seed makes a different boss and
  * records of generated bosses made by 0.7.1 or earlier no longer replay exactly. Hand-built bosses are unchanged.
+ * 0.9.0: Round 1 of the boss identity work (docs/superpowers/specs/2026-09-29-boss-identity-design.md) changed the
+ * attack lists and numbers of nine hand-built bosses (everyone except the Ember Duelist), so their records made by
+ * 0.8.0 or earlier no longer replay exactly. The Ember Duelist and generated bosses are unchanged.
  */
-export const GAME_VERSION = '0.8.0';
+export const GAME_VERSION = '0.9.0';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {

@@ -361,6 +361,24 @@ Added 2026-09-29 (design in `docs/superpowers/specs/2026-09-29-variety-design.md
 
 Every new attack is drawn differently from the others at the moment before it starts (its pose plus the marks of section "Movement skills" and `attackMarks`), so it can be read before it hits. `tests/variety-fairness.test.ts` checks that each new attack hurts a player who stands still and that a single well-timed dash or jump avoids it. This changed the five bosses' numbers, so `GAME_VERSION` is 0.6.0.
 
+## 3a-sexies. Boss identity, Round 1 (game version 0.9.0)
+
+Design and reasoning: `docs/superpowers/specs/2026-09-29-boss-identity-design.md`. Round 1 used only what the boss format already allows: attacks were removed, added or re-weighted so that each boss asks the player one question and no special kind of attack sits on more than three bosses. The Ember Duelist is the fixed reference and is unchanged (`tests/duelist-golden.test.ts`). All numbers are first guesses, to tune from play.
+
+| Boss | Removed | Added | Other changes |
+|---|---|---|---|
+| Ashen Hound | none | `feint` (the same sideways pose and wind-up as the bite, then a short slow step with no hit box: it never hurts, it only tests whether the player falls for a fake) | in the fight mix at weight 2 |
+| Gale Reaver | `updraft-dive`, `retreating-gust` | none | chains of up to 3 with chance 0.7 (was 2 and 0.6), so it keeps pressing |
+| Brass Sentinel | `charging-bash`, `brass-cannon`, `piston-drop` | `late-herald` (a gold strike with a long held pose), `brass-snap` (a red follow-up) | walks back at 80 (was 200): it plants its feet and advances |
+| Cinder Golem | `ground-charge` | none | the Golem never dashes |
+| Quill Warden | `feather-volley`, `sky-lance` | `backwards-vault` (a leap with `target: back`), `rising-swipe` (a hit box that starts at height 100, so it only hurts a jumping player) | |
+| Storm Kite | `snap-plunge` | `long-strafe` (a swoop with a `distance` of 1400 across the arena, phase 2) | |
+| Tremor Brute | none | `floor-wave` (a slow, wide, floor-level bolt, `height` 0 and `size` 80: it must be jumped), `uppercut` (only hurts a jumper) | both in both phases |
+| Veil Dancer | `rending-dash`, `phantom-step`, `falling-veil` | `twin-cut` (two swings, the second on both sides) | |
+| Vesper Sage | none | `lob-and-low` (an arc then a low bolt, the pose is `crouch`) | in both phases |
+
+The guard `tests/boss-distinct.test.ts` keeps the roster from drifting back: a special kind of attack (dash, leap, dive, slip, bolt, low bolt, arc, eruption) may be on at most three bosses, no boss may have two attacks that look the same to the player, and the number of near-copies between bosses (same kind, pose and class, wind-up within 6 updates, reach within 35%) has a ceiling that only goes down. A move with no hit box counts as a slip, and a bolt at height 0 counts as a low bolt (a jump answers it, a sidestep does not).
+
 ## 3b. The boss generator
 
 `src/bosses/generate/` builds a boss at random instead of from a hand-written file. It is offered in the menu's Boss row as **Generated** (`src/bosses/index.ts`, `BOSS_CHOICES`; Generated is the last choice on the row). Picking Fight builds a fresh boss from that fight's own seed (`resolveBoss('generated', seed)` in `src/bosses/resolve.ts`), so it is different almost every attempt and replayable from the seed alone; there is no saved roster and no way to fight the "same" generated boss again except by keeping the exported seed.

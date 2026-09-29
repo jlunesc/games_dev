@@ -73,7 +73,7 @@ describe('the Storm Kite file', () => {
   it('is loaded and found by id, with four attacks, flight, no arena and two phases', () => {
     expect(STORM_KITE.id).toBe('storm-kite');
     expect(bossById('storm-kite')).toBe(STORM_KITE);
-    expect(STORM_KITE.attacks.map((a) => a.id)).toEqual(['plunge', 'swoop', 'bolt-volley', 'snap-plunge']);
+    expect(STORM_KITE.attacks.map((a) => a.id)).toEqual(['plunge', 'swoop', 'bolt-volley', 'long-strafe']);
     expect(STORM_KITE.flight).toBeDefined();
     expect(STORM_KITE.arena).toBeUndefined();
     expect(STORM_KITE.phases).toHaveLength(2);
@@ -381,8 +381,10 @@ describe('the Kite can be beaten', () => {
         return NO_INPUT;
       }
       if (dive !== undefined && dive.shape === 'swoop') {
-        const speed = dive.distance! / (dive.to - dive.from + 1);
-        if (b.attackTick + 1 >= dive.from && Math.abs(b.x - p.x) < 20 * speed && b.attackTick + 1 < dive.to) {
+        // The landing is fixed at take-off and can be short of `distance` (the wall stops the swoop), so wait for it and read the real speed.
+        if (b.leapFromX === null || b.leapToX === null) return NO_INPUT;
+        const speed = Math.abs(b.leapToX - b.leapFromX) / (dive.to - dive.from + 1);
+        if (b.attackTick + 1 >= dive.from && Math.abs(b.x - p.x) - 114 < 11 * speed && b.attackTick + 1 < dive.to) {
           return withInput({ jumpPressed: p.onGround, jumpHeld: true });
         }
         return NO_INPUT;

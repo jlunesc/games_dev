@@ -846,10 +846,9 @@ describe('bossFigure: the Storm Kite', () => {
     const early = withBoss(base(STORM_KITE), { mode: 'attack', facing: 1, x: 700, lift: HIGH, attackTick: 0 });
     const shapes = new Set(
       STORM_KITE.attacks
-        .filter((a) => a.id !== 'snap-plunge')
         .map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), STORM_KITE, BOSS_COLORS))),
     );
-    expect(shapes.size).toBe(STORM_KITE.attacks.length - 1);
+    expect(shapes.size).toBe(STORM_KITE.attacks.length);
   });
 
   it('folds its wings and tucks its head as it dives', () => {

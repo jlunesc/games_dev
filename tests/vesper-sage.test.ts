@@ -43,10 +43,10 @@ function standAt(boss: BossDef, x: number): GameState {
 }
 
 describe('the Vesper Sage file', () => {
-  it('is loaded and found by id, with four attacks, no arena and two phases', () => {
+  it('is loaded and found by id, with five attacks, no arena and two phases', () => {
     expect(VESPER_SAGE.id).toBe('vesper-sage');
     expect(bossById('vesper-sage')).toBe(VESPER_SAGE);
-    expect(VESPER_SAGE.attacks.map((a) => a.id)).toEqual(['single-bolt', 'triple-volley', 'lob', 'point-blank-burst']);
+    expect(VESPER_SAGE.attacks.map((a) => a.id)).toEqual(['single-bolt', 'triple-volley', 'lob', 'point-blank-burst', 'lob-and-low']);
     expect(VESPER_SAGE.arena).toBeUndefined();
     expect(VESPER_SAGE.phases).toHaveLength(2);
   });

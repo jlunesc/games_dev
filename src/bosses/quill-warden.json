@@ -5,10 +5,18 @@
   "height": 150,
   "startX": 960,
   "maxHp": 24,
-  "spacing": { "min": 350, "max": 550 },
+  "spacing": {
+    "min": 350,
+    "max": 550
+  },
   "approachTimeout": 40,
   "predictability": 0.2,
-  "counter": { "window": 12, "range": 200, "staggerTicks": 90, "damageMultiplier": 2 },
+  "counter": {
+    "window": 12,
+    "range": 200,
+    "staggerTicks": 90,
+    "damageMultiplier": 2
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -19,8 +27,20 @@
       "windup": 28,
       "active": 6,
       "recovery": 26,
-      "range": { "min": 280, "max": 400 },
-      "hits": [{ "from": 28, "to": 34, "x0": 0, "x1": 400, "bottom": 0, "top": 170 }]
+      "range": {
+        "min": 280,
+        "max": 400
+      },
+      "hits": [
+        {
+          "from": 28,
+          "to": 34,
+          "x0": 0,
+          "x1": 400,
+          "bottom": 0,
+          "top": 170
+        }
+      ]
     },
     {
       "id": "low-piercer",
@@ -30,8 +50,20 @@
       "windup": 26,
       "active": 6,
       "recovery": 24,
-      "range": { "min": 260, "max": 390 },
-      "hits": [{ "from": 26, "to": 32, "x0": 0, "x1": 390, "bottom": 0, "top": 60 }]
+      "range": {
+        "min": 260,
+        "max": 390
+      },
+      "hits": [
+        {
+          "from": 26,
+          "to": 32,
+          "x0": 0,
+          "x1": 390,
+          "bottom": 0,
+          "top": 60
+        }
+      ]
     },
     {
       "id": "overextended-thrust",
@@ -41,33 +73,65 @@
       "windup": 34,
       "active": 8,
       "recovery": 30,
-      "range": { "min": 300, "max": 450 },
-      "hits": [{ "from": 34, "to": 42, "x0": 0, "x1": 450, "bottom": 0, "top": 140 }]
+      "range": {
+        "min": 300,
+        "max": 450
+      },
+      "hits": [
+        {
+          "from": 34,
+          "to": 42,
+          "x0": 0,
+          "x1": 450,
+          "bottom": 0,
+          "top": 140
+        }
+      ]
     },
     {
-      "id": "feather-volley",
-      "name": "Feather Volley",
-      "pose": "raised",
-      "class": "mustDodge",
-      "windup": 30,
-      "active": 14,
-      "recovery": 30,
-      "range": { "min": 330, "max": 700 },
-      "hits": [],
-      "shots": [{ "kind": "bolt", "at": 30, "height": 15, "size": 30, "speed": 650 }, { "kind": "bolt", "at": 36, "height": 15, "size": 30, "speed": 650 }, { "kind": "bolt", "at": 42, "height": 15, "size": 30, "speed": 650 }]
-    },
-    {
-      "id": "sky-lance",
-      "name": "Sky Lance",
+      "id": "backwards-vault",
+      "name": "Backwards Vault",
       "pose": "crouch",
       "class": "mustDodge",
-      "windup": 34,
-      "active": 46,
-      "recovery": 34,
-      "range": { "min": 250, "max": 600 },
-      "leap": { "from": 34, "to": 64, "height": 190, "target": "player", "hang": 12 },
-      "hits": [{ "from": 64, "to": 72, "x0": 0, "x1": 170, "bottom": 0, "top": 120 }],
-      "shots": [{ "kind": "bolt", "at": 50, "height": 0, "size": 34, "speed": 800, "aim": true }]
+      "windup": 20,
+      "active": 26,
+      "recovery": 16,
+      "range": {
+        "min": 40,
+        "max": 260
+      },
+      "leap": {
+        "from": 20,
+        "to": 46,
+        "height": 120,
+        "target": "back",
+        "distance": 300,
+        "hang": 6
+      },
+      "hits": []
+    },
+    {
+      "id": "rising-swipe",
+      "name": "Rising Swipe",
+      "pose": "raised",
+      "class": "mustDodge",
+      "windup": 24,
+      "active": 8,
+      "recovery": 26,
+      "range": {
+        "min": 150,
+        "max": 320
+      },
+      "hits": [
+        {
+          "from": 24,
+          "to": 32,
+          "x0": 0,
+          "x1": 320,
+          "bottom": 110,
+          "top": 330
+        }
+      ]
     }
   ],
   "phases": [
@@ -75,11 +139,26 @@
       "name": "Only phase",
       "startsAtHpFraction": 1,
       "attacks": [
-        { "id": "reaching-poke", "weight": 3 },
-        { "id": "low-piercer", "weight": 3 },
-        { "id": "overextended-thrust", "weight": 2 },
-        { "id": "feather-volley", "weight": 2 },
-        { "id": "sky-lance", "weight": 2 }
+        {
+          "id": "reaching-poke",
+          "weight": 3
+        },
+        {
+          "id": "low-piercer",
+          "weight": 3
+        },
+        {
+          "id": "overextended-thrust",
+          "weight": 2
+        },
+        {
+          "id": "rising-swipe",
+          "weight": 2
+        },
+        {
+          "id": "backwards-vault",
+          "weight": 2
+        }
       ],
       "gap": 55,
       "maxChain": 1,

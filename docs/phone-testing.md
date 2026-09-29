@@ -561,6 +561,21 @@ Every menu and summary screen now has the arena behind it: the sky, the far shap
 - Is the panel too dark or too see-through? Is the arena too busy behind the text?
 - Would you like the figures to move a little while idle?
 
+## Boss identity, Round 1
+Nine bosses changed which attacks they use (all but the Ember Duelist); details in `docs/bosses.md` section 3a-sexies. Play each one for a few fights before judging. Older exports still hold the removed attacks, so compare only attacks that still exist.
+
+### Checklist
+- [ ] **Ashen Hound:** the new feint looks like the start of a bite but never hurts. Do you catch yourself dodging it? Is it too easy to tell apart?
+- [ ] **Gale Reaver:** it now chains up to three attacks with no gap and has no dive or gust. Does it feel relentless but fair?
+- [ ] **Brass Sentinel:** it advances slowly, never backs off and has no bolt, dive or dash. Does the late gold strike make you wait too long to counter? Is the red follow-up readable?
+- [ ] **Cinder Golem:** it has no charge any more. Does it feel slow and heavy, not boring?
+- [ ] **Quill Warden:** no more bolts or lance. Is the backwards vault a surprise you can read? Does the rising swipe punish a jump you can see coming, and is standing still safe?
+- [ ] **Storm Kite:** in the second half, does the long pass across the arena read before it arrives, and can you jump it?
+- [ ] **Tremor Brute:** the floor wave must be jumped. Is it clear from the picture? Is the uppercut fair (safe if you stay on the ground)? The wave has no special look yet.
+- [ ] **Veil Dancer:** the twin cut has two swings, the second on both sides. Does it feel different from the other bosses' swings?
+- [ ] **Vesper Sage:** the lob followed by a low bolt: can you land and then jump again in time?
+- [ ] Which two bosses still feel the most alike?
+
 ## Redo after a fight
 - [ ] After a win or a loss, the summary shows three choices under the result: Redo, Fight again and Back to the menu. Tapping works, and so does the controller (up and down, bottom button to pick, the other button goes back to the menu).
 - [ ] The Redo row says which dial it will change and by how much, and whether it is a bit harder (after a win) or a bit easier (after a loss).

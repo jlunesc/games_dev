@@ -5,11 +5,22 @@
   "height": 70,
   "startX": 900,
   "maxHp": 22,
-  "spacing": { "min": 220, "max": 480 },
+  "spacing": {
+    "min": 220,
+    "max": 480
+  },
   "approachTimeout": 45,
   "predictability": 0.25,
-  "flight": { "height": 320, "rise": 260 },
-  "counter": { "window": 12, "range": 200, "staggerTicks": 60, "damageMultiplier": 2 },
+  "flight": {
+    "height": 320,
+    "rise": 260
+  },
+  "counter": {
+    "window": 12,
+    "range": 200,
+    "staggerTicks": 60,
+    "damageMultiplier": 2
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -20,9 +31,27 @@
       "windup": 30,
       "active": 32,
       "recovery": 44,
-      "range": { "min": 0, "max": 500 },
-      "dive": { "from": 30, "to": 56, "shape": "plunge", "target": "player" },
-      "hits": [{ "from": 56, "to": 62, "x0": 0, "x1": 120, "bottom": 0, "top": 110, "both": true }]
+      "range": {
+        "min": 0,
+        "max": 500
+      },
+      "dive": {
+        "from": 30,
+        "to": 56,
+        "shape": "plunge",
+        "target": "player"
+      },
+      "hits": [
+        {
+          "from": 56,
+          "to": 62,
+          "x0": 0,
+          "x1": 120,
+          "bottom": 0,
+          "top": 110,
+          "both": true
+        }
+      ]
     },
     {
       "id": "swoop",
@@ -32,9 +61,28 @@
       "windup": 32,
       "active": 46,
       "recovery": 30,
-      "range": { "min": 260, "max": 480 },
-      "dive": { "from": 32, "to": 78, "shape": "swoop", "target": "forward", "distance": 800, "low": 18 },
-      "hits": [{ "from": 46, "to": 64, "x0": -30, "x1": 90, "bottom": 0, "top": 100 }]
+      "range": {
+        "min": 260,
+        "max": 480
+      },
+      "dive": {
+        "from": 32,
+        "to": 78,
+        "shape": "swoop",
+        "target": "forward",
+        "distance": 800,
+        "low": 18
+      },
+      "hits": [
+        {
+          "from": 46,
+          "to": 64,
+          "x0": -30,
+          "x1": 90,
+          "bottom": 0,
+          "top": 100
+        }
+      ]
     },
     {
       "id": "bolt-volley",
@@ -44,25 +92,68 @@
       "windup": 26,
       "active": 30,
       "recovery": 36,
-      "range": { "min": 0, "max": 900 },
+      "range": {
+        "min": 0,
+        "max": 900
+      },
       "hits": [],
       "shots": [
-        { "kind": "bolt", "at": 26, "height": 0, "size": 26, "speed": 520, "aim": true },
-        { "kind": "bolt", "at": 38, "height": 0, "size": 26, "speed": 520, "aim": true },
-        { "kind": "bolt", "at": 50, "height": 0, "size": 26, "speed": 520, "aim": true }
+        {
+          "kind": "bolt",
+          "at": 26,
+          "height": 0,
+          "size": 26,
+          "speed": 520,
+          "aim": true
+        },
+        {
+          "kind": "bolt",
+          "at": 38,
+          "height": 0,
+          "size": 26,
+          "speed": 520,
+          "aim": true
+        },
+        {
+          "kind": "bolt",
+          "at": 50,
+          "height": 0,
+          "size": 26,
+          "speed": 520,
+          "aim": true
+        }
       ]
     },
     {
-      "id": "snap-plunge",
-      "name": "Snap Plunge",
-      "pose": "raised",
+      "id": "long-strafe",
+      "name": "Long Strafe",
+      "pose": "sideways",
       "class": "mustDodge",
-      "windup": 24,
-      "active": 22,
-      "recovery": 34,
-      "range": { "min": 0, "max": 400 },
-      "dive": { "from": 24, "to": 40, "shape": "plunge", "target": "player" },
-      "hits": [{ "from": 40, "to": 46, "x0": 0, "x1": 120, "bottom": 0, "top": 110, "both": true }]
+      "windup": 30,
+      "active": 70,
+      "recovery": 36,
+      "range": {
+        "min": 200,
+        "max": 700
+      },
+      "dive": {
+        "from": 30,
+        "to": 100,
+        "shape": "swoop",
+        "target": "forward",
+        "distance": 1400,
+        "low": 24
+      },
+      "hits": [
+        {
+          "from": 53,
+          "to": 77,
+          "x0": -30,
+          "x1": 90,
+          "bottom": 0,
+          "top": 100
+        }
+      ]
     }
   ],
   "phases": [
@@ -70,9 +161,18 @@
       "name": "Circling",
       "startsAtHpFraction": 1,
       "attacks": [
-        { "id": "plunge", "weight": 3 },
-        { "id": "swoop", "weight": 3 },
-        { "id": "bolt-volley", "weight": 2 }
+        {
+          "id": "plunge",
+          "weight": 3
+        },
+        {
+          "id": "swoop",
+          "weight": 3
+        },
+        {
+          "id": "bolt-volley",
+          "weight": 2
+        }
       ],
       "gap": 60,
       "maxChain": 1,
@@ -85,10 +185,22 @@
       "startsAtHpFraction": 0.5,
       "opening": "swoop",
       "attacks": [
-        { "id": "plunge", "weight": 2 },
-        { "id": "swoop", "weight": 3 },
-        { "id": "bolt-volley", "weight": 2 },
-        { "id": "snap-plunge", "weight": 3 }
+        {
+          "id": "plunge",
+          "weight": 2
+        },
+        {
+          "id": "swoop",
+          "weight": 3
+        },
+        {
+          "id": "bolt-volley",
+          "weight": 2
+        },
+        {
+          "id": "long-strafe",
+          "weight": 3
+        }
       ],
       "gap": 36,
       "maxChain": 2,

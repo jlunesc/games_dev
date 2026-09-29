@@ -43,10 +43,10 @@ function standAt(boss: BossDef, x: number): GameState {
 }
 
 describe('the Tremor Brute file', () => {
-  it('is loaded and found by id, with four attacks, no arena and two phases', () => {
+  it('is loaded and found by id, with six attacks, no arena and two phases', () => {
     expect(TREMOR_BRUTE.id).toBe('tremor-brute');
     expect(bossById('tremor-brute')).toBe(TREMOR_BRUTE);
-    expect(TREMOR_BRUTE.attacks.map((a) => a.id)).toEqual(['hammer-fist', 'backhand', 'fissure', 'twin-quake']);
+    expect(TREMOR_BRUTE.attacks.map((a) => a.id)).toEqual(['hammer-fist', 'backhand', 'fissure', 'twin-quake', 'floor-wave', 'uppercut']);
     expect(TREMOR_BRUTE.arena).toBeUndefined();
     expect(TREMOR_BRUTE.phases).toHaveLength(2);
   });
@@ -141,6 +141,34 @@ describe('each eruption attack has an answer', () => {
   });
 });
 
+describe('the floor wave and the uppercut', () => {
+  const standing = Array.from({ length: 200 }, () => NO_INPUT);
+
+  it('the wave hurts a player who stands in its way and is cleared by a well-timed jump', () => {
+    const boss = solo('floor-wave');
+    const start = () => standAt(boss, 400);
+    expect(analyzeRun(boss, start(), standing).attacks[0]!.outcome).toBe('hit');
+    let cleared = false;
+    for (let t = 20; t <= 180 && !cleared; t++) {
+      const frames = Array.from({ length: 260 }, (_, i) => withInput({ jumpPressed: i + 1 === t, jumpHeld: i + 1 >= t && i + 1 < t + 30 }));
+      cleared = analyzeRun(boss, start(), frames).attacks[0]!.outcome === 'dodged';
+    }
+    expect(cleared).toBe(true);
+  });
+
+  it('the uppercut misses a player who stands still close to it and hits one who jumps', () => {
+    const boss = solo('uppercut');
+    const start = () => standAt(boss, standAt(boss, 640).boss.x - 80);
+    expect(analyzeRun(boss, start(), standing).attacks[0]!.outcome).not.toBe('hit');
+    let hit = false;
+    for (let t = 1; t <= 40 && !hit; t++) {
+      const frames = Array.from({ length: 200 }, (_, i) => withInput({ jumpPressed: i + 1 === t, jumpHeld: i + 1 >= t && i + 1 < t + 30 }));
+      hit = analyzeRun(boss, start(), frames).attacks[0]!.outcome === 'hit';
+    }
+    expect(hit).toBe(true);
+  });
+});
+
 describe('the Brute can be beaten', () => {
   const knower: Bot = (n, prev) => {
     const p = prev.player;
@@ -156,6 +184,10 @@ describe('the Brute can be beaten', () => {
         }
       }
     }
+    const wave = prev.shots.find((sh) => sh.kind === 'bolt' && Math.abs(sh.x - p.x) < 120);
+    const waveComing = b.mode === 'attack' && b.attackId === 'floor-wave' && b.attackTick + 1 === 26 && Math.abs(b.x - p.x) < 200;
+    if ((wave !== undefined || waveComing) && p.onGround) return withInput({ jumpPressed: true, jumpHeld: true });
+    if (!p.onGround) return withInput({ jumpHeld: true });
     const away = p.x > b.x ? 1 : -1;
     if (b.mode === 'attack' && b.attackId === 'hammer-fist' && b.attackTick + 1 === 22) return withInput({ dashPressed: true, moveX: away });
     if (b.mode === 'attack' && b.attackId === 'backhand' && b.attackTick + 1 === 16) return withInput({ attackPressed: true });

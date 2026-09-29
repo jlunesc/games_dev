@@ -5,10 +5,18 @@
   "height": 150,
   "startX": 960,
   "maxHp": 28,
-  "spacing": { "min": 160, "max": 260 },
+  "spacing": {
+    "min": 160,
+    "max": 260
+  },
   "approachTimeout": 45,
   "predictability": 0.2,
-  "counter": { "window": 14, "range": 220, "staggerTicks": 90, "damageMultiplier": 2 },
+  "counter": {
+    "window": 14,
+    "range": 220,
+    "staggerTicks": 90,
+    "damageMultiplier": 2
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -19,8 +27,20 @@
       "windup": 32,
       "active": 8,
       "recovery": 26,
-      "range": { "min": 110, "max": 180 },
-      "hits": [{ "from": 32, "to": 40, "x0": 0, "x1": 190, "bottom": 0, "top": 170 }]
+      "range": {
+        "min": 110,
+        "max": 180
+      },
+      "hits": [
+        {
+          "from": 32,
+          "to": 40,
+          "x0": 0,
+          "x1": 190,
+          "bottom": 0,
+          "top": 170
+        }
+      ]
     },
     {
       "id": "brass-slam",
@@ -30,8 +50,20 @@
       "windup": 30,
       "active": 8,
       "recovery": 24,
-      "range": { "min": 110, "max": 190 },
-      "hits": [{ "from": 30, "to": 38, "x0": 0, "x1": 190, "bottom": 0, "top": 150 }]
+      "range": {
+        "min": 110,
+        "max": 190
+      },
+      "hits": [
+        {
+          "from": 30,
+          "to": 38,
+          "x0": 0,
+          "x1": 190,
+          "bottom": 0,
+          "top": 150
+        }
+      ]
     },
     {
       "id": "wide-sweep",
@@ -41,32 +73,20 @@
       "windup": 24,
       "active": 8,
       "recovery": 22,
-      "range": { "min": 120, "max": 220 },
-      "hits": [{ "from": 24, "to": 32, "x0": 0, "x1": 240, "bottom": 0, "top": 100 }]
-    },
-    {
-      "id": "charging-bash",
-      "name": "Charging Bash",
-      "pose": "back",
-      "class": "mustDodge",
-      "windup": 28,
-      "active": 10,
-      "recovery": 26,
-      "range": { "min": 200, "max": 320 },
-      "move": { "from": 28, "to": 38, "speed": 1400 },
-      "hits": [{ "from": 28, "to": 38, "x0": 0, "x1": 100, "bottom": 0, "top": 130 }]
-    },
-    {
-      "id": "brass-cannon",
-      "name": "Brass Cannon",
-      "pose": "raised",
-      "class": "mustDodge",
-      "windup": 40,
-      "active": 8,
-      "recovery": 36,
-      "range": { "min": 240, "max": 700 },
-      "hits": [],
-      "shots": [{ "kind": "bolt", "at": 40, "height": 10, "size": 50, "speed": 450 }]
+      "range": {
+        "min": 120,
+        "max": 220
+      },
+      "hits": [
+        {
+          "from": 24,
+          "to": 32,
+          "x0": 0,
+          "x1": 240,
+          "bottom": 0,
+          "top": 100
+        }
+      ]
     },
     {
       "id": "spin-cycle",
@@ -76,20 +96,67 @@
       "windup": 30,
       "active": 8,
       "recovery": 28,
-      "range": { "min": 40, "max": 190 },
-      "hits": [{ "from": 30, "to": 38, "x0": 0, "x1": 210, "bottom": 0, "top": 110, "both": true }]
+      "range": {
+        "min": 40,
+        "max": 190
+      },
+      "hits": [
+        {
+          "from": 30,
+          "to": 38,
+          "x0": 0,
+          "x1": 210,
+          "bottom": 0,
+          "top": 110,
+          "both": true
+        }
+      ]
     },
     {
-      "id": "piston-drop",
-      "name": "Piston Drop",
-      "pose": "crouch",
+      "id": "late-herald",
+      "name": "Late Herald",
+      "pose": "raised",
+      "class": "counterable",
+      "windup": 48,
+      "active": 8,
+      "recovery": 30,
+      "range": {
+        "min": 120,
+        "max": 200
+      },
+      "hits": [
+        {
+          "from": 48,
+          "to": 56,
+          "x0": 0,
+          "x1": 200,
+          "bottom": 0,
+          "top": 170
+        }
+      ]
+    },
+    {
+      "id": "brass-snap",
+      "name": "Brass Snap",
+      "pose": "down",
       "class": "mustDodge",
-      "windup": 36,
-      "active": 38,
-      "recovery": 32,
-      "range": { "min": 150, "max": 450 },
-      "leap": { "from": 36, "to": 66, "height": 170, "target": "player", "hang": 10 },
-      "hits": [{ "from": 66, "to": 74, "x0": 0, "x1": 180, "bottom": 0, "top": 100 }]
+      "windup": 26,
+      "active": 6,
+      "recovery": 30,
+      "range": {
+        "min": 100,
+        "max": 180
+      },
+      "hits": [
+        {
+          "from": 26,
+          "to": 32,
+          "x0": 0,
+          "x1": 180,
+          "bottom": 0,
+          "top": 140
+        }
+      ]
     }
   ],
   "phases": [
@@ -97,19 +164,36 @@
       "name": "Only phase",
       "startsAtHpFraction": 1,
       "attacks": [
-        { "id": "herald-strike", "weight": 3 },
-        { "id": "brass-slam", "weight": 3 },
-        { "id": "wide-sweep", "weight": 2 },
-        { "id": "charging-bash", "weight": 2 },
-        { "id": "brass-cannon", "weight": 2 },
-        { "id": "spin-cycle", "weight": 2 },
-        { "id": "piston-drop", "weight": 2 }
+        {
+          "id": "herald-strike",
+          "weight": 3
+        },
+        {
+          "id": "late-herald",
+          "weight": 2
+        },
+        {
+          "id": "brass-slam",
+          "weight": 3
+        },
+        {
+          "id": "wide-sweep",
+          "weight": 2
+        },
+        {
+          "id": "spin-cycle",
+          "weight": 2
+        },
+        {
+          "id": "brass-snap",
+          "weight": 2
+        }
       ],
       "gap": 50,
       "maxChain": 1,
       "chainChance": 0,
       "walkSpeed": 240,
-      "retreatSpeed": 200
+      "retreatSpeed": 80
     }
   ]
 }

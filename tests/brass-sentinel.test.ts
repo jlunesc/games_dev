@@ -5,7 +5,7 @@ import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 
 describe('the Brass Sentinel file', () => {
-  it('is loaded, has seven attacks and no arena', () => {
+  it('is loaded, has six attacks and no arena', () => {
     expect(BRASS_SENTINEL).toBeDefined();
     expect(BRASS_SENTINEL.id).toBe('brass-sentinel');
     expect(BRASS_SENTINEL.name).toBe('Brass Sentinel');
@@ -13,10 +13,9 @@ describe('the Brass Sentinel file', () => {
       'herald-strike',
       'brass-slam',
       'wide-sweep',
-      'charging-bash',
-      'brass-cannon',
       'spin-cycle',
-      'piston-drop',
+      'late-herald',
+      'brass-snap',
     ]);
     expect(BRASS_SENTINEL.arena).toBeUndefined();
     expect(BRASS_SENTINEL.phases).toHaveLength(1);

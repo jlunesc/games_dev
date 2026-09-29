@@ -5,10 +5,18 @@
   "height": 130,
   "startX": 1000,
   "maxHp": 26,
-  "spacing": { "min": 90, "max": 200 },
+  "spacing": {
+    "min": 90,
+    "max": 200
+  },
   "approachTimeout": 40,
   "predictability": 0.25,
-  "counter": { "window": 12, "range": 200, "staggerTicks": 60, "damageMultiplier": 2 },
+  "counter": {
+    "window": 12,
+    "range": 200,
+    "staggerTicks": 60,
+    "damageMultiplier": 2
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -19,8 +27,20 @@
       "windup": 26,
       "active": 6,
       "recovery": 40,
-      "range": { "min": 0, "max": 190 },
-      "hits": [{ "from": 26, "to": 32, "x0": 0, "x1": 160, "bottom": 0, "top": 140 }]
+      "range": {
+        "min": 0,
+        "max": 190
+      },
+      "hits": [
+        {
+          "from": 26,
+          "to": 32,
+          "x0": 0,
+          "x1": 160,
+          "bottom": 0,
+          "top": 140
+        }
+      ]
     },
     {
       "id": "backhand",
@@ -30,8 +50,20 @@
       "windup": 22,
       "active": 6,
       "recovery": 26,
-      "range": { "min": 0, "max": 170 },
-      "hits": [{ "from": 22, "to": 28, "x0": 0, "x1": 150, "bottom": 0, "top": 100 }]
+      "range": {
+        "min": 0,
+        "max": 170
+      },
+      "hits": [
+        {
+          "from": 22,
+          "to": 28,
+          "x0": 0,
+          "x1": 150,
+          "bottom": 0,
+          "top": 100
+        }
+      ]
     },
     {
       "id": "fissure",
@@ -41,12 +73,36 @@
       "windup": 30,
       "active": 6,
       "recovery": 44,
-      "range": { "min": 0, "max": 700 },
+      "range": {
+        "min": 0,
+        "max": 700
+      },
       "hits": [],
       "shots": [
-        { "kind": "eruption", "at": 30, "offset": 0, "width": 140, "delay": 36, "burst": 8 },
-        { "kind": "eruption", "at": 30, "offset": -260, "width": 140, "delay": 36, "burst": 8 },
-        { "kind": "eruption", "at": 30, "offset": 260, "width": 140, "delay": 36, "burst": 8 }
+        {
+          "kind": "eruption",
+          "at": 30,
+          "offset": 0,
+          "width": 140,
+          "delay": 36,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 30,
+          "offset": -260,
+          "width": 140,
+          "delay": 36,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 30,
+          "offset": 260,
+          "width": 140,
+          "delay": 36,
+          "burst": 8
+        }
       ]
     },
     {
@@ -57,11 +113,74 @@
       "windup": 26,
       "active": 30,
       "recovery": 40,
-      "range": { "min": 0, "max": 700 },
+      "range": {
+        "min": 0,
+        "max": 700
+      },
       "hits": [],
       "shots": [
-        { "kind": "eruption", "at": 26, "offset": 0, "width": 140, "delay": 30, "burst": 8 },
-        { "kind": "eruption", "at": 51, "offset": 0, "width": 140, "delay": 26, "burst": 8 }
+        {
+          "kind": "eruption",
+          "at": 26,
+          "offset": 0,
+          "width": 140,
+          "delay": 30,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 51,
+          "offset": 0,
+          "width": 140,
+          "delay": 26,
+          "burst": 8
+        }
+      ]
+    },
+    {
+      "id": "floor-wave",
+      "name": "Floor Wave",
+      "pose": "down",
+      "class": "mustDodge",
+      "windup": 34,
+      "active": 8,
+      "recovery": 40,
+      "range": {
+        "min": 150,
+        "max": 700
+      },
+      "hits": [],
+      "shots": [
+        {
+          "kind": "bolt",
+          "at": 34,
+          "height": 0,
+          "size": 80,
+          "speed": 300
+        }
+      ]
+    },
+    {
+      "id": "uppercut",
+      "name": "Uppercut",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 24,
+      "active": 6,
+      "recovery": 34,
+      "range": {
+        "min": 0,
+        "max": 180
+      },
+      "hits": [
+        {
+          "from": 24,
+          "to": 30,
+          "x0": 0,
+          "x1": 150,
+          "bottom": 100,
+          "top": 320
+        }
       ]
     }
   ],
@@ -70,10 +189,30 @@
       "name": "Rumble",
       "startsAtHpFraction": 1,
       "attacks": [
-        { "id": "hammer-fist", "weight": 3 },
-        { "id": "backhand", "weight": 2 },
-        { "id": "fissure", "weight": 2 },
-        { "id": "twin-quake", "weight": 2 }
+        {
+          "id": "hammer-fist",
+          "weight": 3
+        },
+        {
+          "id": "backhand",
+          "weight": 2
+        },
+        {
+          "id": "fissure",
+          "weight": 2
+        },
+        {
+          "id": "twin-quake",
+          "weight": 2
+        },
+        {
+          "id": "floor-wave",
+          "weight": 2
+        },
+        {
+          "id": "uppercut",
+          "weight": 1
+        }
       ],
       "gap": 50,
       "maxChain": 1,
@@ -86,10 +225,30 @@
       "startsAtHpFraction": 0.5,
       "opening": "fissure",
       "attacks": [
-        { "id": "hammer-fist", "weight": 3 },
-        { "id": "backhand", "weight": 2 },
-        { "id": "fissure", "weight": 3 },
-        { "id": "twin-quake", "weight": 3 }
+        {
+          "id": "hammer-fist",
+          "weight": 3
+        },
+        {
+          "id": "backhand",
+          "weight": 2
+        },
+        {
+          "id": "fissure",
+          "weight": 3
+        },
+        {
+          "id": "twin-quake",
+          "weight": 3
+        },
+        {
+          "id": "floor-wave",
+          "weight": 2
+        },
+        {
+          "id": "uppercut",
+          "weight": 2
+        }
       ],
       "gap": 32,
       "maxChain": 2,

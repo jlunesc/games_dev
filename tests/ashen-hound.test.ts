@@ -51,7 +51,7 @@ describe('the Ashen Hound file', () => {
   it('is loaded and found by id', () => {
     expect(ASHEN_HOUND).toBeDefined();
     expect(ASHEN_HOUND.id).toBe('ashen-hound');
-    expect(ASHEN_HOUND.attacks.map((a) => a.id)).toEqual(['bite', 'rush', 'slip', 'pounce']);
+    expect(ASHEN_HOUND.attacks.map((a) => a.id)).toEqual(['bite', 'rush', 'slip', 'pounce', 'feint']);
     expect(ASHEN_HOUND.phases).toHaveLength(1);
     expect(bossById('ashen-hound')).toBe(ASHEN_HOUND);
   });
@@ -83,6 +83,19 @@ describe('the Hound\'s two special attacks', () => {
     expect(updatesWith(states, 'playerHit')).toEqual([]);
     // It really moved: the boss crossed the player's spot at some point.
     expect(states.some((s) => s.boss.x < s.player.x)).toBe(true);
+  });
+
+  it('a feint looks exactly like a bite (pose and wind-up) but never hurts a standing player', () => {
+    const bite = ASHEN_HOUND.attacks.find((a) => a.id === 'bite')!;
+    const feint = ASHEN_HOUND.attacks.find((a) => a.id === 'feint')!;
+    expect(feint.pose).toBe(bite.pose);
+    expect(feint.windup).toBe(bite.windup);
+    expect(feint.class).toBe(bite.class);
+    expect(feint.hits).toEqual([]);
+    const boss = solo('feint');
+    const states = run(standAt(boss, 100), 400, () => NO_INPUT, boss);
+    expect(windupUpdates(states).length).toBeGreaterThan(3);
+    expect(updatesWith(states, 'playerHit')).toEqual([]);
   });
 
   it('a pounce at a standing player hits him at the landing spot, and not before', () => {
@@ -225,7 +238,7 @@ function drive(boss: BossDef, updates: number): InputFrame[] {
 describe('the analysis of a scripted Hound fight', () => {
   it('sees pounces and slips, with the danger of a pounce at the landing', () => {
     const boss = applyDials(ASHEN_HOUND, NORMAL_DIALS);
-    const frames = drive(boss, 3000);
+    const frames = drive(boss, 6000);
     let initial = createInitialState(boss, 5);
     initial = { ...initial, player: { ...initial.player, health: 1_000_000 } };
     const analysis = analyzeRun(boss, initial, frames);
@@ -406,23 +419,28 @@ describe('a player who camps on top of the wall cannot make the Hound unbeatable
  * pounce. The Hound's slip never hurts, so it gets no answer. (The rush answer is a dash at attack time 28 and not
  * a jump: the rush is on top of the player long before a jump at 30 would be high enough.)
  */
-const ANSWERS: Record<string, { kind: 'dash' | 'jump'; at: number }> = {
+type Answer = { kind: 'dash' | 'jump'; at: number; closeAt?: number };
+
+/** `closeAt` is the earlier time to answer when the Hound starts the attack right next to the player (a rush from a cornered Hound). */
+const ANSWERS: Record<string, Answer> = {
   bite: { kind: 'dash', at: 20 },
-  rush: { kind: 'dash', at: 28 },
+  rush: { kind: 'dash', at: 28, closeAt: 24 },
   pounce: { kind: 'jump', at: 40 },
 };
 
 /** The input for the next update: the answer to the running attack, when its attack time comes. */
 const knower =
-  (answers: Record<string, { kind: 'dash' | 'jump'; at: number }>): Bot =>
+  (answers: Record<string, Answer>): Bot =>
   (_n, prev) => {
     const b = prev.boss;
     if (b.mode !== 'attack' || b.attackId === null) return NO_INPUT;
     const answer = answers[b.attackId];
     if (answer === undefined) return NO_INPUT;
     const t = b.attackTick + 1; // the attack time the coming update will have
-    if (answer.kind === 'dash') return withInput({ dashPressed: t === answer.at });
-    return withInput({ jumpPressed: t === answer.at, jumpHeld: t >= answer.at && t < answer.at + 20 });
+    const close = answer.closeAt !== undefined && Math.abs(b.x - prev.player.x) < 200 && t <= answer.closeAt;
+    const at = close ? answer.closeAt! : answer.at;
+    if (answer.kind === 'dash') return withInput({ dashPressed: t === at });
+    return withInput({ jumpPressed: t === at, jumpHeld: t >= at && t < at + 20 });
   };
 
 describe('a player who knows the Hound can take no damage from it', () => {

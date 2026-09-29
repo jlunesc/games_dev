@@ -5,10 +5,18 @@
   "height": 145,
   "startX": 960,
   "maxHp": 24,
-  "spacing": { "min": 140, "max": 280 },
+  "spacing": {
+    "min": 140,
+    "max": 280
+  },
   "approachTimeout": 45,
   "predictability": 0.2,
-  "counter": { "window": 12, "range": 200, "staggerTicks": 90, "damageMultiplier": 2 },
+  "counter": {
+    "window": 12,
+    "range": 200,
+    "staggerTicks": 90,
+    "damageMultiplier": 2
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -19,32 +27,20 @@
       "windup": 24,
       "active": 8,
       "recovery": 26,
-      "range": { "min": 150, "max": 280 },
-      "hits": [{ "from": 24, "to": 32, "x0": 0, "x1": 220, "bottom": 0, "top": 130 }]
-    },
-    {
-      "id": "rending-dash",
-      "name": "Rending Dash",
-      "pose": "back",
-      "class": "mustDodge",
-      "windup": 26,
-      "active": 10,
-      "recovery": 30,
-      "range": { "min": 220, "max": 380 },
-      "move": { "from": 26, "to": 36, "speed": 1500 },
-      "hits": [{ "from": 26, "to": 36, "x0": 0, "x1": 110, "bottom": 0, "top": 110 }]
-    },
-    {
-      "id": "phantom-step",
-      "name": "Phantom Step",
-      "pose": "back",
-      "class": "mustDodge",
-      "windup": 18,
-      "active": 10,
-      "recovery": 16,
-      "range": { "min": 40, "max": 220 },
-      "move": { "from": 18, "to": 28, "speed": 1300 },
-      "hits": []
+      "range": {
+        "min": 150,
+        "max": 280
+      },
+      "hits": [
+        {
+          "from": 24,
+          "to": 32,
+          "x0": 0,
+          "x1": 220,
+          "bottom": 0,
+          "top": 130
+        }
+      ]
     },
     {
       "id": "veil-slip",
@@ -54,8 +50,16 @@
       "windup": 20,
       "active": 8,
       "recovery": 14,
-      "range": { "min": 60, "max": 300 },
-      "move": { "from": 20, "to": 28, "speed": 1200, "dir": "back" },
+      "range": {
+        "min": 60,
+        "max": 300
+      },
+      "move": {
+        "from": 20,
+        "to": 28,
+        "speed": 1200,
+        "dir": "back"
+      },
       "hits": []
     },
     {
@@ -66,21 +70,69 @@
       "windup": 26,
       "active": 16,
       "recovery": 28,
-      "range": { "min": 200, "max": 600 },
+      "range": {
+        "min": 200,
+        "max": 600
+      },
       "hits": [],
-      "shots": [{ "kind": "bolt", "at": 26, "height": 30, "size": 26, "speed": 900, "aim": true }, { "kind": "bolt", "at": 32, "height": 30, "size": 26, "speed": 900, "aim": true }, { "kind": "bolt", "at": 38, "height": 30, "size": 26, "speed": 900, "aim": true }]
+      "shots": [
+        {
+          "kind": "bolt",
+          "at": 26,
+          "height": 30,
+          "size": 26,
+          "speed": 900,
+          "aim": true
+        },
+        {
+          "kind": "bolt",
+          "at": 32,
+          "height": 30,
+          "size": 26,
+          "speed": 900,
+          "aim": true
+        },
+        {
+          "kind": "bolt",
+          "at": 38,
+          "height": 30,
+          "size": 26,
+          "speed": 900,
+          "aim": true
+        }
+      ]
     },
     {
-      "id": "falling-veil",
-      "name": "Falling Veil",
-      "pose": "crouch",
+      "id": "twin-cut",
+      "name": "Twin Cut",
+      "pose": "back",
       "class": "mustDodge",
-      "windup": 30,
-      "active": 44,
+      "windup": 24,
+      "active": 16,
       "recovery": 30,
-      "range": { "min": 100, "max": 420 },
-      "leap": { "from": 30, "to": 62, "height": 200, "target": "player", "hang": 14 },
-      "hits": [{ "from": 62, "to": 70, "x0": 0, "x1": 210, "bottom": 0, "top": 130, "both": true }]
+      "range": {
+        "min": 60,
+        "max": 220
+      },
+      "hits": [
+        {
+          "from": 24,
+          "to": 30,
+          "x0": 0,
+          "x1": 200,
+          "bottom": 0,
+          "top": 120
+        },
+        {
+          "from": 34,
+          "to": 40,
+          "x0": 0,
+          "x1": 170,
+          "bottom": 0,
+          "top": 120,
+          "both": true
+        }
+      ]
     }
   ],
   "phases": [
@@ -88,12 +140,22 @@
       "name": "Only phase",
       "startsAtHpFraction": 1,
       "attacks": [
-        { "id": "piercing-veil", "weight": 2 },
-        { "id": "rending-dash", "weight": 2 },
-        { "id": "phantom-step", "weight": 2 },
-        { "id": "veil-slip", "weight": 2 },
-        { "id": "needle-fan", "weight": 2 },
-        { "id": "falling-veil", "weight": 2 }
+        {
+          "id": "piercing-veil",
+          "weight": 2
+        },
+        {
+          "id": "twin-cut",
+          "weight": 3
+        },
+        {
+          "id": "veil-slip",
+          "weight": 2
+        },
+        {
+          "id": "needle-fan",
+          "weight": 2
+        }
       ],
       "gap": 45,
       "maxChain": 1,

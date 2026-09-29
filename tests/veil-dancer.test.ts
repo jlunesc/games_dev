@@ -8,28 +8,21 @@ import { run } from './helpers';
 import { updatesWith, windupUpdates } from './boss-helpers';
 
 describe('the Veil Dancer file', () => {
-  it('is loaded, has six attacks and no arena', () => {
+  it('is loaded, has four attacks and no arena', () => {
     expect(VEIL_DANCER).toBeDefined();
     expect(VEIL_DANCER.id).toBe('veil-dancer');
     expect(VEIL_DANCER.name).toBe('Veil Dancer');
-    expect(VEIL_DANCER.attacks.map((a) => a.id)).toEqual([
-      'piercing-veil',
-      'rending-dash',
-      'phantom-step',
-      'veil-slip',
-      'needle-fan',
-      'falling-veil',
-    ]);
+    expect(VEIL_DANCER.attacks.map((a) => a.id)).toEqual(['piercing-veil', 'veil-slip', 'needle-fan', 'twin-cut']);
     expect(VEIL_DANCER.arena).toBeUndefined();
     expect(VEIL_DANCER.phases).toHaveLength(1);
   });
 
-  it('the phantom step shares its pose with the rending dash, its real look-alike', () => {
-    const rending = VEIL_DANCER.attacks.find((a) => a.id === 'rending-dash')!;
-    const phantom = VEIL_DANCER.attacks.find((a) => a.id === 'phantom-step')!;
-    expect(phantom.pose).toBe(rending.pose);
-    expect(phantom.hits).toEqual([]);
-    expect(rending.hits.length).toBeGreaterThan(0);
+  it('the twin cut is two swings, and the second reaches to both sides', () => {
+    const cut = VEIL_DANCER.attacks.find((a) => a.id === 'twin-cut')!;
+    expect(cut.hits).toHaveLength(2);
+    expect(cut.hits[0]!.both).toBeUndefined();
+    expect(cut.hits[1]!.both).toBe(true);
+    expect(cut.hits[1]!.from).toBeGreaterThan(cut.hits[0]!.to);
   });
 });
 
@@ -56,15 +49,12 @@ function standAt(boss: BossDef, distance: number): GameState {
   return s;
 }
 
-describe("the Veil Dancer's fake attack", () => {
-  it('phantom step never hurts a stationary player, even though it repositions the boss', () => {
-    const boss = solo('phantom-step');
-    const states = run(standAt(boss, 130), 400, () => NO_INPUT, boss);
-    const warnings = windupUpdates(states);
-    expect(warnings.length).toBeGreaterThan(3);
-    expect(updatesWith(states, 'playerHit')).toEqual([]);
-    // It really moves the boss: starting 130 away and dashing about 217 units, it ends up past the player.
-    expect(states.some((s) => s.boss.x < s.player.x)).toBe(true);
+describe("the Veil Dancer's twin cut", () => {
+  it('hurts a player who stands still in front of it', () => {
+    const boss = solo('twin-cut');
+    const states = run(standAt(boss, 100), 200, () => NO_INPUT, boss);
+    expect(windupUpdates(states).length).toBeGreaterThan(0);
+    expect(updatesWith(states, 'playerHit').length).toBeGreaterThan(0);
   });
 });
 

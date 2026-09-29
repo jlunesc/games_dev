@@ -91,8 +91,8 @@ describe('the signs on a winding-up boss', () => {
   };
 
   it('add shapes for shots, both sides and hovering, and none for a plain melee attack', () => {
-    expect(count(QUILL_WARDEN, 'feather-volley')).toBe(count(QUILL_WARDEN, 'reaching-poke') + 3);
-    expect(count(QUILL_WARDEN, 'sky-lance')).toBeGreaterThan(idle(QUILL_WARDEN, 'sky-lance'));
+    expect(count(VEIL_DANCER, 'needle-fan')).toBeGreaterThan(count(VEIL_DANCER, 'piercing-veil'));
+    expect(count(CINDER_GOLEM, 'furnace-stomp')).toBeGreaterThan(idle(CINDER_GOLEM, 'furnace-stomp'));
     expect(count(BRASS_SENTINEL, 'spin-cycle')).toBeGreaterThan(count(BRASS_SENTINEL, 'wide-sweep'));
   });
 
@@ -110,8 +110,8 @@ describe('the signs on a winding-up boss', () => {
 
 describe('where a leap with a strike on both sides lands', () => {
   it('shows a landing span on each side', () => {
-    const boss = VEIL_DANCER;
-    const veil = boss.attacks.find((a) => a.id === 'falling-veil')!;
+    const boss = CINDER_GOLEM;
+    const veil = boss.attacks.find((a) => a.id === 'furnace-stomp')!;
     const s = createInitialState(boss, 1);
     const b = { ...s.boss, mode: 'attack' as const, attackId: veil.id, attackTick: veil.leap!.from + 3, leapToX: 400, facing: -1 as const };
     const ring = landingRing(b, boss)!;
@@ -124,7 +124,7 @@ describe('where a leap with a strike on both sides lands', () => {
 
   it('shows one span for a one-sided strike', () => {
     const boss = QUILL_WARDEN;
-    const lance = boss.attacks.find((a) => a.id === 'sky-lance')!;
+    const lance = boss.attacks.find((a) => a.id === 'backwards-vault')!;
     const s = createInitialState(boss, 1);
     const ring = landingRing({ ...s.boss, mode: 'attack', attackId: lance.id, attackTick: lance.leap!.from + 3, leapToX: 400 }, boss)!;
     expect(ring.both).toBeUndefined();
@@ -180,11 +180,11 @@ describe('the colours of a boss attacks', () => {
   });
 
   it('a winding-up boss shows its signs in its own colours', () => {
-    const boss = QUILL_WARDEN;
-    const volley = boss.attacks.find((a) => a.id === 'feather-volley')!;
+    const boss = VEIL_DANCER;
+    const volley = boss.attacks.find((a) => a.id === 'needle-fan')!;
     const s0 = createInitialState(boss, 1);
     const s = { ...s0, boss: { ...s0.boss, mode: 'attack' as const, attackId: volley.id, attackTick: volley.windup - 1, facing: 1 as const, x: 700 } };
     const prims = bossFigure(s, boss, { body: BOSS_COLORS.red, accent: BOSS_COLORS.red, glow: BOSS_COLORS.red });
-    expect(prims.some((p) => p.color === attackPalette('quill-warden').core)).toBe(true);
+    expect(prims.some((p) => p.color === attackPalette('veil-dancer').core)).toBe(true);
   });
 });
