@@ -14,6 +14,12 @@ const TITLES = {
   left: 'You left the fight',
 } as const;
 
+/** Health lines: one for the boss of a normal fight, one per boss for a pair. */
+function healthLines(summary: FightSummary): string[] {
+  if (summary.bosses.length < 2) return [`Boss health left: ${summary.bossHpLeft} of ${summary.bossMaxHp}`];
+  return summary.bosses.map((b) => `${b.name} health left: ${b.hpLeft} of ${b.maxHp}`);
+}
+
 /** The words of the summary screen. */
 export function summaryLines(summary: FightSummary): { title: string; lines: string[] } {
   const worst = summary.mostDangerousAttack;
@@ -25,9 +31,10 @@ export function summaryLines(summary: FightSummary): { title: string; lines: str
       ...(leftInStudy ? ['You left during the study.'] : []),
       `Time: ${formatTime(summary.seconds)}`,
       ...(summary.studySeconds > 0 ? [`Study time: ${formatTime(summary.studySeconds)}`] : []),
-      `Phase reached: ${summary.phaseReached} of ${summary.phaseCount}`,
+      // The phase reached follows the primary boss only, so it is left out for a pair.
+      ...(summary.bosses.length < 2 ? [`Phase reached: ${summary.phaseReached} of ${summary.phaseCount}`] : []),
       `Hits taken: ${summary.hitsTaken}`,
-      `Boss health left: ${summary.bossHpLeft} of ${summary.bossMaxHp}`,
+      ...healthLines(summary),
       worst === null
         ? 'You were never hit.'
         : `Hurt you most: ${worst.name} (${worst.hits} hit${worst.hits === 1 ? '' : 's'})`,

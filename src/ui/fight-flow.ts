@@ -1,5 +1,6 @@
 import type { BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
+import type { FightDef } from '../game/fight';
 import type { GameState } from '../game/state';
 import { createTracker, summarize, trackUpdate, type FightSummary, type SummaryTracker } from '../game/summary';
 import { recordUpdate, startRecording, type FightMeta, type Recording } from '../stats/record';
@@ -35,7 +36,7 @@ export function advanceFlow(
   flow: FightFlow,
   before: GameState,
   after: GameState,
-  boss: BossDef,
+  source: BossDef | FightDef,
   frame: InputFrame,
 ): { flow: FightFlow; show: FightSummary | null; finished: FinishedFight | null } {
   // After a win or a loss the game shows its message, then starts a new fight: that new fight is not tracked.
@@ -47,15 +48,15 @@ export function advanceFlow(
   let finished: FinishedFight | null = null;
   if (ended === null && after.phase !== 'fight') {
     const result = after.phase === 'victory' ? 'victory' : 'defeat';
-    ended = summarize(tracker, after, boss, result);
+    ended = summarize(tracker, after, source, result);
     finished = { recording, result };
   }
   return { flow: { tracker, ended, recording }, show: null, finished };
 }
 
 /** The summary for leaving now: the real result if the fight already ended (leaving during the end pause), otherwise "left". */
-export function leaveSummary(flow: FightFlow, state: GameState, boss: BossDef): FightSummary {
-  return flow.ended ?? summarize(flow.tracker, state, boss, 'left');
+export function leaveSummary(flow: FightFlow, state: GameState, source: BossDef | FightDef): FightSummary {
+  return flow.ended ?? summarize(flow.tracker, state, source, 'left');
 }
 
 /**

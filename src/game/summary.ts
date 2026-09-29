@@ -1,6 +1,7 @@
 import type { BossDef } from '../bosses/schema';
 import { TICK_RATE } from '../engine/time';
-import type { GameState } from './state';
+import { asFight, type FightDef } from './fight';
+import { bossAt, bossCount, type GameState } from './state';
 
 export type FightResult = 'victory' | 'defeat' | 'left';
 
@@ -10,6 +11,21 @@ export interface SummaryTracker {
   hitsTaken: number;
   /** 1-based: the highest boss phase seen. */
   phaseReached: number;
+}
+
+/** Hits by the primary boss's attacks are counted under the attack id; a partner's under `<index>:<id>`. */
+const attackKey = (index: number, id: string): string => (index === 0 ? id : `${index}:${id}`);
+
+/**
+ * The attack that is hurting the player: the one going on now or, when it ended on the very update that hit, on the
+ * update before. Only one boss attacks at a time.
+ */
+function hurtingAttack(state: GameState, previous: GameState): string {
+  for (let index = 0; index < bossCount(state); index++) {
+    const id = bossAt(state, index).attackId ?? bossAt(previous, index).attackId;
+    if (id !== null) return attackKey(index, id);
+  }
+  return 'unknown';
 }
 
 export const createTracker = (): SummaryTracker => ({
@@ -28,8 +44,7 @@ export function trackUpdate(
   let hitsTaken = tracker.hitsTaken;
   for (const event of state.events) {
     if (event !== 'playerHit') continue;
-    // The attack may end on the very update that hits, so fall back to the previous state.
-    const id = state.boss.attackId ?? previous.boss.attackId ?? 'unknown';
+    const id = hurtingAttack(state, previous);
     hitsByAttack = { ...hitsByAttack, [id]: (hitsByAttack[id] ?? 0) + 1 };
     hitsTaken += 1;
   }
@@ -50,11 +65,15 @@ export interface FightSummary {
   studySeconds: number;
   /** True when the study was still on at this state (a fight left during the study). */
   studyActive: boolean;
+  /** The primary boss's phase reached and phase count. */
   phaseReached: number;
   phaseCount: number;
   hitsTaken: number;
+  /** Summed over every boss of the fight. */
   bossHpLeft: number;
   bossMaxHp: number;
+  /** One entry per boss, in fight order (the primary boss first). */
+  bosses: { name: string; hpLeft: number; maxHp: number }[];
   mostDangerousAttack: { id: string; name: string; hits: number } | null;
 }
 
@@ -62,15 +81,25 @@ export interface FightSummary {
 export function summarize(
   tracker: SummaryTracker,
   state: GameState,
-  boss: BossDef,
+  source: BossDef | FightDef,
   result: FightResult,
 ): FightSummary {
+  const fight = asFight(source);
   let worst: { id: string; name: string; hits: number } | null = null;
-  // Strict ">" keeps the attack listed first in the boss file on a tie.
-  for (const attack of boss.attacks) {
-    const hits = tracker.hitsByAttack[attack.id] ?? 0;
-    if (hits > (worst?.hits ?? 0)) worst = { id: attack.id, name: attack.name, hits };
+  // Strict ">" keeps the attack listed first (the primary boss's before its partner's) on a tie.
+  for (const [index, boss] of fight.bosses.entries()) {
+    for (const attack of boss.attacks) {
+      const hits = tracker.hitsByAttack[attackKey(index, attack.id)] ?? 0;
+      if (hits <= (worst?.hits ?? 0)) continue;
+      const name = fight.bosses.length > 1 ? `${boss.name}'s ${attack.name}` : attack.name;
+      worst = { id: attack.id, name, hits };
+    }
   }
+  const bosses = fight.bosses.map((boss, index) => ({
+    name: boss.name,
+    hpLeft: bossAt(state, index).hp,
+    maxHp: boss.maxHp,
+  }));
   const studyTicks = state.study.active ? state.tick : state.study.endTick;
   return {
     result,
@@ -79,10 +108,11 @@ export function summarize(
     studySeconds: studyTicks / TICK_RATE,
     studyActive: state.study.active,
     phaseReached: tracker.phaseReached,
-    phaseCount: boss.phases.length,
+    phaseCount: fight.bosses[0]!.phases.length,
     hitsTaken: tracker.hitsTaken,
-    bossHpLeft: state.boss.hp,
-    bossMaxHp: boss.maxHp,
+    bossHpLeft: bosses.reduce((total, b) => total + b.hpLeft, 0),
+    bossMaxHp: bosses.reduce((total, b) => total + b.maxHp, 0),
+    bosses,
     mostDangerousAttack: worst,
   };
 }
