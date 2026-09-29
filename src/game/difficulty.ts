@@ -1,5 +1,6 @@
 import { parseBoss } from '../bosses/parse';
 import type { AttackDef, BossDef, PhaseDef } from '../bosses/schema';
+import { makeFight, type FightDef } from './fight';
 import { nextRandom } from './rng';
 
 /** The things that make a boss harder or easier. Each is a number where 1 is the boss file as written. */
@@ -288,4 +289,12 @@ export function applyDials(boss: BossDef, dials: Dials): BossDef {
     attacks: boss.attacks.map((attack) => adjustAttack(attack, boss, dials)),
     phases: boss.phases.map((phase) => adjustPhase(phase, dials)),
   });
+}
+
+/** Applies the dials to every boss of a fight, then rebuilds the enraged copies so the enrage is applied on top of the dials. */
+export function applyDialsToFight(fight: FightDef, dials: Dials): FightDef {
+  return makeFight(
+    fight.bosses.map((boss) => applyDials(boss, dials)),
+    fight.enrage,
+  );
 }
