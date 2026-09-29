@@ -10,15 +10,19 @@ import {
 const at = (focus: number): SettingsModel => ({ ...createSettingsModel(DEFAULT_SETTINGS), focus });
 
 describe('the settings rows', () => {
-  it('list the five switches, then Back, with On or Off and a help line', () => {
+  it('list the four switches, the Volume row, then Back, each with a help line', () => {
     const rows = settingsRows(createSettingsModel(DEFAULT_SETTINGS));
-    expect(rows.map((r) => r.id)).toEqual(['freeze', 'shake', 'flash', 'effects', 'sound', 'back']);
+    expect(rows.map((r) => r.id)).toEqual(['freeze', 'shake', 'flash', 'effects', 'volume', 'back']);
     const effects = rows.find((r) => r.id === 'effects')!;
     expect(effects.label).toBe('Effects');
     expect(effects.help).toBe('Particles, drifting embers and moving background layers.');
-    expect(rows.slice(0, 5).every((r) => r.value === 'On' && r.help.length > 0)).toBe(true);
+    expect(rows.slice(0, 4).every((r) => r.value === 'On' && r.help.length > 0)).toBe(true);
     const off = settingsRows(createSettingsModel({ ...DEFAULT_SETTINGS, shake: false }));
     expect(off.find((r) => r.id === 'shake')!.value).toBe('Off');
+    const volume = rows.find((r) => r.id === 'volume')!;
+    expect(volume.label).toBe('Volume');
+    expect(volume.value).toBe('Medium');
+    expect(volume.help).toBe('How loud the sounds and music are.');
     const back = rows.find((r) => r.id === 'back')!;
     expect(back.label).toBe('Back');
     expect(back.value).toBeUndefined();
@@ -27,7 +31,7 @@ describe('the settings rows', () => {
 });
 
 describe('the settings screen', () => {
-  it('up and down move the focus and wrap over the switches and Back', () => {
+  it('up and down move the focus and wrap over the rows', () => {
     expect(settingsStep(createSettingsModel(DEFAULT_SETTINGS), 'up').model.focus).toBe(5);
     expect(settingsStep(at(5), 'down').model.focus).toBe(0);
   });
@@ -46,6 +50,18 @@ describe('the settings screen', () => {
       expect(toggled.settings).toEqual({ ...DEFAULT_SETTINGS, effects: false });
       expect(settingsStep(toggled, action).model.settings).toEqual(DEFAULT_SETTINGS);
     }
+  });
+
+  it('right and confirm step the volume up, left steps it down, all wrapping round', () => {
+    const volumeOf = (m: SettingsModel): string => m.settings.volume;
+    expect(volumeOf(settingsStep(at(4), 'right').model)).toBe('high');
+    expect(volumeOf(settingsStep(at(4), 'confirm').model)).toBe('high');
+    expect(volumeOf(settingsStep(at(4), 'left').model)).toBe('low');
+    const high = { ...at(4), settings: { ...DEFAULT_SETTINGS, volume: 'high' as const } };
+    expect(volumeOf(settingsStep(high, 'right').model)).toBe('off');
+    const off = { ...at(4), settings: { ...DEFAULT_SETTINGS, volume: 'off' as const } };
+    expect(volumeOf(settingsStep(off, 'left').model)).toBe('high');
+    expect(settingsStep(at(4), 'right').outcome).toBe('stay');
   });
 
   it('back leaves and nothing else does', () => {

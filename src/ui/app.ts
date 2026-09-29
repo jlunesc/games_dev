@@ -115,7 +115,7 @@ export function mountApp(root: HTMLElement): void {
   const storeReady: Promise<FightStore | null> = openIndexedDbStore();
 
   const sound = createSound();
-  sound.setEnabled(settings.sound);
+  sound.setEnabled(settings.volume !== 'off');
   // A phone only counts some events as a tap for sound: touch needs pointerup or click, not just pointerdown.
   for (const type of ['pointerdown', 'pointerup', 'click']) {
     root.addEventListener(type, () => sound.unlock());
@@ -226,7 +226,7 @@ export function mountApp(root: HTMLElement): void {
     if (next === settings) return;
     settings = next;
     saveSettings(storage, settings);
-    sound.setEnabled(settings.sound);
+    sound.setEnabled(settings.volume !== 'off');
   }
 
   // Menu

@@ -125,11 +125,11 @@ describe('the new boss events', () => {
 });
 
 describe('the settings', () => {
-  const off = { freeze: false, shake: false, flash: false, effects: true, sound: true };
+  const off = { freeze: false, shake: false, flash: false, effects: true, volume: 'medium' as const };
 
   it('turning the freeze off removes every freeze', () => {
     expect(freezeFor(['bossHit', 'counter', 'playerHit'], { ...off, freeze: false })).toBe(0);
-    expect(freezeFor(['bossHit'], { freeze: true, shake: false, flash: false, effects: true, sound: true })).toBe(
+    expect(freezeFor(['bossHit'], { freeze: true, shake: false, flash: false, effects: true, volume: 'medium' })).toBe(
       FEEDBACK.freezeOnBossHit,
     );
   });
@@ -140,7 +140,7 @@ describe('the settings', () => {
       shake: false,
       flash: true,
       effects: true,
-      sound: true,
+      volume: 'medium',
     });
     expect(noShake.shakeTicks).toBe(0);
     expect(noShake.bossFlashTicks).toBe(FEEDBACK.bossFlashTicks);
@@ -150,7 +150,7 @@ describe('the settings', () => {
       shake: true,
       flash: false,
       effects: true,
-      sound: true,
+      volume: 'medium',
     });
     expect(noFlash.shakeTicks).toBe(FEEDBACK.shakeTicks);
     expect(noFlash.bossFlashTicks).toBe(0);
