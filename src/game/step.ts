@@ -1,7 +1,8 @@
 import type { ArenaDef, BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { DT } from '../engine/time';
-import { attackById, beginTransition, landBoss, updateBoss } from './boss';
+import { attackById, beginTransition, landBoss, updateBosses } from './boss';
+import { asFight, type FightDef } from './fight';
 import {
   activeHitBoxes,
   arenaSurfaces,
@@ -17,11 +18,16 @@ import { GAME, PLAYER, WORLD } from './params';
 import { nextRandom } from './rng';
 import { moveShots } from './shots';
 import {
+  allBosses,
+  bossAt,
+  bossCount,
   createInitialState,
+  isDowned,
   type GameEvent,
   type GameState,
   type PlayerState,
 } from './state';
+import { bossDefFor } from './turns';
 
 const ATTACK_TOTAL = PLAYER.attack.startup + PLAYER.attack.active + PLAYER.attack.recovery;
 
@@ -152,23 +158,31 @@ export function hurtPlayer(s: GameState, amount: number): void {
 /**
  * A swing that starts inside the counter window of a counterable attack, close enough, staggers the boss
  * and cancels the attack. It runs before the hits are resolved, so the cancelled attack cannot hurt.
+ * Only one boss attacks at a time, so at most one boss can be countered by a swing.
  */
-function tryCounter(s: GameState, boss: BossDef, studying: boolean): void {
-  const { player: p, boss: b } = s;
+function tryCounter(s: GameState, fight: FightDef, studying: boolean): void {
   if (studying) return;
-  if (b.mode !== 'attack' || b.attackId === null || p.attackTick !== 0 || p.attackAim !== 'forward') return;
+  for (let i = 0; i < bossCount(s); i++) {
+    if (!isDowned(s, i) && counterBoss(s, bossDefFor(s, fight, i), i, fight.bosses[0]!.arena)) return;
+  }
+}
+
+function counterBoss(s: GameState, boss: BossDef, index: number, arena: ArenaDef | undefined): boolean {
+  const p = s.player;
+  const b = bossAt(s, index);
+  if (b.mode !== 'attack' || b.attackId === null || p.attackTick !== 0 || p.attackAim !== 'forward') return false;
   const attack = attackById(boss, b.attackId);
-  if (attack.class !== 'counterable') return;
-  if (b.attackTick < attack.windup - boss.counter.window || b.attackTick >= attack.windup) return;
-  if (Math.abs(p.x - b.x) > boss.counter.range) return;
+  if (attack.class !== 'counterable') return false;
+  if (b.attackTick < attack.windup - boss.counter.window || b.attackTick >= attack.windup) return false;
+  if (Math.abs(p.x - b.x) > boss.counter.range) return false;
   // With an arena, the swing must also be able to reach the boss vertically (a player high on a platform
   // above a boss on the floor cannot counter it). Only the y ranges count: x stays governed by `counter.range`.
   // A bare arena keeps the old rule (distance only), which the recorded duelist scenarios and the counter of a
   // leaping boss from the floor rely on.
-  if (boss.arena !== undefined && (boss.arena.platforms.length > 0 || boss.arena.covers.length > 0)) {
+  if (arena !== undefined && (arena.platforms.length > 0 || arena.covers.length > 0)) {
     const swing = attackBox(p);
     const body = bossBox(b, boss);
-    if (swing.y >= body.y + body.h || body.y >= swing.y + swing.h) return;
+    if (swing.y >= body.y + body.h || body.y >= swing.y + swing.h) return false;
   }
   landBoss(b);
   b.mode = 'stagger';
@@ -178,13 +192,46 @@ function tryCounter(s: GameState, boss: BossDef, studying: boolean): void {
   b.pendingAttackId = null;
   b.chainLeft = 0;
   s.events.push('counter');
+  return true;
 }
 
-/** The player's swing hurts the boss once per swing. It ends the fight at 0 health and can start the next phase. */
-function resolvePlayerAttack(s: GameState, boss: BossDef, studying: boolean): void {
-  const { player: p, boss: b } = s;
-  if (studying || b.mode === 'transition') return;
-  if (!attackActive(p) || p.attackConnected || !overlaps(attackBox(p), bossBox(b, boss))) return;
+/** A boss is beaten in a fight with partners: it falls, its own shots vanish, and the fight goes on. */
+function downBoss(s: GameState, index: number): void {
+  const b = bossAt(s, index);
+  landBoss(b);
+  b.mode = 'gap';
+  b.modeTick = 0;
+  b.attackId = null;
+  b.attackTick = 0;
+  b.pendingAttackId = null;
+  b.chainLeft = 0;
+  s.shots = s.shots.filter((shot) => (shot.owner ?? 0) !== index);
+  s.events.push('bossDown');
+}
+
+/**
+ * The player's swing hurts one boss once per swing: the nearest one it reaches (the first-listed on a tie).
+ * The last boss at 0 health ends the fight; an earlier one falls and the rest go on. A hit can start the next phase.
+ */
+function resolvePlayerAttack(s: GameState, fight: FightDef, studying: boolean): void {
+  const p = s.player;
+  if (studying || !attackActive(p) || p.attackConnected) return;
+  const swing = attackBox(p);
+  let target = -1;
+  let nearest = Infinity;
+  for (let i = 0; i < bossCount(s); i++) {
+    const candidate = bossAt(s, i);
+    if (isDowned(s, i) || candidate.mode === 'transition') continue;
+    if (!overlaps(swing, bossBox(candidate, bossDefFor(s, fight, i)))) continue;
+    const distance = Math.abs(p.x - candidate.x);
+    if (distance < nearest) {
+      target = i;
+      nearest = distance;
+    }
+  }
+  if (target < 0) return;
+  const boss = bossDefFor(s, fight, target);
+  const b = bossAt(s, target);
   p.attackConnected = true;
   if (p.attackAim === 'down') {
     // The pogo: a downward hit bounces the player up, and the bounce is not cut short by letting go of jump.
@@ -196,36 +243,46 @@ function resolvePlayerAttack(s: GameState, boss: BossDef, studying: boolean): vo
   b.hp = Math.max(0, b.hp - damage);
   s.events.push('bossHit');
   if (b.hp <= 0) {
-    s.phase = 'victory';
-    s.endTicks = GAME.defeatRestartTicks;
-    s.events.push('bossDefeated');
+    if (allBosses(s).every((each) => each.hp <= 0)) {
+      s.phase = 'victory';
+      s.endTicks = GAME.defeatRestartTicks;
+      s.events.push('bossDefeated');
+    } else {
+      downBoss(s, target);
+    }
     return;
   }
   const next = boss.phases[b.phase + 1];
-  if (next !== undefined && b.hp <= boss.maxHp * next.startsAtHpFraction) beginTransition(s, boss);
+  if (next !== undefined && b.hp <= boss.maxHp * next.startsAtHpFraction) beginTransition(s, boss, target);
 }
 
-/** The boss's active hit boxes hurt a player who is not untouchable, for the damage of the attack that is landing. */
-function resolveBossHits(s: GameState, boss: BossDef, studying: boolean): void {
+/** The active hit boxes of a boss hurt a player who is not untouchable, for the damage of the attack that is landing. */
+function resolveBossHits(s: GameState, fight: FightDef, studying: boolean): void {
   const p = s.player;
   if (isInvulnerable(p)) return;
   const box = playerBox(p);
-  if (!activeHitBoxes(s.boss, boss).some((hit) => overlaps(hit, box))) return;
-  if (studying) {
-    // A demonstration: it reaches the player but hurts nobody. The short untouchability makes it count once.
-    p.invulnerableTicks = PLAYER.hitInvulnerability;
-    s.events.push('studyHit');
+  for (let i = 0; i < bossCount(s); i++) {
+    if (isDowned(s, i)) continue;
+    const boss = bossDefFor(s, fight, i);
+    const b = bossAt(s, i);
+    if (!activeHitBoxes(b, boss).some((hit) => overlaps(hit, box))) continue;
+    if (studying) {
+      // A demonstration: it reaches the player but hurts nobody. The short untouchability makes it count once.
+      p.invulnerableTicks = PLAYER.hitInvulnerability;
+      s.events.push('studyHit');
+      return;
+    }
+    const attack = boss.attacks.find((a) => a.id === b.attackId);
+    hurtPlayer(s, attack?.damage ?? 1);
     return;
   }
-  const attack = boss.attacks.find((a) => a.id === s.boss.attackId);
-  hurtPlayer(s, attack?.damage ?? 1);
 }
 
 /**
  * Shots that reach a player who is not untouchable hurt them once, for the largest damage among the shots that
  * landed, and are used up. A dash lets them pass. In the study they reach the player and hurt nobody.
  */
-function resolveShotHits(s: GameState, boss: BossDef, studying: boolean): void {
+function resolveShotHits(s: GameState, fight: FightDef, studying: boolean): void {
   const p = s.player;
   if (isInvulnerable(p) || s.shots.length === 0) return;
   const box = playerBox(p);
@@ -241,12 +298,17 @@ function resolveShotHits(s: GameState, boss: BossDef, studying: boolean): void {
     s.events.push('studyHit');
     return;
   }
-  const damage = Math.max(...hit.map((shot) => boss.attacks.find((a) => a.id === shot.attackId)?.damage ?? 1));
+  const damage = Math.max(
+    ...hit.map((shot) => fight.bosses[shot.owner ?? 0]?.attacks.find((a) => a.id === shot.attackId)?.damage ?? 1),
+  );
   hurtPlayer(s, damage);
 }
 
 /** Advances the game by one update. Pure: returns a new state and never touches the one it is given. */
-export function step(prev: GameState, input: InputFrame, boss: BossDef): GameState {
+export function step(prev: GameState, input: InputFrame, source: BossDef | FightDef): GameState {
+  const fight = asFight(source);
+  // The arena of a fight is the primary boss's.
+  const boss = fight.bosses[0]!;
   const s = structuredClone(prev);
   s.events = [];
   s.shotHits = [];
@@ -259,7 +321,7 @@ export function step(prev: GameState, input: InputFrame, boss: BossDef): GameSta
     s.player.prevY = s.player.y;
     // The next fight gets a new seed derived from this one, so it plays out differently but stays reproducible.
     // The restarted fight deliberately has no study (it is only offered before the first fight).
-    return s.endTicks <= 0 ? createInitialState(boss, nextRandom(s.rng).state) : s;
+    return s.endTicks <= 0 ? createInitialState(fight, nextRandom(s.rng).state) : s;
   }
 
   // Whether this update is part of the study is fixed now: the update on which the last demonstration finishes
@@ -268,14 +330,14 @@ export function step(prev: GameState, input: InputFrame, boss: BossDef): GameSta
   updatePlayer(s.player, input, s.events, boss.arena);
   // Shots already in the air move first: a shot fired on this update appears at the boss and first moves on the next.
   moveShots(s, boss);
-  updateBoss(s, boss);
-  tryCounter(s, boss, studying);
-  resolvePlayerAttack(s, boss, studying);
-  if (s.phase === 'fight') resolveBossHits(s, boss, studying);
-  if (s.phase === 'fight') resolveShotHits(s, boss, studying);
+  updateBosses(s, fight);
+  tryCounter(s, fight, studying);
+  resolvePlayerAttack(s, fight, studying);
+  if (s.phase === 'fight') resolveBossHits(s, fight, studying);
+  if (s.phase === 'fight') resolveShotHits(s, fight, studying);
   // The fight is over: a boss that was mid-leap must not hang in the air for the whole end countdown, and no shot lingers.
   if (s.phase !== 'fight') {
-    landBoss(s.boss);
+    for (let i = 0; i < bossCount(s); i++) landBoss(bossAt(s, i));
     s.shots = [];
   }
   return s;
