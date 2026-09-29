@@ -93,12 +93,8 @@ export const RECIPES: Record<VoiceName, readonly Part[]> = {
     { tone: 'sine', from: 55, to: 45, seconds: 0.6, volume: 0.3 },
     { noise: 'lowpass', freq: 400, to: 1200, seconds: 0.5, volume: 0.1 },
   ],
-  // The player goes down: a long falling tone and a fading tail.
-  defeat: [
-    { tone: 'sawtooth', from: 160, to: 70, seconds: 0.6, volume: 0.07 },
-    { tone: 'sine', from: 90, to: 55, seconds: 0.7, volume: 0.1 },
-    { noise: 'lowpass', freq: 700, to: 200, seconds: 0.6, volume: 0.04 },
-  ],
+  // The player goes down: a soft low thump; the jingle is the loss sting in the music.
+  defeat: [{ tone: 'sine', from: 100, to: 55, seconds: 0.22, volume: 0.1 }],
   // A boss goes down: a falling tone and a fading noise tail.
   fall: [
     { tone: 'triangle', from: 420, to: 110, seconds: 0.5, volume: 0.14 },
@@ -287,6 +283,6 @@ export const MUSIC = {
     priority: 10,
     spacing: 0.11,
     win: { tone: 'triangle', semitones: [0, 4, 7, 12], above: 24, seconds: 0.6, volume: 0.2 },
-    loss: { tone: 'sawtooth', semitones: [7, 3, 0, -5], above: 12, seconds: 0.7, volume: 0.05 },
+    loss: { tone: 'square', semitones: [7, 4, 0, 4, -1, -5, -8], above: 12, seconds: 0.16, volume: 0.05 },
   },
 } as const;

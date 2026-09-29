@@ -176,12 +176,15 @@ describe('the stings', () => {
     expect(starts[1]! - starts[0]!).toBeCloseTo(MUSIC.sting.spacing, 6);
   });
 
-  it('plays a falling figure for a loss', () => {
+  it('plays a short square-wave jingle for a loss, in the boss key, ending lower than it starts', () => {
     const { ctx, music } = setup();
     music.sting('loss', THEME);
-    const pitches = ctx.ofKind('oscillator').map(firstFrequency);
-    expect(pitches).toHaveLength(4);
-    expect(pitches).toEqual([...pitches].sort((a, b) => b - a));
+    const notes = ctx.ofKind('oscillator');
+    const pitches = notes.map(firstFrequency);
+    expect(pitches).toHaveLength(MUSIC.sting.loss.semitones.length);
+    expect(pitches[0]).toBe(midiToHz(THEME.root + 12 + 7));
+    expect(pitches[pitches.length - 1]).toBeLessThan(pitches[0]!);
+    expect(notes.every((note) => note.type === 'square')).toBe(true);
   });
 
   it('plays nothing at volume off', () => {
