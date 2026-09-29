@@ -29,7 +29,7 @@ import { openIndexedDbStore, type FightStore } from '../stats/store';
 import { createSound } from './audio';
 import { mountControllerScreen } from './controller-screen';
 import { el } from './dom';
-import { NO_FEEDBACK, advanceFeedback, applyEvents, freezeFor, type FeedbackState } from './feedback';
+import { NO_FEEDBACK, advanceFeedback, applyEvents, flashBossFor, freezeFor, type FeedbackState } from './feedback';
 import { advanceFlow, leaveRecording, leaveSummary, startFlow, type FightFlow } from './fight-flow';
 import { setUpFight } from './fight-setup';
 import { createMenu, menuRows, menuStep, type MenuAction, type MenuModel } from './menu-model';
@@ -160,6 +160,8 @@ export function mountApp(root: HTMLElement): void {
     playedAt: new Date().toISOString(),
   });
   let feedback: FeedbackState = NO_FEEDBACK;
+  // Which boss flashes white after a hit (0 is the primary; only a pair has another).
+  let flashBoss = 0;
   // The looks: particles and the pre-drawn background. Cosmetic only, never read by the simulation.
   let fx: EffectsState = NO_EFFECTS;
   let background: BackgroundCache | null = null;
@@ -550,6 +552,7 @@ export function mountApp(root: HTMLElement): void {
     exitHoldMs = 0;
     leaveHint.hidden = true;
     feedback = NO_FEEDBACK;
+    flashBoss = 0;
     fx = NO_EFFECTS;
     // Built once per mood and reused after (null when no canvas can be made: the plain gradient is drawn instead).
     const mood = moodFor(fight.bosses[0]!.id, seed);
@@ -590,6 +593,7 @@ export function mountApp(root: HTMLElement): void {
       effects: fx,
       background,
       motion: settings.effects,
+      flashBoss,
     });
   }
 
@@ -653,7 +657,8 @@ export function mountApp(root: HTMLElement): void {
         return;
       }
       feedback = applyEvents(feedback, state.events, settings);
-      fx = spawnEffects(fx, before, state, fight.bosses[0]!, settings.effects);
+      flashBoss = flashBossFor(state.events, before, state, flashBoss);
+      fx = spawnEffects(fx, before, state, fight, settings.effects);
       freezeLeft = Math.max(freezeLeft, freezeFor(state.events, settings));
       if (freezeLeft > 0) hitStopView = true;
       sound.play(state.events);

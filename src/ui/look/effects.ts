@@ -2,8 +2,10 @@ import type { BossDef } from '../../bosses/schema';
 import { DT } from '../../engine/time';
 import { attackBox, bossBox, playerBox, type Box } from '../../game/geometry';
 import { PLAYER, WORLD } from '../../game/params';
-import type { GameState } from '../../game/state';
+import { asFight, type FightDef } from '../../game/fight';
+import { bossAt, bossCount, isDowned, type BossState, type GameState } from '../../game/state';
 import { nextRandom } from '../../game/rng';
+import { fellBosses, phasedBoss, struckBoss } from './who';
 import { LOOK } from './tuning';
 
 /**
@@ -142,8 +144,8 @@ class Spawner {
  * one: its final radius is capped at the farthest reach (`x1`) of the hit windows of the attack that was running when the
  * boss came down. An attack without hit windows keeps the normal growth, and so does a reach larger than the ring's own.
  */
-function shockwaveGrowth(before: GameState, boss: BossDef): number {
-  const attack = before.boss.attackId === null ? undefined : boss.attacks.find((a) => a.id === before.boss.attackId);
+function shockwaveGrowth(landing: BossState, boss: BossDef): number {
+  const attack = landing.attackId === null ? undefined : boss.attacks.find((a) => a.id === landing.attackId);
   if (attack === undefined || attack.hits.length === 0) return LOOK.shockwaveGrowthPerTick;
   const reach = Math.max(...attack.hits.map((hit) => hit.x1));
   // The ring is drawn for `shockwaveLifeTicks - 1` growth steps before it is removed.
@@ -158,18 +160,22 @@ const newest = <T>(items: T[], max: number): T[] => (items.length > max ? items.
 /**
  * The effects for what happened in one update (`before` to `after`), added to `fx`. With `enabled` false it
  * returns `fx` itself and spawns nothing. Never goes over `LOOK.maxParticles` / `LOOK.maxRings`: the oldest go.
+ * Works for a boss on its own or a fight of several: each effect is placed on the boss it happened to.
  */
 export function spawnEffects(
   fx: EffectsState,
   before: GameState,
   after: GameState,
-  boss: BossDef,
+  source: BossDef | FightDef,
   enabled: boolean,
 ): EffectsState {
   if (!enabled) return fx;
+  const fight = asFight(source);
   const out = new Spawner(fx.rng);
   const player = centreOf(playerBox(after.player));
-  const bossCentre = centreOf(bossBox(after.boss, boss));
+  const bossCentre = (index: number): { x: number; y: number } =>
+    centreOf(bossBox(bossAt(after, index), fight.bosses[index]!));
+  let fallen = false;
 
   for (const event of after.events) {
     switch (event) {
@@ -179,10 +185,12 @@ export function spawnEffects(
         out.smallRing(c.x, c.y, LOOK.spark);
         break;
       }
-      case 'counter':
-        out.sparks(LOOK.sparksOnCounter, bossCentre.x, bossCentre.y, LOOK.counterRing, LOOK.spark);
-        out.normalRing(bossCentre.x, bossCentre.y, LOOK.counterRing);
+      case 'counter': {
+        const c = bossCentre(struckBoss(before, after));
+        out.sparks(LOOK.sparksOnCounter, c.x, c.y, LOOK.counterRing, LOOK.spark);
+        out.normalRing(c.x, c.y, LOOK.counterRing);
         break;
+      }
       case 'playerHit':
         out.sparks(LOOK.sparksOnPlayerHit, player.x, player.y, LOOK.hurtSpark);
         out.smallRing(player.x, player.y, LOOK.hurtSpark);
@@ -194,16 +202,26 @@ export function spawnEffects(
         if (after.player.onGround) out.dust(LOOK.dustOnDash, after.player.x, after.player.y, PLAYER.width);
         break;
       }
-      case 'bossDefeated':
-        out.burst(bossCentre.x, bossCentre.y);
-        out.bigRing(bossCentre.x, bossCentre.y, LOOK.burst);
+      case 'bossDown':
+      case 'bossDefeated': {
+        if (fallen) break;
+        fallen = true;
+        const fell = fellBosses(before, after);
+        for (const index of fell.length > 0 ? fell : [0]) {
+          const c = bossCentre(index);
+          out.burst(c.x, c.y);
+          out.bigRing(c.x, c.y, LOOK.burst);
+        }
         break;
+      }
       case 'playerDefeated':
         out.burst(player.x, player.y);
         break;
-      case 'phaseChange':
-        out.normalRing(bossCentre.x, bossCentre.y, LOOK.phaseRing);
+      case 'phaseChange': {
+        const c = bossCentre(phasedBoss(before, after));
+        out.normalRing(c.x, c.y, LOOK.phaseRing);
         break;
+      }
       case 'studyHit':
         out.sparks(LOOK.sparksOnStudyHit, player.x, player.y, LOOK.hurtSpark);
         break;
@@ -216,9 +234,15 @@ export function spawnEffects(
   if (!before.player.onGround && after.player.onGround && before.player.vy > HARD_LANDING_SPEED) {
     out.dust(LOOK.dustOnLand, after.player.x, after.player.y, PLAYER.width);
   }
-  if (before.boss.lift > 0 && after.boss.lift === 0) {
-    out.dust(LOOK.dustOnLand * 2, after.boss.x, WORLD.floorY, boss.width);
-    out.ring(after.boss.x, WORLD.floorY, shockwaveGrowth(before, boss), LOOK.shockwaveLifeTicks, LOOK.ringWidth, LOOK.shockwave);
+  for (let index = 0; index < bossCount(after); index++) {
+    const was = bossAt(before, index);
+    const now = bossAt(after, index);
+    // A boss that falls lands too, but its heap is no danger zone: no shockwave for it.
+    if (was.lift > 0 && now.lift === 0 && !isDowned(after, index)) {
+      const def = fight.bosses[index]!;
+      out.dust(LOOK.dustOnLand * 2, now.x, WORLD.floorY, def.width);
+      out.ring(now.x, WORLD.floorY, shockwaveGrowth(was, def), LOOK.shockwaveLifeTicks, LOOK.ringWidth, LOOK.shockwave);
+    }
   }
 
   if (out.particles.length === 0 && out.rings.length === 0) return fx;

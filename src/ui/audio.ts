@@ -54,7 +54,7 @@ export function createSound(): Sound {
         if (event === 'bossWindupRed') beep(330, 140, 'sawtooth', 0.1);
         if (event === 'counter') beep(1100, 160, 'triangle', 0.18);
         if (event === 'phaseChange') beep(140, 450, 'sawtooth', 0.18);
-        if (event === 'bossDefeated') beep(523, 320, 'triangle', 0.2);
+        if (event === 'bossDefeated' || event === 'bossDown') beep(523, 320, 'triangle', 0.2);
         if (event === 'playerDefeated') beep(80, 500, 'sawtooth', 0.2);
       }
     },
