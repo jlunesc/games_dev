@@ -48,6 +48,7 @@ export function createEngine(ctx: AudioContext, volume: Volume, cap: number = SO
   limiter.attack.value = SOUND.limiter.attack;
   limiter.release.value = SOUND.limiter.release;
   const effects = ctx.createGain();
+  effects.gain.value = SOUND.effectsLevel;
   const musicBus = ctx.createGain();
   effects.connect(master);
   musicBus.connect(master);

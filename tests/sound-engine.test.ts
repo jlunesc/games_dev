@@ -21,6 +21,12 @@ describe('the sound engine', () => {
     expect(limiter.threshold.value).toBe(SOUND.limiter.threshold);
   });
 
+  it('keeps the effects bus a little below the music bus', () => {
+    const { engine } = make();
+    expect(node(engine.effects).gain.value).toBe(SOUND.effectsLevel);
+    expect(SOUND.effectsLevel).toBeLessThan(1);
+  });
+
   it('sets the master gain from the volume', () => {
     for (const volume of ['off', 'low', 'medium', 'high'] as const) {
       const { ctx } = make(volume);

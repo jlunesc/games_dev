@@ -5,6 +5,8 @@ import type { Volume } from '../settings';
 export const SOUND = {
   /** Master gain for each Volume setting. */
   master: { off: 0, low: 0.35, medium: 0.65, high: 1 } satisfies Record<Volume, number>,
+  /** All sound effects together, against the music. */
+  effectsLevel: 0.75,
   /** Most sound effects alive at once; music does not count. */
   voiceCap: 16,
   /** The compressor that keeps a loud moment from clipping. */
@@ -93,14 +95,14 @@ export const RECIPES: Record<VoiceName, readonly Part[]> = {
   ],
   // The player goes down: a long falling tone and a fading tail.
   defeat: [
-    { tone: 'sawtooth', from: 160, to: 40, seconds: 0.7, volume: 0.22 },
-    { tone: 'sine', from: 70, to: 30, seconds: 0.8, volume: 0.28 },
-    { noise: 'lowpass', freq: 700, to: 150, seconds: 0.7, volume: 0.12 },
+    { tone: 'sawtooth', from: 160, to: 70, seconds: 0.6, volume: 0.07 },
+    { tone: 'sine', from: 90, to: 55, seconds: 0.7, volume: 0.1 },
+    { noise: 'lowpass', freq: 700, to: 200, seconds: 0.6, volume: 0.04 },
   ],
   // A boss goes down: a falling tone and a fading noise tail.
   fall: [
-    { tone: 'triangle', from: 420, to: 110, seconds: 0.5, volume: 0.2 },
-    { noise: 'lowpass', freq: 1400, to: 200, seconds: 0.6, volume: 0.12, delay: 0.05 },
+    { tone: 'triangle', from: 420, to: 110, seconds: 0.5, volume: 0.14 },
+    { noise: 'lowpass', freq: 1400, to: 200, seconds: 0.6, volume: 0.08, delay: 0.05 },
   ],
   // Counterable: a clear high two-note ting.
   warningGold: [
@@ -285,6 +287,6 @@ export const MUSIC = {
     priority: 10,
     spacing: 0.11,
     win: { tone: 'triangle', semitones: [0, 4, 7, 12], above: 24, seconds: 0.6, volume: 0.2 },
-    loss: { tone: 'sawtooth', semitones: [7, 3, 0, -5], above: 12, seconds: 0.7, volume: 0.1 },
+    loss: { tone: 'sawtooth', semitones: [7, 3, 0, -5], above: 12, seconds: 0.7, volume: 0.05 },
   },
 } as const;
