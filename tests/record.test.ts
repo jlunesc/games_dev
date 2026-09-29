@@ -120,13 +120,13 @@ describe('buildRecord', () => {
     expect(buildRecord(rec, 'left', 1, null).id).toBe('2026-09-20T10:00:00.000Z#ffffffff');
   });
 
-  it('carries the study rounds and is schema version 5', () => {
-    expect(STATS_SCHEMA_VERSION).toBe(5);
+  it('carries the study rounds and is schema version 6', () => {
+    expect(STATS_SCHEMA_VERSION).toBe(6);
     expect(GAME_VERSION).toBe('0.8.0');
     for (const study of [0, 1, 2] as const) {
       const record = buildRecord(startRecording(metaOf({ study })), 'left', 1, null);
       expect(record.study).toBe(study);
-      expect(record.schemaVersion).toBe(5);
+      expect(record.schemaVersion).toBe(6);
       expect(record.gameVersion).toBe('0.8.0');
     }
   });
