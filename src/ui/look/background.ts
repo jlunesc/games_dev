@@ -1,6 +1,6 @@
 import { WORLD } from '../../game/params';
 import { LOOK } from './tuning';
-import type { LayerDef, Mood } from './moods';
+import type { GlowDef, HazeDef, LayerDef, Mood } from './moods';
 
 /** One silhouette of a layer: it stands on the pattern's floor line, `w` wide and `h` tall, its left edge at `x`. */
 export interface LayerShape {
@@ -21,6 +21,8 @@ export interface Ember {
 export interface BackgroundCache {
   readonly sky: CanvasImageSource;
   readonly layers: readonly CanvasImageSource[];
+  /** The mist band, when the mood has one; it wraps at `patternWidth` like a layer. */
+  readonly haze: CanvasImageSource | null;
   /** Width in world units that every layer picture covers; the drift wraps at this width. The pixels are `LOOK.layerScale` of it. */
   readonly patternWidth: number;
 }
@@ -116,6 +118,48 @@ export function emberPositions(mood: Mood, tick: number, count: number): Ember[]
   return out;
 }
 
+/** One streak of rain or wind: from its tail (x1, y1) to its head (x2, y2). */
+export interface Streak {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+/** Where the rain or wind streaks are at a tick: worked out from the index and the mood alone, so nothing has to be remembered. */
+export function weatherStreaks(mood: Mood, tick: number): Streak[] {
+  const weather = mood.weather;
+  if (!weather) return [];
+  const cfg = LOOK.weather[weather.kind];
+  const t = tick / 60;
+  const base = hashString(mood.id) + 5;
+  const dx = Math.cos(cfg.angle);
+  const dy = Math.sin(cfg.angle);
+  const out: Streak[] = [];
+  for (let i = 0; i < cfg.count; i++) {
+    const rand = rng(base + i * 7717);
+    const speed = cfg.speed * (0.8 + rand() * 0.4);
+    const x = (rand() * WORLD.width + dx * speed * t) % WORLD.width;
+    const y = (rand() * WORLD.floorY + dy * speed * t) % WORLD.floorY;
+    out.push({ x1: x - dx * cfg.length, y1: y - dy * cfg.length, x2: x, y2: y });
+  }
+  return out;
+}
+
+/** How bright the lightning flash is at a tick (0 when there is none), always the same for the same mood and tick. */
+export function lightningAlpha(mood: Mood, tick: number): number {
+  if (!mood.lightning) return 0;
+  const L = LOOK.lightning;
+  const slot = Math.floor(tick / L.slotTicks);
+  const rand = rng(hashString(mood.id) ^ Math.imul(slot + 1, 2654435761));
+  if (rand() >= L.chance) return 0;
+  const start = L.minStartTicks + rand() * (L.slotTicks - L.flashTicks - L.minStartTicks);
+  const since = tick - slot * L.slotTicks - start;
+  if (since < 0 || since >= L.flashTicks) return 0;
+  const left = 1 - since / L.flashTicks;
+  return L.peakAlpha * left * left;
+}
+
 function makeCanvas(width: number, height: number): HTMLCanvasElement | null {
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -144,6 +188,50 @@ function paintLayer(g: CanvasRenderingContext2D, layer: LayerDef, width: number)
   }
 }
 
+function paintGlow(g: CanvasRenderingContext2D, glow: GlowDef, k: number): void {
+  const cx = (SKY_BLEED + glow.x * WORLD.width) * k;
+  const cy = (SKY_BLEED + glow.y * WORLD.height) * k;
+  const gradient = g.createRadialGradient(cx, cy, 0, cx, cy, glow.radius * k);
+  gradient.addColorStop(0, glow.color);
+  gradient.addColorStop(1, `${glow.color}00`);
+  g.save();
+  g.globalAlpha = glow.alpha;
+  g.fillStyle = gradient;
+  g.fillRect(0, 0, g.canvas.width, g.canvas.height);
+  if (glow.disc) {
+    g.globalAlpha = Math.min(1, glow.alpha * 2.5);
+    g.fillStyle = glow.color;
+    g.beginPath();
+    g.arc(cx, cy, glow.disc * k, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+}
+
+/** Soft blobs across the band, each also drawn one pattern to the left and right so the band wraps seamlessly. */
+function paintHaze(g: CanvasRenderingContext2D, haze: HazeDef, width: number): void {
+  const rand = rng(haze.seed * 7919 + 3);
+  const H = haze.height;
+  for (let i = 0; i < LOOK.haze.blobs; i++) {
+    const cx = rand() * width;
+    const cy = H * (0.3 + rand() * 0.4);
+    const rx = LOOK.haze.blobWidthMin + rand() * (LOOK.haze.blobWidthMax - LOOK.haze.blobWidthMin);
+    const ry = H * (0.28 + rand() * 0.22);
+    for (const shift of [-width, 0, width]) {
+      g.save();
+      g.translate(cx + shift, cy);
+      g.scale(rx / ry, 1);
+      const gradient = g.createRadialGradient(0, 0, 0, 0, 0, ry);
+      gradient.addColorStop(0, haze.color);
+      gradient.addColorStop(1, `${haze.color}00`);
+      g.globalAlpha = 0.55;
+      g.fillStyle = gradient;
+      g.fillRect(-ry, -ry, ry * 2, ry * 2);
+      g.restore();
+    }
+  }
+}
+
 /**
  * Pre-render the sky and every layer of a mood into off-screen pictures. Returns null when there is no
  * `document` (tests, workers) or a canvas cannot be made; the drawing then falls back to a plain gradient.
@@ -164,6 +252,7 @@ export function createBackground(mood: Mood): BackgroundCache | null {
     gradient.addColorStop(1, mood.skyBottom);
     skyCtx.fillStyle = gradient;
     skyCtx.fillRect(0, 0, skyCanvas.width, skyCanvas.height);
+    if (mood.glow) paintGlow(skyCtx, mood.glow, k);
 
     const layers: CanvasImageSource[] = [];
     for (const layer of mood.layers) {
@@ -175,7 +264,16 @@ export function createBackground(mood: Mood): BackgroundCache | null {
       paintLayer(g, layer, patternWidth);
       layers.push(canvas);
     }
-    return { sky: skyCanvas, layers, patternWidth };
+    let haze: CanvasImageSource | null = null;
+    if (mood.haze) {
+      const canvas = makeCanvas(Math.ceil(patternWidth * k), Math.ceil(mood.haze.height * k));
+      const g = canvas?.getContext('2d');
+      if (!canvas || !g) return null;
+      g.scale(canvas.width / patternWidth, canvas.height / mood.haze.height);
+      paintHaze(g, mood.haze, patternWidth);
+      haze = canvas;
+    }
+    return { sky: skyCanvas, layers, haze, patternWidth };
   } catch {
     return null;
   }
@@ -205,7 +303,9 @@ export function drawBackground(
       const left = -LOOK.layerMargin - offset;
       ctx.drawImage(image, left, 0, p, WORLD.floorY);
       ctx.drawImage(image, left + p, 0, p, WORLD.floorY);
+      if (i === 0) drawHaze(ctx, mood, cache, tick, motion);
     });
+    if (mood.layers.length === 0) drawHaze(ctx, mood, cache, tick, motion);
   } else {
     const gradient = ctx.createLinearGradient(0, -SKY_BLEED, 0, WORLD.height + SKY_BLEED);
     gradient.addColorStop(0, mood.skyTop);
@@ -214,6 +314,24 @@ export function drawBackground(
     ctx.fillRect(-SKY_BLEED, -SKY_BLEED, WORLD.width + 2 * SKY_BLEED, WORLD.height + 2 * SKY_BLEED);
   }
   if (motion) {
+    const flash = lightningAlpha(mood, tick);
+    if (flash > 0 && mood.lightning) {
+      ctx.globalAlpha = flash;
+      ctx.fillStyle = mood.lightning.color;
+      ctx.fillRect(-SKY_BLEED, -SKY_BLEED, WORLD.width + 2 * SKY_BLEED, WORLD.height + 2 * SKY_BLEED);
+    }
+    if (mood.weather) {
+      const cfg = LOOK.weather[mood.weather.kind];
+      ctx.globalAlpha = cfg.alpha;
+      ctx.strokeStyle = mood.weather.color;
+      ctx.lineWidth = cfg.width;
+      ctx.beginPath();
+      for (const s of weatherStreaks(mood, tick)) {
+        ctx.moveTo(s.x1, s.y1);
+        ctx.lineTo(s.x2, s.y2);
+      }
+      ctx.stroke();
+    }
     ctx.fillStyle = mood.ember;
     for (const e of emberPositions(mood, tick, LOOK.emberCount)) {
       ctx.globalAlpha = e.alpha;
@@ -223,4 +341,17 @@ export function drawBackground(
     }
   }
   ctx.restore();
+}
+
+function drawHaze(ctx: CanvasRenderingContext2D, mood: Mood, cache: BackgroundCache, tick: number, motion: boolean): void {
+  const haze = mood.haze;
+  if (!haze || !cache.haze) return;
+  const p = cache.patternWidth;
+  const offset = motion ? ((tick / 60) * haze.speed) % p : 0;
+  const left = -LOOK.layerMargin - offset;
+  const top = haze.y * WORLD.floorY - haze.height / 2;
+  ctx.globalAlpha = haze.alpha;
+  ctx.drawImage(cache.haze, left, top, p, haze.height);
+  ctx.drawImage(cache.haze, left + p, top, p, haze.height);
+  ctx.globalAlpha = LOOK.layerAlpha;
 }

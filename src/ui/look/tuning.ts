@@ -95,6 +95,20 @@ export const LOOK = {
   /** Layers and the sky are pre-rendered at this fraction of their size and drawn scaled up (a quarter of the memory at 0.5). */
   layerScale: 0.5,
 
+  // ---- Weather and sky effects (all cheap: the mist and glow are baked once, streaks are one stroke, lightning one fill) ----
+  /** Streaks per frame, how fast they fly (world units per second), their angle below level (radians), length, width and opacity. */
+  weather: {
+    rain: { count: 28, speed: 620, angle: 1.25, length: 26, width: 1.5, alpha: 0.32 },
+    wind: { count: 14, speed: 520, angle: 0.07, length: 80, width: 1.5, alpha: 0.22 },
+  },
+  /** Mist bands: how many soft blobs are baked into one band, and how wide and tall each is (fractions of the band). */
+  haze: { blobs: 9, blobWidthMin: 220, blobWidthMax: 420 },
+  /**
+   * Lightning: time is cut into slots; each slot has a `chance` of one dim flash that starts at least `minStartTicks`
+   * into it and fades over `flashTicks`. One flash at a time, at most once per slot, never brighter than `peakAlpha`.
+   */
+  lightning: { slotTicks: 420, chance: 0.7, minStartTicks: 90, flashTicks: 16, peakAlpha: 0.14 },
+
   // ---- Figures: the player ----
   headRadius: 13,
   capeLength: 34,

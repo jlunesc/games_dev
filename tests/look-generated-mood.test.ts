@@ -65,3 +65,39 @@ describe('a generated fight’s backdrop', () => {
     expect(bossLook(idle, EMBER_DUELIST, '#123456').body).toBe('#123456');
   });
 });
+
+describe('generatedMood sky effects', () => {
+  const seeds = Array.from({ length: 300 }, (_, i) => i * 7919 + 3);
+
+  it('always has a soft glow that stays faint and inside the sky', () => {
+    for (const seed of seeds) {
+      const g = generatedMood(seed).glow!;
+      expect(g).toBeDefined();
+      expect(g.color).toMatch(/^#[0-9a-f]{6}$/);
+      expect(g.alpha).toBeLessThanOrEqual(0.25);
+      expect(g.x).toBeGreaterThan(0);
+      expect(g.x).toBeLessThan(1);
+      expect(g.y).toBeGreaterThan(0);
+      expect(g.y).toBeLessThan(0.5);
+    }
+  });
+
+  it('gives mist to some fights and weather to a few, well-formed', () => {
+    const moods = seeds.map(generatedMood);
+    const hazy = moods.filter((m) => m.haze);
+    const wet = moods.filter((m) => m.weather);
+    expect(hazy.length).toBeGreaterThan(seeds.length * 0.4);
+    expect(hazy.length).toBeLessThan(seeds.length * 0.8);
+    expect(wet.length).toBeGreaterThan(0);
+    expect(wet.length).toBeLessThan(seeds.length * 0.4);
+    for (const m of hazy) {
+      expect(m.haze!.color).toMatch(/^#[0-9a-f]{6}$/);
+      expect(m.haze!.alpha).toBeLessThanOrEqual(0.5);
+      expect(m.haze!.y).toBeGreaterThan(0);
+      expect(m.haze!.y).toBeLessThan(1);
+    }
+    for (const m of wet) expect(['rain', 'wind']).toContain(m.weather!.kind);
+    expect(moods.some((m) => m.lightning)).toBe(false);
+  });
+});
+

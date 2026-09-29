@@ -404,6 +404,13 @@ A new choice on the **Boss** row, last in the list: **Storm Kite**, a winged bir
 ## Generated backdrops
 Every **Generated** fight now gets its own backdrop, invented fresh from that fight's seed (the same seed always looks the same): a random colour family (reds, greens, teals, purples, browns and so on), two or three layers of shapes (pillars, ridges or spires) at random heights and speeds, and embers, floor and edge in matching colours. The skies stay dark on purpose, so the boss and its warnings stand out. The boss's body colour is picked opposite the sky on the colour wheel. The hand-built bosses keep their own backdrops. The shot and strike colours of a generated boss are still the default ones.
 
+### Sky effects (glow, mist, rain, wind, lightning)
+Every backdrop can also have a soft **glow** in the sky (a moon, a sun or a horizon light), a band of **mist** that drifts slowly, and **rain** or **wind** streaks. The **Storm Kite** also has a dim **lightning flash** now and then (never more than one every 7 seconds). Hand-built bosses each got a few of these; generated fights get a random glow, mist about 6 times in 10 and rain or wind about 1 time in 4. They are all cheap: the glow and mist are drawn once, the streaks are one line-drawing step, the flash one fill. Settings > **Effects** off stops the mist drift, the streaks and the lightning (the glow stays).
+- [ ] The game still runs smoothly on the phone in the Storm Kite fight (rain, mist and lightning all at once, the busiest backdrop). If it stutters, tell me and I will lower the numbers in `LOOK.weather` and `LOOK.lightning`, or drop the effect.
+- [ ] The lightning is dim and does not hurt to look at, and the red and gold warnings stay easy to read during a flash.
+- [ ] The rain and wind streaks do not look like attacks or shots.
+- [ ] Mist and glow sit behind everything and never hide the boss.
+
 ### Checklist
 - [ ] Two generated fights in a row look clearly different.
 - [ ] The boss, its red and gold warnings, the player and the platforms are easy to see in every one you get.

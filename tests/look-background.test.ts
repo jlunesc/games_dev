@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WORLD } from '../src/game/params';
 import { LOOK } from '../src/ui/look/tuning';
-import { MOODS, type LayerDef } from '../src/ui/look/moods';
-import { createBackground, drawBackground, emberPositions, layerShapes } from '../src/ui/look/background';
+import { MOODS, type LayerDef, type Mood } from '../src/ui/look/moods';
+import { createBackground, drawBackground, emberPositions, layerShapes, lightningAlpha, weatherStreaks } from '../src/ui/look/background';
 
 const WIDTH = WORLD.width + 2 * LOOK.layerMargin;
+
+/** The Ember Duelist's backdrop without its glow and mist, for the tests of the plain sky and layers. */
+const PLAIN: Mood = { ...MOODS['ember-duelist']! };
+delete PLAIN.glow;
+delete PLAIN.haze;
 
 function layer(shape: LayerDef['shape'], seed: number, heightFraction = 0.5): LayerDef {
   return { shape, color: '#123456', speed: 10, heightFraction, seed };
@@ -162,7 +167,7 @@ function fakeContext() {
 }
 
 describe('drawBackground', () => {
-  const mood = MOODS['ember-duelist']!;
+  const mood = PLAIN;
 
   it('draws a plain gradient sky with no layers when there is no cache, and stays balanced', () => {
     const f = fakeContext();
@@ -230,7 +235,7 @@ describe('a cached background (with a stand-in document)', () => {
 
   it('pre-renders the sky and each layer once, wide enough to wrap', () => {
     const made = stubDocument();
-    const mood = MOODS['ember-duelist']!;
+    const mood = PLAIN;
     const cache = createBackground(mood);
     expect(cache).not.toBeNull();
     expect(made).toHaveLength(1 + mood.layers.length);
@@ -245,7 +250,7 @@ describe('a cached background (with a stand-in document)', () => {
 
   it('draws two copies of each layer, offset by the drift only with motion, and stays balanced', () => {
     stubDocument();
-    const mood = MOODS['ember-duelist']!;
+    const mood = PLAIN;
     const cache = createBackground(mood)!;
     const draws = (tick: number, motion: boolean) => {
       const f = fakeContext();
@@ -275,7 +280,7 @@ describe('a cached background (with a stand-in document)', () => {
 
   it('stretches the half-size pictures back to world size when drawing (sky and layers)', () => {
     stubDocument();
-    const mood = MOODS['ember-duelist']!;
+    const mood = PLAIN;
     const cache = createBackground(mood)!;
     const f = fakeContext();
     const sizes: number[][] = [];
@@ -287,5 +292,179 @@ describe('a cached background (with a stand-in document)', () => {
       expect(w).toBe(WIDTH);
       expect(h).toBe(WORLD.floorY);
     }
+  });
+});
+
+describe('weatherStreaks', () => {
+  const rain: Mood = { ...PLAIN, weather: { kind: 'rain', color: '#ffffff' } };
+  const wind: Mood = { ...PLAIN, weather: { kind: 'wind', color: '#ffffff' } };
+
+  it('is empty for a mood with no weather', () => {
+    expect(weatherStreaks(PLAIN, 100)).toEqual([]);
+  });
+
+  it('gives the capped count, the same for the same tick, and stays inside the world', () => {
+    for (const [mood, kind] of [[rain, 'rain'], [wind, 'wind']] as const) {
+      const streaks = weatherStreaks(mood, 777);
+      expect(streaks).toHaveLength(LOOK.weather[kind].count);
+      expect(streaks).toEqual(weatherStreaks(mood, 777));
+      for (const s of streaks) {
+        expect(s.x2).toBeGreaterThanOrEqual(0);
+        expect(s.x2).toBeLessThanOrEqual(WORLD.width);
+        expect(s.y2).toBeGreaterThanOrEqual(0);
+        expect(s.y2).toBeLessThanOrEqual(WORLD.floorY);
+      }
+    }
+  });
+
+  it('rain falls down and wind blows sideways', () => {
+    const r = weatherStreaks(rain, 10).map((s) => Math.abs(s.y2 - s.y1) / Math.abs(s.x2 - s.x1));
+    const w = weatherStreaks(wind, 10).map((s) => Math.abs(s.y2 - s.y1) / Math.abs(s.x2 - s.x1));
+    expect(Math.min(...r)).toBeGreaterThan(1);
+    expect(Math.max(...w)).toBeLessThan(0.2);
+  });
+
+  it('moves as the tick advances', () => {
+    expect(weatherStreaks(rain, 11)).not.toEqual(weatherStreaks(rain, 10));
+  });
+});
+
+describe('lightningAlpha', () => {
+  const storm: Mood = { ...PLAIN, id: 'stormy', lightning: { color: '#ffffff' } };
+
+  it('is zero for a mood with no lightning', () => {
+    for (let tick = 0; tick < 3000; tick += 7) expect(lightningAlpha(PLAIN, tick)).toBe(0);
+  });
+
+  it('flashes now and then, never above the peak, never in the first moments of a fight, and is deterministic', () => {
+    let flashes = 0;
+    let dark = 0;
+    for (let tick = 0; tick < 60 * 120; tick++) {
+      const a = lightningAlpha(storm, tick);
+      expect(a).toBe(lightningAlpha(storm, tick));
+      expect(a).toBeGreaterThanOrEqual(0);
+      expect(a).toBeLessThanOrEqual(LOOK.lightning.peakAlpha);
+      if (tick < LOOK.lightning.minStartTicks) expect(a).toBe(0);
+      if (a > 0) flashes++;
+      else dark++;
+    }
+    expect(flashes).toBeGreaterThan(0);
+    // Mostly dark: a flash is a short moment.
+    expect(dark).toBeGreaterThan(flashes * 10);
+  });
+
+  it('never flashes twice inside one slot', () => {
+    for (let slot = 0; slot < 60; slot++) {
+      let starts = 0;
+      let prev = 0;
+      for (let i = 0; i < LOOK.lightning.slotTicks; i++) {
+        const a = lightningAlpha(storm, slot * LOOK.lightning.slotTicks + i);
+        if (a > 0 && prev === 0) starts++;
+        prev = a;
+      }
+      expect(starts).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe('sky effects in the drawing', () => {
+  const count = (mood: Mood, tick: number, motion: boolean) => {
+    const f = fakeContext();
+    const ctx = f.ctx as unknown as Record<string, unknown>;
+    const strokes: number[] = [];
+    ctx.stroke = () => strokes.push(1);
+    ctx.moveTo = rec();
+    ctx.lineTo = rec();
+    function rec() {
+      return () => {};
+    }
+    drawBackground(f.ctx, mood, null, tick, motion);
+    expect(f.balance()).toBe(0);
+    expect(f.minDepth()).toBe(0);
+    return strokes.length;
+  };
+
+  it('strokes all the weather in one go, and only with motion', () => {
+    const rain: Mood = { ...PLAIN, weather: { kind: 'rain', color: '#ffffff' } };
+    expect(count(rain, 50, true)).toBe(1);
+    expect(count(rain, 50, false)).toBe(0);
+    expect(count(PLAIN, 50, true)).toBe(0);
+  });
+
+  it('adds one full-screen fill during a flash and none otherwise', () => {
+    const storm: Mood = { ...PLAIN, id: 'stormy', lightning: { color: '#ffffff' } };
+    let flashTick = -1;
+    for (let t = 0; t < 5000 && flashTick < 0; t++) if (lightningAlpha(storm, t) > 0) flashTick = t;
+    expect(flashTick).toBeGreaterThanOrEqual(0);
+    const fills = (tick: number, motion: boolean) => {
+      const f = fakeContext();
+      drawBackground(f.ctx, storm, null, tick, motion);
+      return f.calls.filter((c) => c === 'fillRect').length;
+    };
+    const base = fills(0, false);
+    expect(fills(flashTick, true)).toBe(base + 1);
+    expect(fills(flashTick, false)).toBe(base);
+  });
+});
+
+describe('a cached background with a glow and a mist band', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('bakes both in once, and draws the mist as two copies one pattern apart between the far layer and the rest', () => {
+    const made: { width: number; height: number }[] = [];
+    let radials = 0;
+    vi.stubGlobal('document', {
+      createElement: () => {
+        const canvas = {
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            canvas,
+            fillStyle: '',
+            globalAlpha: 1,
+            createLinearGradient: () => ({ addColorStop() {} }),
+            createRadialGradient: () => {
+              radials++;
+              return { addColorStop() {} };
+            },
+            save() {},
+            restore() {},
+            translate() {},
+            fillRect() {},
+            beginPath() {},
+            rect() {},
+            arc() {},
+            scale() {},
+            moveTo() {},
+            lineTo() {},
+            closePath() {},
+            fill() {},
+          }),
+        };
+        made.push(canvas);
+        return canvas;
+      },
+    });
+    const mood: Mood = {
+      ...PLAIN,
+      glow: { color: '#ffffff', x: 0.5, y: 0.2, radius: 300, alpha: 0.2, disc: 30 },
+      haze: { color: '#ffffff', alpha: 0.4, speed: 10, y: 0.5, height: 160, seed: 1 },
+    };
+    const cache = createBackground(mood)!;
+    expect(cache.haze).not.toBeNull();
+    // Sky, layers, and one mist band: no more pictures than that.
+    expect(made).toHaveLength(1 + mood.layers.length + 1);
+    // One glow, and three copies of each blob (so the band wraps).
+    expect(radials).toBe(1 + 3 * LOOK.haze.blobs);
+    const f = fakeContext();
+    const xs: unknown[][] = [];
+    (f.ctx as unknown as { drawImage: (...a: unknown[]) => void }).drawImage = (...a) => xs.push(a);
+    drawBackground(f.ctx, mood, cache, 300, true);
+    // Sky, far layer twice, mist twice, then the other layers twice each.
+    expect(xs).toHaveLength(1 + 2 * mood.layers.length + 2);
+    const mistImages = xs.filter((a) => a[0] === cache.haze);
+    expect(mistImages).toHaveLength(2);
+    expect((mistImages[1]![1] as number) - (mistImages[0]![1] as number)).toBe(WIDTH);
+    expect(xs.indexOf(mistImages[0]!)).toBe(3);
   });
 });

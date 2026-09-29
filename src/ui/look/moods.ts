@@ -13,6 +13,32 @@ export interface LayerDef {
   seed: number;
 }
 
+/** A soft light in the sky (a moon, a sun or a horizon glow), baked into the sky picture. `x` and `y` are fractions of the world; `radius` is in world units; `disc` adds a solid disc of that radius in the middle. */
+export interface GlowDef {
+  color: string;
+  x: number;
+  y: number;
+  radius: number;
+  alpha: number;
+  disc?: number;
+}
+
+/** A band of mist or cloud that drifts like one more layer. `y` is the band's middle as a fraction of the floor height, `height` is in world units. */
+export interface HazeDef {
+  color: string;
+  alpha: number;
+  speed: number;
+  y: number;
+  height: number;
+  seed: number;
+}
+
+/** Falling rain or blowing wind streaks. Counts and sizes are in `LOOK.weather`. */
+export interface WeatherDef {
+  kind: 'rain' | 'wind';
+  color: string;
+}
+
 /** The colours and layers behind one boss's arena. */
 export interface Mood {
   id: string;
@@ -26,6 +52,11 @@ export interface Mood {
   accent: string;
   /** The boss's body colour when nothing changes it (a hit flash, a stagger). */
   bodyColor: string;
+  glow?: GlowDef;
+  haze?: HazeDef;
+  weather?: WeatherDef;
+  /** Now and then a dim flash lights the whole sky in this colour. */
+  lightning?: { color: string };
 }
 
 const [FAR, MID, NEAR] = LOOK.layerSpeeds;
@@ -61,6 +92,8 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#ff7a2a',
     accent: '#ffb44a',
     bodyColor: LOOK.bossBodyEmber,
+    glow: { color: '#ff7a2a', x: 0.5, y: 0.78, radius: 520, alpha: 0.22 },
+    haze: { color: '#ff8a4a', alpha: 0.4, speed: 7, y: 0.62, height: 170, seed: 121 },
   },
   'ashen-hound': {
     id: 'ashen-hound',
@@ -76,6 +109,8 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#7fa0d0',
     accent: '#a8d0ff',
     bodyColor: LOOK.bossBodyAsh,
+    glow: { color: '#b8d0f0', x: 0.78, y: 0.2, radius: 300, alpha: 0.2, disc: 26 },
+    haze: { color: '#a8bcd8', alpha: 0.34, speed: 6, y: 0.7, height: 190, seed: 122 },
   },
   'quill-warden': {
     id: 'quill-warden',
@@ -91,6 +126,8 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#6fe0a8',
     accent: '#8fe8bc',
     bodyColor: LOOK.bossBodyQuill,
+    glow: { color: '#a8f0c8', x: 0.25, y: 0.18, radius: 300, alpha: 0.18, disc: 22 },
+    haze: { color: '#7fe0b0', alpha: 0.44, speed: 8, y: 0.68, height: 200, seed: 123 },
   },
   'cinder-golem': {
     id: 'cinder-golem',
@@ -106,6 +143,8 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#d08840',
     accent: '#e8b060',
     bodyColor: LOOK.bossBodyAsh,
+    glow: { color: '#e08840', x: 0.15, y: 0.75, radius: 460, alpha: 0.2 },
+    haze: { color: '#9a8a78', alpha: 0.52, speed: 9, y: 0.4, height: 170, seed: 124 },
   },
   'veil-dancer': {
     id: 'veil-dancer',
@@ -121,6 +160,8 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#b070e0',
     accent: '#d0a0f4',
     bodyColor: LOOK.bossBodyVeil,
+    glow: { color: '#e0b8ff', x: 0.68, y: 0.2, radius: 340, alpha: 0.22, disc: 34 },
+    haze: { color: '#b070e0', alpha: 0.4, speed: 6, y: 0.66, height: 180, seed: 125 },
   },
   'gale-reaver': {
     id: 'gale-reaver',
@@ -136,6 +177,8 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#5fd8e4',
     accent: '#8ff0f8',
     bodyColor: LOOK.bossBodyGale,
+    haze: { color: '#8ff0f8', alpha: 0.4, speed: 16, y: 0.35, height: 150, seed: 126 },
+    weather: { kind: 'wind', color: '#a8f4f8' },
   },
   'brass-sentinel': {
     id: 'brass-sentinel',
@@ -151,6 +194,7 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#e0c050',
     accent: '#f0d878',
     bodyColor: LOOK.bossBodyBrass,
+    glow: { color: '#f0d070', x: 0.5, y: 0.3, radius: 420, alpha: 0.2, disc: 38 },
   },
   'vesper-sage': {
     id: 'vesper-sage',
@@ -167,6 +211,7 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#9a78e8',
     accent: '#b48cff',
     bodyColor: LOOK.bossBodySage,
+    glow: { color: '#d4c0ff', x: 0.4, y: 0.16, radius: 320, alpha: 0.22, disc: 30 },
   },
   'tremor-brute': {
     id: 'tremor-brute',
@@ -183,6 +228,7 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#d8583a',
     accent: '#e8785a',
     bodyColor: LOOK.bossBodyBrute,
+    haze: { color: '#c0805a', alpha: 0.48, speed: 8, y: 0.72, height: 180, seed: 127 },
   },
   'storm-kite': {
     id: 'storm-kite',
@@ -199,6 +245,10 @@ export const MOODS: Record<string, Mood> = {
     floorGlow: '#5a9cff',
     accent: '#7fb0ff',
     bodyColor: LOOK.bossBodyKite,
+    glow: { color: '#8a78c8', x: 0.6, y: 0.3, radius: 460, alpha: 0.2 },
+    haze: { color: '#a090d0', alpha: 0.52, speed: 14, y: 0.3, height: 170, seed: 128 },
+    weather: { kind: 'rain', color: '#b8d0ff' },
+    lightning: { color: '#dce8ff' },
   },
 };
 

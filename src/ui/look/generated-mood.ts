@@ -1,5 +1,5 @@
 import { rng } from './background';
-import type { LayerDef, Mood } from './moods';
+import type { GlowDef, HazeDef, LayerDef, Mood, WeatherDef } from './moods';
 import { LOOK } from './tuning';
 
 /** Everything below is look only: a fresh backdrop for each generated fight, always the same for the same seed. */
@@ -65,6 +65,34 @@ export function generatedMood(seed: number): Mood {
   }
 
   const accentHue = hue + between(-20, 20);
+  // Drawn after everything above, so adding these never changes the colours a seed already gave.
+  const glow: GlowDef = {
+    color: hslToHex(accentHue, 70, between(60, 75)),
+    x: between(0.15, 0.85),
+    y: between(0.12, 0.4),
+    radius: between(280, 420),
+    alpha: between(0.14, 0.24),
+  };
+  if (next() < 0.4) glow.disc = between(22, 36);
+  const hazeRoll = next();
+  const haze: HazeDef | undefined =
+    hazeRoll < 0.6
+      ? {
+          color: hslToHex(hue + between(-15, 15), 45, between(55, 70)),
+          alpha: between(0.25, 0.38),
+          speed: between(6, 16),
+          y: between(0.3, 0.72),
+          height: between(150, 200),
+          seed: 2000 + Math.floor(next() * 1_000_000),
+        }
+      : undefined;
+  const weatherRoll = next();
+  const weather: WeatherDef | undefined =
+    weatherRoll < 0.15
+      ? { kind: 'rain', color: hslToHex(hue, 40, 78) }
+      : weatherRoll < 0.25
+        ? { kind: 'wind', color: hslToHex(hue, 40, 78) }
+        : undefined;
   return {
     id: `generated-${seed >>> 0}`,
     skyTop: hslToHex(hue, sat * 0.8, between(SKY_TOP_LIGHTNESS[0], SKY_TOP_LIGHTNESS[1])),
@@ -76,5 +104,8 @@ export function generatedMood(seed: number): Mood {
     floorGlow: hslToHex(accentHue, 80, between(55, 65)),
     accent: hslToHex(accentHue, 80, between(66, 76)),
     bodyColor: hslToHex(hue + between(150, 210), between(35, 55), between(54, 64)),
+    glow,
+    ...(haze ? { haze } : {}),
+    ...(weather ? { weather } : {}),
   };
 }
