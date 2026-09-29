@@ -7,7 +7,7 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 ## 1. Where boss files live and how they are checked
 
 - One file per boss: `src/bosses/<id>.json`. There are two: the Ember Duelist (`src/bosses/ember-duelist.json`, the fixed reference boss) and the Ashen Hound (`src/bosses/ashen-hound.json`, the first boss that dashes and leaps; section 3a describes it).
-- `src/bosses/index.ts` imports the file and runs it through `parseBoss` (`src/bosses/parse.ts`) once, when the game loads, and exports the results (`EMBER_DUELIST`, `ASHEN_HOUND`). The types are in `src/bosses/schema.ts`.
+- `src/bosses/roster.ts` imports the file and runs it through `parseBoss` (`src/bosses/parse.ts`) once, when the game loads, and exports the results (`EMBER_DUELIST`, `ASHEN_HOUND`). The types are in `src/bosses/schema.ts`. `src/bosses/index.ts` re-exports the roster and adds `bossById` and the menu's `BOSS_CHOICES`; nothing else imports `roster.ts` directly except `pairs.ts`, which is why the list lives in its own file.
 - The checker throws a `BossFormatError` for the first problem it finds, with a message naming the exact place in the file. Example:
 
   ```
@@ -20,7 +20,7 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 
 ### Adding a boss
 1. Create `src/bosses/<id>.json` with every field below (copy `ember-duelist.json` as a starting point, or `ashen-hound.json` for a boss that moves or leaps).
-2. Load and export it in `src/bosses/index.ts` the same way as the Duelist and the Hound, with its own import name: `import rawNext from './next-boss.json'; export const NEXT_BOSS = parseBoss(rawNext);`, and add it to the `BOSSES` list in that file (the menu offers the bosses in that order).
+2. Load and export it in `src/bosses/roster.ts` the same way as the Duelist and the Hound, with its own import name: `import rawNext from './next-boss.json'; export const NEXT_BOSS = parseBoss(rawNext);`, and add it to the `BOSSES` list in that file (the menu offers the bosses in that order).
 3. Add tests: the real file is accepted and has the shape you planned; and behavior tests for anything new about it. `tests/boss-parse.test.ts` (checker) and `tests/step-boss.test.ts`, `tests/step-counter.test.ts`, `tests/step-phases.test.ts`, `tests/step-leap.test.ts` (behavior, with helpers in `tests/boss-helpers.ts` and `tests/helpers.ts`) show the pattern; `tests/ashen-hound.test.ts` is the pattern for a whole boss file. The boss must also survive the difficulty dials at both ends of their range, now including the leap fields: `tests/difficulty.test.ts` runs the dials over the Duelist and over a test boss with leaps and moves in every direction, and `tests/ashen-hound.test.ts` checks the real Hound at every extreme (add the same check for a new boss).
 4. The menu's Boss row (`src/ui/menu-model.ts`) steps through `BOSS_CHOICES` with left and right (wrapping around) — the named bosses in `BOSSES`, plus the synthetic `'generated'` choice at the end (section 3b) — so a boss added to `BOSSES` can be chosen from the menu with no other change. The menu remembers the choice; an unknown stored id falls back to the Duelist (`bossById`, which does not know about `'generated'`; a fight or a replay resolves the stored id through `resolveBoss` instead, section 3b).
 5. Drawing is separate from the boss file. The body colors, the arm poses, the crouch, the glow and the landing bar live in `src/ui/render.ts`; a boss file only chooses one of the existing poses and describes the movement.
@@ -447,6 +447,35 @@ There are seven dials. Each is a multiplier on numbers in the boss file (damage 
 | `variety` | 0.5 to 1 | Each phase keeps only that fraction of its `attacks` (rounded, at least 1): the ones with the highest `weight` (ties keep list order), in their original order. An `opening` attack is not filtered. |
 
 The ranges, the steps the Tweak screen moves in, and the values of the three presets are all in `src/game/difficulty.ts` (`DIALS` and `PRESETS`); change them there. The leap's flight length (`to - from`) and `height` are not scaled by any dial: stretching the flight would move the landing, and its shockwave, in time. Adding a dial means a new entry in `DIALS`, its effect in `applyDials` and a test. The dials never touch the arena (see "The arena in the fight"). Player and environment dials are not built yet (`docs/backlog.md`).
+
+## 5a. Pairs
+
+A pair puts two existing bosses in the same fight (bosses take turns; the sword hurts the nearest one; both must fall; the survivor is enraged). A pair is a data file, `src/bosses/<pair-id>.json`, checked at load by `parsePair` (`src/bosses/pair.ts`) with the same kind of message as a boss file (`Pair data error at pair.bosses[1].boss: ...`, a `PairFormatError`). `src/bosses/pairs.ts` loads each pair and lists it in `PAIRS`; the menu's Boss row offers each pair after the named bosses and before `'generated'`.
+
+```json
+{
+  "id": "hound-and-sage",
+  "name": "Hound and Sage",
+  "bosses": [
+    { "boss": "ashen-hound", "healthScale": 0.6 },
+    { "boss": "vesper-sage", "healthScale": 0.6 }
+  ],
+  "enrage": { "gapScale": 0.6, "walkScale": 1.3 }
+}
+```
+
+| Field | Rule |
+|---|---|
+| `id` | Non-empty. It is stored wherever a boss id is stored (the menu choice, a fight record's `bossId`), so it must not be the id of a boss or `generated`. |
+| `name` | Non-empty. Shown in the Boss row. |
+| `bosses` | Exactly two entries. The first is the **primary boss**: the fight uses its arena and its backdrop, and it is the boss the game state calls `boss` (the other is in `partners`). The two must be different bosses, and each must exist in `BOSSES` (an unknown id is an error; it never falls back to the Duelist). A pair cannot contain a generated boss. |
+| `bosses[i].boss` | The id of an existing boss file. |
+| `bosses[i].healthScale` | From 0.2 to 2. The boss's `maxHp` is multiplied by it (rounded, at least 1) before the difficulty dials. Bosses were tuned for solo fights, so a pair usually scales each one down. Example: the Hound has 24 health and the Sage 20, so at 0.6 they have 14 and 12 in the pair. |
+| `enrage` | Optional (`null` or missing means none). When one boss falls, the other switches to a boosted copy of itself. `gapScale` (0.1 to 1) multiplies each phase's `gap` (rounded, at least 1), so waits get shorter; `walkScale` (1 to 3) multiplies each phase's `walkSpeed` and `retreatSpeed`. |
+
+A pair adds no attacks and no arena of its own. To use one, `resolveFight(id, seed)` (`src/bosses/resolve.ts`) turns a pair id into a fight: each boss with its health scaled, plus the enrage. A boss id or `generated` gives a fight of one boss, exactly as before. The difficulty dials apply to both bosses at once (`applyDialsToFight`). The pair is not judged for fairness by the generator's checker; each pair is hand-tuned and checked with scripted players, like the Ashen Hound.
+
+To add a pair: create `src/bosses/<id>.json`, load it in `src/bosses/pairs.ts` (`parsePair(raw, knownBoss)`) and add it to `PAIRS`, then add a test like the ones for Hound and Sage in `tests/pair-parse.test.ts`. The Boss row picks it up with no other change.
 
 ## 6. Ideas not built yet
 
