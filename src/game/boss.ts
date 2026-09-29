@@ -242,7 +242,12 @@ function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef, index: numbe
 }
 
 /** The x a leap will land on, fixed at take-off and kept inside the arena. */
-function leapLanding(s: GameState, boss: BossDef, leap: { target: LeapTarget; distance?: number }, index: number): number {
+function leapLanding(
+  s: GameState,
+  boss: BossDef,
+  leap: { target: LeapTarget; distance?: number },
+  index: number,
+): number {
   const b = bossAt(s, index);
   const half = boss.width / 2;
   let x = s.player.x;

@@ -163,11 +163,11 @@ export function hurtPlayer(s: GameState, amount: number): void {
 function tryCounter(s: GameState, fight: FightDef, studying: boolean): void {
   if (studying) return;
   for (let i = 0; i < bossCount(s); i++) {
-    if (!isDowned(s, i) && counterBoss(s, bossDefFor(s, fight, i), i)) return;
+    if (!isDowned(s, i) && counterBoss(s, bossDefFor(s, fight, i), i, fight.bosses[0]!.arena)) return;
   }
 }
 
-function counterBoss(s: GameState, boss: BossDef, index: number): boolean {
+function counterBoss(s: GameState, boss: BossDef, index: number, arena: ArenaDef | undefined): boolean {
   const p = s.player;
   const b = bossAt(s, index);
   if (b.mode !== 'attack' || b.attackId === null || p.attackTick !== 0 || p.attackAim !== 'forward') return false;
@@ -179,7 +179,7 @@ function counterBoss(s: GameState, boss: BossDef, index: number): boolean {
   // above a boss on the floor cannot counter it). Only the y ranges count: x stays governed by `counter.range`.
   // A bare arena keeps the old rule (distance only), which the recorded duelist scenarios and the counter of a
   // leaping boss from the floor rely on.
-  if (boss.arena !== undefined && (boss.arena.platforms.length > 0 || boss.arena.covers.length > 0)) {
+  if (arena !== undefined && (arena.platforms.length > 0 || arena.covers.length > 0)) {
     const swing = attackBox(p);
     const body = bossBox(b, boss);
     if (swing.y >= body.y + body.h || body.y >= swing.y + swing.h) return false;
@@ -303,7 +303,6 @@ function resolveShotHits(s: GameState, fight: FightDef, studying: boolean): void
   );
   hurtPlayer(s, damage);
 }
-
 
 /** Advances the game by one update. Pure: returns a new state and never touches the one it is given. */
 export function step(prev: GameState, input: InputFrame, source: BossDef | FightDef): GameState {

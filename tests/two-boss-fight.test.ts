@@ -3,6 +3,7 @@ import { NO_INPUT } from '../src/engine/input-frame';
 import type { FightDef } from '../src/game/fight';
 import { createInitialState, type GameEvent, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
+import { isEnraged } from '../src/game/turns';
 import { dummy, pair, unit } from './duo-helpers';
 import { DUELIST, withInput } from './helpers';
 import { shootingAttack } from './shot-helpers';
@@ -79,19 +80,37 @@ describe('beating one boss', () => {
   it('lets the fight go on: the boss falls, its shots vanish, and no victory is declared', () => {
     const fight = pair(dummy(1000, 5), dummy(650, 1));
     const s0 = stand(fight);
-    s0.shots.push({
-      kind: 'bolt', attackId: 'shoot', originTick: 0, x: 900, lift: 400, dir: -1, originX: 900, size: 30, speed: 0, climb: 0, owner: 1,
-    });
+    s0.shots.push(
+      { kind: 'bolt', attackId: 'shoot', originTick: 0, x: 900, lift: 400, dir: -1, originX: 900, size: 30, speed: 0, climb: 0, owner: 1 },
+      { kind: 'bolt', attackId: 'shoot', originTick: 0, x: 900, lift: 400, dir: -1, originX: 900, size: 30, speed: 0, climb: 0 },
+    );
     const { state, events } = swing(s0, fight);
     expect(events).toContain('bossDown');
     expect(events).not.toContain('bossDefeated');
     expect(state.phase).toBe('fight');
     expect(state.partners[0]!.hp).toBe(0);
     expect(state.boss.hp).toBe(5);
-    expect(state.shots).toEqual([]);
+    expect(state.shots.map((shot) => shot.owner)).toEqual([undefined]);
   });
 
-  it('never lets a fallen boss act, be hit again or hold the turn', () => {
+  it('downs the primary boss just the same: the partner carries on, enraged, and the fight is not over', () => {
+    const fight = pair(dummy(650, 1), dummy(1000, 5), { gapScale: 0.25, walkScale: 2 });
+    const s0 = stand(fight);
+    s0.shots.push(
+      { kind: 'bolt', attackId: 'shoot', originTick: 0, x: 900, lift: 400, dir: -1, originX: 900, size: 30, speed: 0, climb: 0 },
+      { kind: 'bolt', attackId: 'shoot', originTick: 0, x: 900, lift: 400, dir: -1, originX: 900, size: 30, speed: 0, climb: 0, owner: 1 },
+    );
+    const { state, events } = swing(s0, fight);
+    expect(state.boss.hp).toBeLessThanOrEqual(0);
+    expect(events).toContain('bossDown');
+    expect(events).not.toContain('bossDefeated');
+    expect(state.phase).toBe('fight');
+    expect(state.partners[0]!.hp).toBe(5);
+    expect(isEnraged(state, fight, 1)).toBe(true);
+    expect(state.shots.map((shot) => shot.owner)).toEqual([1]);
+  });
+
+  it('leaves a fallen boss exactly as it fell while the fight goes on', () => {
     const fight = pair(unit(5, 960), dummy(650, 1));
     let s = stand(fight);
     s = swing(s, fight).state;
@@ -101,8 +120,6 @@ describe('beating one boss', () => {
       expect(s.phase).toBe('fight');
     }
     expect(JSON.stringify(s.partners[0])).toBe(before);
-    // The survivor kept attacking, so the fallen boss did not block its turns.
-    expect(s.boss.mode === 'attack' || s.boss.mode === 'approach' || s.shots.length > 0 || s.boss.lastAttacks.length > 0).toBe(true);
   });
 
   it('enrages the survivor: it starts its next attack sooner than it would without the enrage', () => {

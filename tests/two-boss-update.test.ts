@@ -64,6 +64,24 @@ describe('updateBoss with an index', () => {
   });
 });
 
+describe('a blocked opening', () => {
+  it('becomes a plain wait: no attack is chosen, no random number is drawn, the gap starts over', () => {
+    const base = unit(5, 1100);
+    const b = { ...base, phases: [{ ...base.phases[0]!, opening: 'shoot' }] };
+    const s = createInitialState(pair(unit(5, 960), b));
+    const partner = s.partners[0]!;
+    partner.mode = 'transition';
+    partner.modeTick = b.transitionTicks - 1;
+    const before = s.rng;
+    s.tick += 1;
+    updateBoss(s, b, 1, false);
+    expect(partner.mode).toBe('gap');
+    expect(partner.modeTick).toBe(0);
+    expect(partner.pendingAttackId).toBeNull();
+    expect(s.rng).toBe(before);
+  });
+});
+
 describe('a dummy partner', () => {
   it('never leaves its wait', () => {
     const d = dummy(1100);
