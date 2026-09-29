@@ -88,3 +88,47 @@ export class FakeContext {
 
 export const asContext = (fake: FakeContext): AudioContext => fake as unknown as AudioContext;
 export const asNode = <T>(node: FakeNode): T => node as unknown as T;
+
+/** A stand-in for setInterval and setTimeout that only runs when a test says so. */
+export class FakeTimer {
+  private intervals = new Map<number, () => void>();
+  private timeouts = new Map<number, () => void>();
+  private next = 1;
+  /** How many repeating timers are running. */
+  get active(): number {
+    return this.intervals.size;
+  }
+  every(fn: () => void, _ms: number): number {
+    const id = this.next++;
+    this.intervals.set(id, fn);
+    return id;
+  }
+  after(fn: () => void, _ms: number): number {
+    const id = this.next++;
+    this.timeouts.set(id, fn);
+    return id;
+  }
+  cancel(handle: unknown): void {
+    this.intervals.delete(handle as number);
+    this.timeouts.delete(handle as number);
+  }
+  /** One tick of every repeating timer. */
+  run(): void {
+    for (const fn of [...this.intervals.values()]) fn();
+  }
+  /** Runs and forgets every one-shot timer. */
+  flush(): void {
+    const due = [...this.timeouts.values()];
+    this.timeouts.clear();
+    for (const fn of due) fn();
+  }
+}
+
+/** Moves the fake audio clock forward, ticking the timer every 25 ms of it, the way the real page would. */
+export function advance(ctx: FakeContext, timer: FakeTimer, seconds: number, tick = 0.025): void {
+  const end = ctx.currentTime + seconds;
+  while (ctx.currentTime < end - 1e-9) {
+    ctx.currentTime += tick;
+    timer.run();
+  }
+}

@@ -245,3 +245,46 @@ export const PROGRESSIONS: Record<Mode, ReadonlyArray<{ offset: number; third: 3
     { offset: 5, third: 4 },
   ],
 };
+
+/** The music. Every value is a first guess to be tuned on the phone. */
+export const MUSIC = {
+  /** The sequencer wakes this often and schedules what falls in the next `lookaheadSeconds` of the audio clock. */
+  timerMs: 25,
+  lookaheadSeconds: 0.12,
+  /** The first beat sounds this long after the music starts. */
+  startDelaySeconds: 0.05,
+  startFadeSeconds: 0.5,
+  stopFadeSeconds: 0.3,
+  /** A step already this far in the past (the timer was starved, the page was hidden) is skipped, not played late. */
+  lateSeconds: 0.1,
+  /** How often, in updates, the fight is looked at to decide the layers (they only change on a bar line anyway). */
+  checkEvery: 10,
+  /** The whole music against the sound effects. */
+  level: 0.5,
+  /** How loud each layer plays when it is on. */
+  layerGain: { pad: 0.5, bass: 0.9, drums: 0.7, lead: 0.5 },
+  /** The pad when it plays alone (the study): quieter, so watching is not drowned. */
+  studyPadGain: 0.3,
+  note: {
+    /** A chord tone held for the bar, fading in and out so a bar melts into the next. */
+    pad: { tone: 'triangle', volume: 0.09, attackSeconds: 0.5, releaseSeconds: 0.5 },
+    /** The bass is a triangle with a quiet square an octave up so it can be heard on a phone speaker. */
+    bass: {
+      seconds: 0.2,
+      parts: [
+        { tone: 'triangle', semitones: 0, volume: 0.3 },
+        { tone: 'square', semitones: 12, volume: 0.04 },
+      ],
+    },
+    lead: { tone: 'square', seconds: 0.18, volume: 0.05 },
+    kick: { from: 120, to: 45, seconds: 0.16, volume: 0.5 },
+    hat: { freq: 7000, seconds: 0.04, volume: 0.1 },
+  },
+  /** A win sting is `semitones` above the tonic plus `above`; a loss sting the same. */
+  sting: {
+    priority: 10,
+    spacing: 0.11,
+    win: { tone: 'triangle', semitones: [0, 4, 7, 12], above: 24, seconds: 0.6, volume: 0.2 },
+    loss: { tone: 'sawtooth', semitones: [7, 3, 0, -5], above: 12, seconds: 0.7, volume: 0.1 },
+  },
+} as const;
