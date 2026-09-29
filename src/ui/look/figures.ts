@@ -9,7 +9,7 @@
  */
 import type { AttackDef, BossDef, Pose } from '../../bosses/schema';
 import { PLAYER, WORLD } from '../../game/params';
-import type { GameState } from '../../game/state';
+import { bossAt, type GameState } from '../../game/state';
 import { attackPalette } from './attackfx';
 import { armRect, bossDrawBox, type Rect } from './pose';
 import { LOOK } from './tuning';
@@ -200,8 +200,8 @@ interface AttackMarks {
   shots: { kind: 'bolt' | 'arc' | 'eruption'; aimed: boolean; back: boolean }[];
 }
 
-function bossPose(state: GameState, boss: BossDef): BossPose {
-  const b = state.boss;
+function bossPose(state: GameState, boss: BossDef, index: number): BossPose {
+  const b = bossAt(state, index);
   const box = bossDrawBox(b, boss);
   const attack =
     b.mode === 'attack' && b.attackId !== null ? boss.attacks.find((a) => a.id === b.attackId) : undefined;
@@ -1365,14 +1365,15 @@ function attackMarks(bp: BossPose, bossId: string): Primitive[] {
  * The boss's figure for this moment. The style comes from the boss id (`ember-duelist` a biped, `ashen-hound` a beast, `vesper-sage` a hooded caster, `tremor-brute` a hunched bruiser, `cinder-golem` a walking furnace, `quill-warden` a heron-like lancer, `veil-dancer` a masked dancer in a veil,
  * `gale-reaver` a forward-leaning wind-runner, `brass-sentinel` an armoured knight, `storm-kite` a winged bird that hangs high and dives, anything else a generic block); the animation from the tick, the boss mode, the running attack's pose, the facing and
  * the lift. It fits inside the box `bossDrawBox` reports (crouch shortening and lift included), widened for the head,
- * tail, snout, arm and blade, so what the player sees is what can hurt them.
+ * tail, snout, arm and blade, so what the player sees is what can hurt them. `index` is which boss of the fight to draw (0 is the primary).
  */
 export function bossFigure(
   state: GameState,
   boss: BossDef,
   colors: { body: string; accent: string; glow: string | null },
+  index = 0,
 ): Primitive[] {
-  const bp = bossPose(state, boss);
+  const bp = bossPose(state, boss, index);
   switch (boss.id) {
     case 'ember-duelist':
       return duelistFigure(bp, colors);

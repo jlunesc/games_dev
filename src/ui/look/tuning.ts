@@ -9,8 +9,8 @@
  *   `moods.ts`, one block per boss. Those floor and edge colours replace `floor`, `floorLine` and `platformGlow` here
  *   whenever a mood is drawn (which is every fight); the ones here only serve the old plain drawing. A generated
  *   boss has no block there: its backdrop and body colour are invented from the fight's seed in `generated-mood.ts`.
- * - The health bars, the black bars round the screen, the arena fill, the white hit flash and the white slash box are
- *   in `render.ts`.
+ * - The black bars round the screen, the arena fill, the white hit flash and the white slash box are in `render.ts`.
+ *   The health bars' size and spacing are in `hud` below; their red is in `render.ts`.
  * The shapes of the figures (proportions of the legs, the body and the head) are in `figures.ts`.
  */
 export const LOOK = {
@@ -286,6 +286,50 @@ export const LOOK = {
     'tremor-brute': { edge: '#d0703a', core: '#ffd8a8', halo: '#a04a30' },
     'storm-kite': { edge: '#7fd0ff', core: '#eaf6ff', halo: '#4a8cff' },
   } as Record<string, { edge: string; core: string; halo: string }>,
+
+  // ---- Health bars: one per boss, stacked at the top right (a lone boss has the first one only) ----
+  hud: {
+    /** Gap to the right edge and to the top, world units. */
+    margin: 24,
+    barTop: 24,
+    barWidth: 260,
+    barHeight: 14,
+    /** How far the next bar sits below the one above it. */
+    barStep: 52,
+    /** The phase tick starts this far above its bar and is this tall and wide. */
+    tickRise: 4,
+    tickHeight: 22,
+    tickWidth: 3,
+    /** The name sits this far below the top of its bar. */
+    nameDrop: 22,
+    /** How dim the bar and name of a fallen boss are (1 is not dimmed). */
+    fallenAlpha: 0.35,
+  },
+
+  // ---- The turn marker: a pulsing triangle over the boss that holds the turn (fights with two bosses only) ----
+  turnMarker: {
+    color: '#fff6b0',
+    alpha: 0.9,
+    /** Half the width and the height of the triangle at rest, world units. */
+    halfWidth: 12,
+    height: 14,
+    /** How far the tip stays above the top of the boss's drawn box. */
+    gap: 30,
+    /** The marker never goes higher than this (a boss hanging near the top of the world). */
+    minTop: 8,
+    /** How much it swells at the peak of the pulse (0.25 is a quarter bigger) and how long a pulse takes, in ticks. */
+    pulse: 0.25,
+    pulseTicks: 40,
+  },
+
+  // ---- A beaten boss of a pair, drawn as a low heap ----
+  fallen: {
+    /** The heap's height as a fraction of the boss's height, and its width as a multiple of the boss's width. */
+    heightFraction: 0.25,
+    widthScale: 1.15,
+    /** How dim the heap is (1 is not dimmed). */
+    alpha: 0.5,
+  },
 
   // ---- Floor, platforms and cover (copied from the old render.ts colours) ----
   floor: '#2a2a3a',

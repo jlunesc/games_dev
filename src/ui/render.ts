@@ -1,10 +1,12 @@
 import type { BossDef } from '../bosses/schema';
 import { activeHitBoxes, attackActive, attackBox, shotBox } from '../game/geometry';
 import { ERUPTION, PLAYER, WORLD } from '../game/params';
-import type { ArcState, BossState, EruptionState, GameState } from '../game/state';
+import { asFight, type FightDef } from '../game/fight';
+import { bossAt, isDowned, type ArcState, type BossState, type EruptionState, type GameState } from '../game/state';
 import { shakeOffset, type FeedbackState } from './feedback';
 import { drawBackground, type BackgroundCache } from './look/background';
 import type { EffectsState } from './look/effects';
+import { fallenFigure, healthBars, turnMarker } from './look/duo';
 import { bossFigure, drawPrimitives, playerFigure } from './look/figures';
 import { attackPalette, boltTrail, slashShape } from './look/attackfx';
 import { playerSwing } from './look/playerfx';
@@ -23,6 +25,8 @@ export interface FrameLook {
   background: BackgroundCache | null;
   /** False draws the layers still and no embers (the Effects switch off). */
   motion: boolean;
+  /** The boss that flashes white after a hit; left out, every boss flashes. */
+  flashBoss?: number;
 }
 
 export interface Viewport {
@@ -224,11 +228,12 @@ export function eruptionMark(shot: EruptionState): { left: number; right: number
 }
 
 /** Bolts as glowing cores with a trail, arcs as an orb in the air over a red floor mark, eruptions as a mark that charges into a column, and the bursts. */
-function drawShots(ctx: CanvasRenderingContext2D, state: GameState, bossId: string): void {
-  const look = { ...LOOK.shot, ...attackPalette(bossId) };
+function drawShots(ctx: CanvasRenderingContext2D, state: GameState, bossIds: readonly string[]): void {
+  const looks = bossIds.map((id) => ({ ...LOOK.shot, ...attackPalette(id) }));
   const pulse = 0.6 + 0.4 * Math.sin(state.tick / 4);
   ctx.save();
   for (const shot of state.shots) {
+    const look = looks[shot.owner ?? 0] ?? looks[0]!;
     if (shot.kind === 'eruption') {
       const mark = eruptionMark(shot);
       if (mark === null) continue;
@@ -297,12 +302,27 @@ function drawShots(ctx: CanvasRenderingContext2D, state: GameState, bossId: stri
 function drawBoss(
   ctx: CanvasRenderingContext2D,
   state: GameState,
-  boss: BossDef,
+  fight: FightDef,
+  index: number,
   feedback: FeedbackState,
   mood: Mood | null,
+  flashBoss: number | undefined,
 ): void {
-  const b = state.boss;
-  const look = bossLook(b, boss, mood?.bodyColor);
+  const boss = fight.bosses[index]!;
+  const b = bossAt(state, index);
+  // A partner has its own colours; the primary's are the arena's mood.
+  const own = index === 0 || mood === null ? mood : moodFor(boss.id);
+
+  if (isDowned(state, index)) {
+    const colors =
+      own === null
+        ? { body: LOOK.bossBodyEmber, accent: LOOK.bossBodyEmber }
+        : { body: own.bodyColor, accent: own.accent };
+    drawPrimitives(ctx, fallenFigure(b.x, b.facing, boss.width, boss.height, colors), LOOK.fallen.alpha);
+    return;
+  }
+
+  const look = bossLook(b, boss, own?.bodyColor);
   const pulse = 0.55 + 0.35 * Math.sin(state.tick / 6);
   const attack =
     b.mode === 'attack' && b.attackId !== null
@@ -340,11 +360,12 @@ function drawBoss(
   const { top, height } = bossDrawBox(b, boss);
   const left = b.x - boss.width / 2;
 
-  const bodyColor = bossBodyColor(look, feedback);
-  if (mood !== null) {
+  const flashing = flashBoss === undefined || flashBoss === index;
+  const bodyColor = bossBodyColor(look, flashing ? feedback : { ...feedback, bossFlashTicks: 0 });
+  if (own !== null) {
     drawPrimitives(
       ctx,
-      bossFigure(state, boss, { body: bodyColor, accent: look.glow ?? mood.accent, glow: look.glow }),
+      bossFigure(state, boss, { body: bodyColor, accent: look.glow ?? own.accent, glow: look.glow }, index),
     );
   } else {
     ctx.fillStyle = bodyColor;
@@ -358,7 +379,7 @@ function drawBoss(
     ctx.globalAlpha = 1;
   }
 
-  if (mood === null) {
+  if (own === null) {
     // The arm shows the pose of the attack being performed; when waiting it hangs at the side.
     const shoulderY = top + height * 0.3;
     const arm =
@@ -373,7 +394,7 @@ function drawBoss(
   }
 
   for (const box of activeHitBoxes(b, boss)) {
-    if (mood === null) {
+    if (own === null) {
       ctx.globalAlpha = 0.5;
       ctx.fillStyle = look.glow ?? COLORS.bossHp;
       ctx.fillRect(box.x, box.y, box.w, box.h);
@@ -387,6 +408,13 @@ function drawBoss(
     ctx.globalAlpha = 1;
     drawPrimitives(ctx, slashShape(box, box.x + box.w / 2 >= b.x ? 1 : -1, attackPalette(boss.id)), LOOK.slash.shapeAlpha);
   }
+}
+
+/** The pulsing triangle over the boss that holds the turn (a fight with two bosses only). */
+function drawTurnMarker(ctx: CanvasRenderingContext2D, state: GameState, fight: FightDef): void {
+  const marker = turnMarker(state, fight);
+  if (marker === null) return;
+  drawPrimitives(ctx, [{ kind: 'poly', points: marker.points, color: LOOK.turnMarker.color }], LOOK.turnMarker.alpha);
 }
 
 function drawPlayer(
@@ -484,27 +512,26 @@ function drawEffects(ctx: CanvasRenderingContext2D, fx: EffectsState): void {
   ctx.restore();
 }
 
-function drawHud(ctx: CanvasRenderingContext2D, state: GameState, boss: BossDef): void {
+function drawHud(ctx: CanvasRenderingContext2D, state: GameState, fight: FightDef): void {
   for (let i = 0; i < PLAYER.maxHealth; i++) {
     ctx.globalAlpha = i < state.player.health ? 1 : 0.25;
     ctx.fillStyle = COLORS.hud;
     ctx.fillRect(24 + i * 30, 24, 22, 22);
   }
-  ctx.globalAlpha = 1;
-  const width = 260;
-  const left = WORLD.width - 24 - width;
-  ctx.fillStyle = COLORS.hudBack;
-  ctx.fillRect(left, 24, width, 14);
-  ctx.fillStyle = COLORS.bossHp;
-  ctx.fillRect(left, 24, (width * state.boss.hp) / boss.maxHp, 14);
-  ctx.fillStyle = COLORS.hud;
-  for (const phase of boss.phases.slice(1)) {
-    ctx.fillRect(left + width * phase.startsAtHpFraction - 1, 20, 3, 22);
+  for (const bar of healthBars(state, fight)) {
+    ctx.globalAlpha = bar.dim ? LOOK.hud.fallenAlpha : 1;
+    ctx.fillStyle = COLORS.hudBack;
+    ctx.fillRect(bar.back.x, bar.back.y, bar.back.w, bar.back.h);
+    ctx.fillStyle = bar.color ?? COLORS.bossHp;
+    ctx.fillRect(bar.fill.x, bar.fill.y, bar.fill.w, bar.fill.h);
+    ctx.fillStyle = COLORS.hud;
+    for (const tick of bar.ticks) ctx.fillRect(tick.x, tick.y, tick.w, tick.h);
+    ctx.font = '600 16px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(bar.name, bar.nameX, bar.nameY);
   }
-  ctx.font = '600 16px system-ui, sans-serif';
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  ctx.fillText(state.study.active ? `STUDY  ${boss.name}` : boss.name, WORLD.width - 24, 46);
+  ctx.globalAlpha = 1;
 }
 
 /** Draws one frame. `alpha` (0 to just under 1) blends the player between the last two updates. */
@@ -513,12 +540,14 @@ export function drawFrame(
   canvasWidth: number,
   canvasHeight: number,
   state: GameState,
-  boss: BossDef,
+  source: BossDef | FightDef,
   alpha: number,
   feedback: FeedbackState,
   look?: FrameLook,
 ): void {
-  const mood = look === undefined ? null : moodFor(boss.id, state.seed);
+  const fight = asFight(source);
+  const primary = fight.bosses[0]!;
+  const mood = look === undefined ? null : moodFor(primary.id, state.seed);
   const view = computeViewport(canvasWidth, canvasHeight);
   const shake = shakeOffset(feedback);
 
@@ -555,12 +584,17 @@ export function drawFrame(
     ctx.fillRect(-8, WORLD.floorY, WORLD.width + 16, 3);
   }
 
-  drawArena(ctx, boss, mood);
-  drawBoss(ctx, state, boss, feedback, mood);
-  drawShots(ctx, state, boss.id);
+  drawArena(ctx, primary, mood);
+  for (let index = 0; index < fight.bosses.length; index++) {
+    drawBoss(ctx, state, fight, index, feedback, mood, look?.flashBoss);
+  }
+  drawShots(ctx, state, fight.bosses.map((def) => def.id));
   drawPlayer(ctx, state, alpha, feedback, mood);
-  if (look !== undefined) drawEffects(ctx, look.effects);
-  drawHud(ctx, state, boss);
+  if (look !== undefined) {
+    drawTurnMarker(ctx, state, fight);
+    drawEffects(ctx, look.effects);
+  }
+  drawHud(ctx, state, fight);
 
   if (state.phase !== 'fight') {
     ctx.fillStyle = COLORS.hud;

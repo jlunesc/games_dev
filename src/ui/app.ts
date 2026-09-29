@@ -586,7 +586,7 @@ export function mountApp(root: HTMLElement): void {
       canvas.width = width;
       canvas.height = height;
     }
-    drawFrame(context, width, height, state, fight.bosses[0]!, alpha, feedback, {
+    drawFrame(context, width, height, state, fight, alpha, feedback, {
       effects: fx,
       background,
       motion: settings.effects,
