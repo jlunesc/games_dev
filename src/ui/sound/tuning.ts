@@ -196,3 +196,52 @@ export const PAIR_PAN = 0.35;
 
 /** A bolt within `range` world units of the player counts as passing by; the sound pans `pan` toward its side. */
 export const SHOT_PASS = { range: 90, pan: 0.5 } as const;
+
+export type Mode = 'minor' | 'major';
+
+/** A boss's music: the key's tonic as a MIDI note (60 is middle C; the bass plays it as written), the mode and the tempo. */
+export interface Theme {
+  root: number;
+  mode: Mode;
+  bpm: number;
+}
+
+/** One theme per boss id. A boss that is not here (a generated one) gets a key from the fight's seed instead. */
+export const THEMES: Record<string, Theme> = {
+  'ember-duelist': { root: 45, mode: 'minor', bpm: 118 },
+  'ashen-hound': { root: 38, mode: 'minor', bpm: 138 },
+  'quill-warden': { root: 40, mode: 'minor', bpm: 108 },
+  'cinder-golem': { root: 36, mode: 'minor', bpm: 84 },
+  'veil-dancer': { root: 42, mode: 'minor', bpm: 112 },
+  'gale-reaver': { root: 43, mode: 'minor', bpm: 148 },
+  'brass-sentinel': { root: 38, mode: 'major', bpm: 100 },
+  'vesper-sage': { root: 46, mode: 'minor', bpm: 96 },
+  'tremor-brute': { root: 41, mode: 'minor', bpm: 90 },
+  'storm-kite': { root: 40, mode: 'major', bpm: 126 },
+  trainee: { root: 36, mode: 'major', bpm: 100 },
+};
+
+/** A generated boss: root `lowest` plus the seed modulo 12, tempo `bpmMin` plus the seed modulo `bpmSpan`. */
+export const SEEDED = { lowest: 36, bpmMin: 96, bpmSpan: 44 } as const;
+
+/** Drums come in at this health fraction or below (or in phase 2), the lead at the second one (or in the last phase). */
+export const LAYERS = { drumsAtHp: 0.5, leadAtHp: 0.25 } as const;
+
+/**
+ * One chord per bar, four bars, then round again. `offset` is semitones above the tonic and `third` the size of the
+ * chord's third (3 minor, 4 major). Every chord tone stays inside the natural scale of its mode.
+ */
+export const PROGRESSIONS: Record<Mode, ReadonlyArray<{ offset: number; third: 3 | 4 }>> = {
+  minor: [
+    { offset: 0, third: 3 },
+    { offset: 8, third: 4 },
+    { offset: 3, third: 4 },
+    { offset: 10, third: 4 },
+  ],
+  major: [
+    { offset: 0, third: 4 },
+    { offset: 7, third: 4 },
+    { offset: 9, third: 3 },
+    { offset: 5, third: 4 },
+  ],
+};
