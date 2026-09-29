@@ -40,20 +40,30 @@ export function renderList(
   list.children[focus]?.scrollIntoView({ block: 'nearest' });
 }
 
-/** Draws the summary screen: a title, one line per fact, and a button back to the menu. */
+/** Draws the summary screen: a title, one line per fact, then the choices for what to do next with the focused one highlighted. */
 export function renderSummary(
   panel: HTMLElement,
   title: string,
   lines: readonly string[],
-  onDone: () => void,
+  rows: readonly ListRow[],
+  focus: number,
+  onPick: (index: number) => void,
 ): void {
-  const done = el('button', 'action', 'Back to the menu');
-  done.type = 'button';
-  done.addEventListener('click', onDone);
+  const list = el('div', 'rows');
+  rows.forEach((row, index) => {
+    const button = el('button', index === focus ? 'row focused' : 'row');
+    button.type = 'button';
+    button.append(el('span', 'row-label', row.label));
+    if (row.value !== undefined) button.append(el('span', 'row-value', row.value));
+    button.addEventListener('click', () => onPick(index));
+    list.append(button);
+  });
+  const help = rows[focus]?.help;
   panel.replaceChildren(
     el('h1', undefined, title),
     ...lines.map((line) => el('p', 'summary-line', line)),
-    done,
-    el('p', 'hint', 'Press the bottom button to go back to the menu.'),
+    list,
+    ...(help === undefined || help === '' ? [] : [el('p', 'help', help)]),
   );
+  list.children[focus]?.scrollIntoView({ block: 'nearest' });
 }

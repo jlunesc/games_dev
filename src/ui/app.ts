@@ -17,7 +17,7 @@ import {
 } from '../engine/input-profile';
 import { advanceHold } from '../engine/hold';
 import { planUpdates } from '../engine/loop';
-import { applyDials } from '../game/difficulty';
+import { applyDials, redoDials, type Dials, type RedoChange } from '../game/difficulty';
 import { GAME } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
@@ -58,6 +58,7 @@ import {
 } from './stats-model';
 import { browserStorage } from './storage';
 import { studyBanner } from './study-banner';
+import { createSummaryMenu, summaryRows, summaryStep, type SummaryMenu } from './summary-menu';
 import { summaryLines } from './summary-text';
 import { createTweak, tweakRows, tweakStep, type TweakModel } from './tweak-model';
 
@@ -134,6 +135,11 @@ export function mountApp(root: HTMLElement): void {
   let saveEpoch = 0;
   // What the summary screen currently shows, kept so the save line can be added when the save finishes.
   let shownSummary: FightSummary | null = null;
+  // The dials of the fight being played or just played. A redo changes these, not the menu's own settings.
+  let fightDials: Dials = prefs.dials;
+  // The after-fight menu, and the change a Redo would make (picked when the summary opens, so the row can say it).
+  let summaryMenu: SummaryMenu = createSummaryMenu('left', null);
+  let redoPlan: { dials: Dials; change: RedoChange | null } = { dials: prefs.dials, change: null };
   let nav: NavState = NAV_START;
   let held: HeldButtons = NOTHING_HELD;
   let pending: PendingPresses = NO_PRESSES;
@@ -442,12 +448,34 @@ export function mountApp(root: HTMLElement): void {
   function renderSummaryScreen(): void {
     if (shownSummary === null) return;
     const text = summaryLines(shownSummary);
-    renderSummary(panel, text.title, saveLine === null ? text.lines : [...text.lines, saveLine], showMenu);
+    const rows = summaryRows(summaryMenu, redoPlan.change);
+    renderSummary(
+      panel,
+      text.title,
+      saveLine === null ? text.lines : [...text.lines, saveLine],
+      rows,
+      summaryMenu.focus,
+      (index) => {
+        summaryMenu = { ...summaryMenu, focus: index };
+        handleSummary('confirm');
+      },
+    );
+  }
+
+  function handleSummary(action: MenuAction): void {
+    const result = summaryStep(summaryMenu, action);
+    summaryMenu = result.menu;
+    if (result.pick === 'redo') startFight(redoPlan.dials);
+    else if (result.pick === 'again') startFight(fightDials);
+    else if (result.pick === 'menu') showMenu();
+    else renderSummaryScreen();
   }
 
   function showSummary(summary: FightSummary): void {
     screen = 'summary';
     shownSummary = summary;
+    redoPlan = redoDials(fightDials, summary.result === 'victory', newSeed());
+    summaryMenu = createSummaryMenu(summary.result, redoPlan.change);
     summaryUnlockAt = performance.now() + SUMMARY_LOCK_MS;
     leaveFightScreen();
     renderSummaryScreen();
@@ -498,20 +526,21 @@ export function mountApp(root: HTMLElement): void {
     showSummary(leaveSummary(flow, state, boss));
   }
 
-  function startFight(): void {
+  function startFight(dials: Dials = prefs.dials): void {
     screen = 'fight';
+    fightDials = dials;
     saveEpoch += 1;
     saveLine = null;
     shownSummary = null;
     const seed = newSeed();
     const resolved = resolveBoss(prefs.bossId, seed);
-    boss = applyDials(resolved.boss, prefs.dials);
+    boss = applyDials(resolved.boss, dials);
     bossUnfair = resolved.unfair;
     state = createInitialState(boss, seed, prefs.study);
     flow = startFlow({
       bossId: boss.id,
       presetId: prefs.presetId,
-      dials: prefs.dials,
+      dials,
       seed,
       study: prefs.study,
       playedAt: new Date().toISOString(),
@@ -674,7 +703,7 @@ export function mountApp(root: HTMLElement): void {
     else if (screen === 'tweak') handleTweak(action);
     else if (screen === 'stats') handleStats(action);
     else if (screen === 'settings') handleSettings(action);
-    else if ((action === 'confirm' || action === 'back') && now >= summaryUnlockAt) showMenu();
+    else if (now >= summaryUnlockAt) handleSummary(action);
   }
 
   showMenu();

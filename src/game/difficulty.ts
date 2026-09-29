@@ -1,5 +1,6 @@
 import { parseBoss } from '../bosses/parse';
 import type { AttackDef, BossDef, PhaseDef } from '../bosses/schema';
+import { nextRandom } from './rng';
 
 /** The things that make a boss harder or easier. Each is a number where 1 is the boss file as written. */
 export type DialId =
@@ -153,6 +154,42 @@ export function dialsEqual(a: Dials, b: Dials): boolean {
 /** The dials whose value differs from `base` (in dial order). */
 export function changedDials(base: Dials, dials: Dials): DialId[] {
   return DIALS.filter((d) => Math.abs(base[d.id] - dials[d.id]) >= 1e-9).map((d) => d.id);
+}
+
+/** Which way a dial moves to make the boss harder: 1 is up, -1 is down. Damage is left out on purpose (see `redoDials`). */
+const HARDER_DIRECTION: Record<Exclude<DialId, 'damage'>, 1 | -1> = {
+  speed: 1,
+  frequency: 1,
+  readability: -1,
+  health: 1,
+  range: 1,
+  variety: 1,
+};
+
+export interface RedoChange {
+  dial: DialId;
+  from: number;
+  to: number;
+  harder: boolean;
+}
+
+/**
+ * The dials for a redo of a fight: one random dial (never damage) moved one step, harder after a win and easier
+ * after a loss. Damage is always set to 1. A dial already at its limit that way is not picked; when none can move
+ * the dials come back unchanged (except damage) and `change` is null. Pure: the seed makes the pick repeatable.
+ */
+export function redoDials(dials: Dials, won: boolean, seed: number): { dials: Dials; change: RedoChange | null } {
+  const next: Dials = { ...dials, damage: 1 };
+  const movable = DIALS.flatMap((def) => {
+    if (def.id === 'damage') return [];
+    const direction = won ? HARDER_DIRECTION[def.id] : (-HARDER_DIRECTION[def.id] as 1 | -1);
+    const to = clampDial(def.id, dials[def.id] + direction * def.step);
+    return to === dials[def.id] ? [] : [{ dial: def.id, to }];
+  });
+  const pick = movable[Math.floor(nextRandom(seed).value * movable.length)];
+  if (pick === undefined) return { dials: next, change: null };
+  next[pick.dial] = pick.to;
+  return { dials: next, change: { dial: pick.dial, from: dials[pick.dial], to: pick.to, harder: won } };
 }
 
 const atLeastOne = (n: number): number => Math.max(1, Math.round(n));

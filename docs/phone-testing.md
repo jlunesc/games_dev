@@ -487,6 +487,17 @@ Android can clear a browser's data by itself (for example when the phone is shor
 - [ ] Nothing pauses or stutters when a fight ends and is saved.
 - [ ] On a long fight (2 minutes or more) note whether the game pauses for a moment when the fight ends; how long?
 
+## Redo after a fight
+- [ ] After a win or a loss, the summary shows three choices under the result: Redo, Fight again and Back to the menu. Tapping works, and so does the controller (up and down, bottom button to pick, the other button goes back to the menu).
+- [ ] The Redo row says which dial it will change and by how much, and whether it is a bit harder (after a win) or a bit easier (after a loss).
+- [ ] After a Redo, the fight really has that change (for example a shorter warning), and one Redo changes only that one dial.
+- [ ] Several Redos in a row pile up: win, Redo, win, Redo is two changes in total.
+- [ ] Damage is 1 hit on a Redo, even after a fight on Hard (2 hits).
+- [ ] Fight again plays with the same settings as the fight just played, with no change.
+- [ ] Back to the menu shows your own preset and Tweak values untouched, and the next Fight uses them.
+- [ ] Leaving a fight with the hold shows only Fight again and Back to the menu, with no Redo.
+- [ ] The redone fights are saved, and the Stats show them as Custom.
+
 ## Things I would like to know
 After playing, answer these in plain words:
 - Does the counter feel too easy or too hard? Note that it can also be triggered by mashing attack, and by a swing that faces away from the boss (the game only checks that you are close and press attack in the window).
