@@ -39,6 +39,7 @@ import { createBackground, type BackgroundCache } from './look/background';
 import { NO_EFFECTS, spawnEffects, stepEffects, type EffectsState } from './look/effects';
 import { moodFor } from './look/moods';
 import { drawFrame } from './render';
+import { createMenuScene } from './menu-scene';
 import { renderList, renderSummary } from './screens';
 import { loadSettings, saveSettings, type Settings } from './settings';
 import {
@@ -100,6 +101,10 @@ export function mountApp(root: HTMLElement): void {
   const maybeContext = canvas.getContext('2d');
   if (maybeContext === null) throw new Error('Canvas 2D is not available');
   const context: CanvasRenderingContext2D = maybeContext;
+  // The arena behind the menus: a second canvas under the panel, shown whenever the panel is.
+  const sceneCanvas = el('canvas', 'scene-canvas');
+  const sceneContext = sceneCanvas.getContext('2d');
+  const scene = createMenuScene();
   const panel = el('div', 'panel');
   const banner = el('p', 'banner');
   banner.hidden = true;
@@ -108,7 +113,7 @@ export function mountApp(root: HTMLElement): void {
   // The study note sits near the top, small and see-through, so it never covers the action or blocks a tap.
   const studyNote = el('p', 'note');
   studyNote.hidden = true;
-  root.replaceChildren(canvas, panel, banner, leaveHint, studyNote);
+  root.replaceChildren(sceneCanvas, canvas, panel, banner, leaveHint, studyNote);
 
   // The fight store opens once, in the background. It resolves to null when the device cannot store stats (the
   // game plays on) and never rejects. Anything that needs the store awaits this.
@@ -217,6 +222,7 @@ export function mountApp(root: HTMLElement): void {
     leaveHint.hidden = true;
     canvas.hidden = true;
     panel.hidden = false;
+    sceneCanvas.hidden = false;
     setBanner(null);
     setStudyNote(null);
   }
@@ -576,6 +582,7 @@ export function mountApp(root: HTMLElement): void {
     paused = false;
     lastTime = performance.now();
     panel.hidden = true;
+    sceneCanvas.hidden = true;
     canvas.hidden = false;
     setBanner(null);
     setStudyNote(null);
@@ -675,8 +682,31 @@ export function mountApp(root: HTMLElement): void {
     draw(hitStopView ? 1 : plan.alpha);
   }
 
+  let sceneFrames = 0;
+  let sceneKey = '';
+  /** Draws the arena behind the menus at half the frame rate; a still picture (Effects off) is drawn only when something changed. */
+  function drawScene(): void {
+    if (screen === 'fight' || sceneContext === null) return;
+    sceneFrames++;
+    const motion = settings.effects;
+    if (motion && sceneFrames % 2 === 0) return;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const width = Math.round(sceneCanvas.clientWidth * ratio);
+    const height = Math.round(sceneCanvas.clientHeight * ratio);
+    const key = `${prefs.bossId}|${width}x${height}|${motion}`;
+    if (!motion && key === sceneKey) return;
+    sceneKey = key;
+    if (sceneCanvas.width !== width || sceneCanvas.height !== height) {
+      sceneCanvas.width = width;
+      sceneCanvas.height = height;
+    }
+    scene.draw(sceneContext, width, height, prefs.bossId, sceneFrames, motion);
+    panel.style.setProperty('--accent', scene.moodOf(prefs.bossId).accent);
+  }
+
   function frame(now: number): void {
     requestAnimationFrame(frame);
+    drawScene();
     // Sample the pad on every frame, on the controller test screen too, so `held` never goes stale.
     const pad = firstPad();
     const selection = pad === null ? null : selectProfile(pad.id, pad.mapping);

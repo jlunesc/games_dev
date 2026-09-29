@@ -27,6 +27,8 @@ export interface FrameLook {
   motion: boolean;
   /** The boss that flashes white after a hit; left out, every boss flashes. */
   flashBoss?: number;
+  /** Draw the arena and the figures only, with no health bars, turn marker or end text: the picture behind the menus. */
+  scene?: boolean;
 }
 
 export interface Viewport {
@@ -590,11 +592,11 @@ export function drawFrame(
   }
   drawShots(ctx, state, fight.bosses.map((def) => def.id));
   drawPlayer(ctx, state, alpha, feedback, mood);
-  if (look !== undefined) {
+  if (look !== undefined && look.scene !== true) {
     drawTurnMarker(ctx, state, fight);
     drawEffects(ctx, look.effects);
   }
-  drawHud(ctx, state, fight);
+  if (look?.scene !== true) drawHud(ctx, state, fight);
 
   if (state.phase !== 'fight') {
     ctx.fillStyle = COLORS.hud;

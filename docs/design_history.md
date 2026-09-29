@@ -148,6 +148,13 @@ Constraints stated by the owner:
 - **Reasoning**: sound is a second way to read a telegraph, which helps training; layers that follow health tell the player how the fight is going without looking.
 - Design in `docs/superpowers/specs/2026-09-29-sound-design.md`.
 
+### 3.18 Menu backdrop (2026-09-29)
+- **LOCKED** (owner): the menus should look more like the arenas.
+- **Chosen** (**DELEGATED**): draw the real arena renderer behind the menus with the boss on the Boss row standing in it, and colour the panel from that boss's mood. No health bars or text are drawn in the picture.
+- **Alternatives**: a hand-made menu picture (rejected: it would drift from the arenas and need its own art); a menu picture that follows nothing (rejected: the boss row is the natural thing to preview).
+- **Reasoning**: reusing the arena drawing gives the same look for free and keeps one place to tune. Phone cost is kept low by half frame rate, a capped pixel ratio and a still picture when Effects is off.
+- Plan in `docs/superpowers/plans/2026-09-29-menu-look.md`.
+
 ## 4. Stats (v1)
 
 The owner asked for as much information as possible, as a first version to complete while testing. The full list is in `SPEC.md` section 9. In short: per fight (boss, parameters, result, duration, phase reached, HP, damage, accuracy), per boss attack occurrence (type, phase, timing, distance, outcome, reaction time, dodge margin, what the player was doing), player behavior (input log, positions, range time, punish windows, heals), and derived measures (hit rate per attack, learning curve, fatigue, death causes).

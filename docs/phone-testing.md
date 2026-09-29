@@ -546,6 +546,21 @@ The ten placeholder beeps are gone. Every sound is made in code, so nothing extr
 - Would you like a separate Music on/off switch, or is one Volume enough? Should the music keep playing on the summary screen?
 - In the pair fight, does the left and right split help you know who is acting?
 
+## Menu look
+Every menu and summary screen now has the arena behind it: the sky, the far shapes, the floor, the boss and you standing still. It follows the boss on the Boss row, and the panel and the highlighted row change colour with it. Fights look exactly as before.
+
+### Checklist
+- [ ] The main menu shows an arena behind the panel. Moving to a different boss on the Boss row changes the picture and the colours (including the two-boss pair and Generated).
+- [ ] The text is easy to read on every boss, on the menu, Settings, Tweak and the summary screen.
+- [ ] Starting a fight and returning to the menu shows the picture again with no flash or gap.
+- [ ] The menu is smooth on the S21 (moving the highlight has no lag), and the phone does not get warm sitting on the menu.
+- [ ] With Effects off the picture is still, and the menu is smooth.
+- [ ] Turning the phone sideways or resizing keeps the picture filling the screen.
+
+### Questions
+- Is the panel too dark or too see-through? Is the arena too busy behind the text?
+- Would you like the figures to move a little while idle?
+
 ## Redo after a fight
 - [ ] After a win or a loss, the summary shows three choices under the result: Redo, Fight again and Back to the menu. Tapping works, and so does the controller (up and down, bottom button to pick, the other button goes back to the menu).
 - [ ] The Redo row says which dial it will change and by how much, and whether it is a bit harder (after a win) or a bit easier (after a loss).
