@@ -1,12 +1,14 @@
-import { resolveBoss } from '../bosses/resolve';
+import { resolveFight } from '../bosses/resolve';
 import type { BossDef, ShotDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { TICK_RATE } from '../engine/time';
-import { applyDials } from '../game/difficulty';
+import { applyDialsToFight } from '../game/difficulty';
+import { asFight, type FightDef } from '../game/fight';
 import { activeHitBoxes, overlaps, playerBox, shotBox } from '../game/geometry';
 import { PLAYER, WORLD } from '../game/params';
 import { step } from '../game/step';
-import { createInitialState, type GameState, type PlayerState } from '../game/state';
+import { bossAt, bossCount, createInitialState, isDowned, type GameState, type PlayerState } from '../game/state';
+import { bossDefFor } from '../game/turns';
 import { decodeInputs } from './input-log';
 import type { FightRecord, Recording } from './record';
 
@@ -31,6 +33,8 @@ export type Evasion = 'dash' | 'jump' | 'platform' | 'cover' | 'distance';
 
 export interface AttackOccurrence {
   attackId: string;
+  /** Which boss of the fight made the attack: 0 is the primary boss, 1 its partner. Always 0 in a fight of one. */
+  boss: number;
   /** 1-based phase number the boss was in. */
   phase: number;
   /** The update the warning began, and the warning's length. */
@@ -78,17 +82,33 @@ export interface StudyAnalysis {
   hits: number;
 }
 
+/** What one boss of the fight did. A fight of one boss has one entry. */
+export interface BossAnalysis {
+  id: string;
+  name: string;
+  /** Health at the start, with the Health dial and the pair's health scale applied. */
+  maxHp: number;
+  hpLeft: number;
+  /** 1-based: the highest phase this boss reached. */
+  phaseReached: number;
+  phaseCount: number;
+  damageDealt: number;
+}
+
 export interface Analysis {
   ticks: number;
   /** The whole session, the study included. */
   seconds: number;
   /** The fight itself without the study, the same rule as `FightSummary.seconds`: `(ticks - study ticks) / 60`. */
   fightSeconds: number;
+  /** The primary boss's phase reached and phase count; the others are in `bosses`. */
   phaseReached: number;
   phaseCount: number;
+  /** Summed over every boss of the fight. */
   bossHpLeft: number;
   bossMaxHp: number;
   damageDealt: number;
+  bosses: BossAnalysis[];
   /** Health actually lost (a blow larger than the health left counts what was left). */
   damageTaken: number;
   hitsTaken: number;
@@ -136,6 +156,7 @@ export function actionOf(p: PlayerState, frame: InputFrame): PlayerAction {
 /** An attack being watched: filled in update by update, turned into an `AttackOccurrence` when it ends. */
 interface OpenAttack {
   attackId: string;
+  boss: number;
   phase: number;
   startTick: number;
   windup: number;
@@ -200,6 +221,7 @@ function occurrence(open: OpenAttack): AttackOccurrence {
   const marginTicks = hasMargin ? firstDanger - dodge : null;
   return {
     attackId: open.attackId,
+    boss: open.boss,
     phase: open.phase,
     startTick: open.startTick,
     windupTicks: open.windup,
@@ -219,17 +241,42 @@ function occurrence(open: OpenAttack): AttackOccurrence {
   };
 }
 
+/** Distance from the player to the nearest boss still standing (to the primary once every boss is down). */
+function nearestDistance(s: GameState): number {
+  let nearest = Infinity;
+  for (let i = 0; i < bossCount(s); i++) {
+    if (!isDowned(s, i)) nearest = Math.min(nearest, Math.abs(s.player.x - bossAt(s, i).x));
+  }
+  return nearest === Infinity ? Math.abs(s.player.x - s.boss.x) : nearest;
+}
+
+/**
+ * The boss whose attack began on this update. Only one boss attacks at a time, and a boss that starts an attack is
+ * at attack time 0. One countered on that very update is already staggered but was waiting with its attack chosen.
+ */
+function attackerOf(before: GameState, after: GameState): number {
+  for (let i = 0; i < bossCount(after); i++) {
+    const b = bossAt(after, i);
+    if (b.mode === 'attack' && b.attackTick === 0) return i;
+  }
+  for (let i = 0; i < bossCount(after); i++) {
+    if (bossAt(before, i).pendingAttackId !== null && bossAt(after, i).mode === 'stagger') return i;
+  }
+  return 0;
+}
+
 /**
  * Replays a fight through the real game and measures it. Pure: it only reads the states and events that
  * `step` produces, so the numbers can never disagree with what the game did.
  */
 export function analyzeRun(
-  boss: BossDef,
+  source: BossDef | FightDef,
   initial: GameState,
   frames: readonly InputFrame[],
   /** Only for the report's `study.rounds`; everything else is read from the states. */
   studyRounds = 0,
 ): Analysis {
+  const fight = asFight(source);
   let state = initial;
   const attacks: AttackOccurrence[] = [];
   const bossHitTicks: number[] = [];
@@ -251,7 +298,7 @@ export function analyzeRun(
   let studyMid = 0;
   let studyFar = 0;
   let platformUpdates = 0;
-  let maxPhase = state.boss.phase;
+  const maxPhases = Array.from({ length: bossCount(state) }, (_, i) => bossAt(state, i).phase);
   let open: OpenAttack | null = null;
   /** Attacks that are over but whose shots are still flying; each is emitted once its last shot is gone. */
   let lingering: OpenAttack[] = [];
@@ -283,7 +330,9 @@ export function analyzeRun(
     const t = tick - attack.startTick;
     attack.lastT = t;
     if (dodgeBegan(before, after) && attack.dodgeStart === null && t <= attack.dangerTo) attack.dodgeStart = tick;
-    const mine = after.shots.filter((x) => x.attackId === attack.attackId && x.originTick === attack.startTick);
+    const mine = after.shots.filter(
+      (x) => (x.owner ?? 0) === attack.boss && x.attackId === attack.attackId && x.originTick === attack.startTick,
+    );
     const real = playerBox(after.player);
     const grounded = playerBox({ ...after.player, y: WORLD.floorY });
     for (const shot of mine) {
@@ -301,7 +350,14 @@ export function analyzeRun(
       attack.damage += before.player.health - after.player.health;
       attack.actionWhenHit = actionOf(after.player, frame);
     }
-    if (events.includes('phaseChange') || events.includes('bossDefeated') || events.includes('playerDefeated')) {
+    const owner = bossAt(after, attack.boss);
+    const changedPhase = owner.phase !== bossAt(before, attack.boss).phase;
+    if (
+      (events.includes('phaseChange') && changedPhase) ||
+      events.includes('bossDefeated') ||
+      events.includes('playerDefeated') ||
+      (isDowned(after, attack.boss) && !isDowned(before, attack.boss))
+    ) {
       attack.shotsCleared = true;
     } else if (t >= attack.lastShotAt && mine.length === 0) {
       attack.shotsDone = true;
@@ -325,9 +381,11 @@ export function analyzeRun(
     // by cover) and against what the attack would have covered in a bare arena (`bare`, the same list when the
     // boss has no arena). Each is asked about the player where they are (`real`) and where they would stand on the
     // floor at the same x (`grounded`).
-    const boxes = activeHitBoxes(after.boss, boss);
+    const owner = bossAt(after, attack.boss);
+    const def = bossDefFor(after, fight, attack.boss);
+    const boxes = activeHitBoxes(owner, def);
     const real = playerBox(after.player);
-    const bare = boss.arena === undefined ? boxes : activeHitBoxes(after.boss, boss, { ignoreCover: true });
+    const bare = def.arena === undefined ? boxes : activeHitBoxes(owner, def, { ignoreCover: true });
     if (bare.length > 0) {
       const grounded = playerBox({ ...after.player, y: WORLD.floorY });
       const cutReal = boxes.some((b) => overlaps(b, real));
@@ -358,7 +416,7 @@ export function analyzeRun(
     if (events.includes('counter')) attack.countered = true;
     if (
       !attack.countered &&
-      after.boss.mode === 'attack' &&
+      owner.mode === 'attack' &&
       t >= attack.recoveryFrom &&
       !attack.windowOpen
     ) {
@@ -372,7 +430,7 @@ export function analyzeRun(
     const before = state;
     // Once the fight is over the game only counts down to a restart; that is not part of this fight.
     if (before.phase !== 'fight') break;
-    state = step(before, frame, boss);
+    state = step(before, frame, fight);
     const after = state;
     const { events, tick } = after;
 
@@ -393,8 +451,10 @@ export function analyzeRun(
     }
     if (events.includes('studyHit')) studyHits += 1;
     if (after.study.active) studyUpdates += 1;
-    maxPhase = Math.max(maxPhase, after.boss.phase);
-    const distance = Math.abs(after.player.x - after.boss.x);
+    maxPhases.forEach((reached, i) => {
+      maxPhases[i] = Math.max(reached, bossAt(after, i).phase);
+    });
+    const distance = nearestDistance(after);
     // An update belongs to the study when it ran while the study was on (the study's last update included).
     const inStudy = before.study.active;
     if (distance < CLOSE_BELOW) {
@@ -419,13 +479,14 @@ export function analyzeRun(
     if (open !== null) observe(open, before, after, frame);
 
     const started = events.includes('bossWindupGold') || events.includes('bossWindupRed');
-    if (open !== null && (started || after.boss.mode !== 'attack')) {
+    if (open !== null && (started || bossAt(after, open.boss).mode !== 'attack')) {
       finish(open, false);
       open = null;
     }
     // An attack countered on its very first update has no attack id any more: it is still the pending one before.
-    const id = after.boss.attackId ?? before.boss.pendingAttackId;
-    const def = started ? boss.attacks.find((a) => a.id === id) : undefined;
+    const index = started ? attackerOf(before, after) : 0;
+    const id = bossAt(after, index).attackId ?? bossAt(before, index).pendingAttackId;
+    const def = started ? bossDefFor(after, fight, index).attacks.find((a) => a.id === id) : undefined;
     if (def !== undefined) {
       // A bolt is dangerous from the update it fires; an arc from the update it lands until its burst ends;
       // an eruption from the update its blast goes off until the blast ends.
@@ -438,13 +499,14 @@ export function analyzeRun(
       const tos = [...def.hits.map((h) => h.to), ...shots.map(dangerEnd)];
       open = {
         attackId: def.id,
-        phase: after.boss.phase + 1,
+        boss: index,
+        phase: bossAt(after, index).phase + 1,
         startTick: tick,
         windup: def.windup,
         dangerFrom: froms.length > 0 ? Math.min(...froms) : def.windup,
         dangerTo: tos.length > 0 ? Math.max(...tos) : def.windup + def.active,
         recoveryFrom: def.windup + def.active,
-        distance,
+        distance: Math.abs(after.player.x - bossAt(after, index).x),
         actionAtStart: actionOf(after.player, frame),
         dodgeStart: null,
         dashedInDanger: false,
@@ -466,7 +528,7 @@ export function analyzeRun(
       };
       // What happened on the update the attack began (a dodge, or a counter that cancels it at once) counts too.
       observe(open, before, after, frame);
-      if (after.boss.mode !== 'attack') {
+      if (bossAt(after, index).mode !== 'attack') {
         finish(open, false);
         open = null;
       }
@@ -478,15 +540,26 @@ export function analyzeRun(
   attacks.sort((a, b) => a.startTick - b.startTick);
 
   const studyTicks = state.study.active ? studyUpdates : state.study.endTick;
+  const bosses: BossAnalysis[] = fight.bosses.map((def, i) => ({
+    id: def.id,
+    name: def.name,
+    maxHp: def.maxHp,
+    hpLeft: bossAt(state, i).hp,
+    phaseReached: maxPhases[i]! + 1,
+    phaseCount: def.phases.length,
+    damageDealt: def.maxHp - bossAt(state, i).hp,
+  }));
+  const sum = (pick: (b: BossAnalysis) => number): number => bosses.reduce((total, b) => total + pick(b), 0);
   return {
     ticks: state.tick,
     seconds: state.tick / TICK_RATE,
     fightSeconds: (state.tick - studyTicks) / TICK_RATE,
-    phaseReached: maxPhase + 1,
-    phaseCount: boss.phases.length,
-    bossHpLeft: state.boss.hp,
-    bossMaxHp: boss.maxHp,
-    damageDealt: boss.maxHp - state.boss.hp,
+    phaseReached: maxPhases[0]! + 1,
+    phaseCount: fight.bosses[0]!.phases.length,
+    bossHpLeft: sum((b) => b.hpLeft),
+    bossMaxHp: sum((b) => b.maxHp),
+    damageDealt: sum((b) => b.damageDealt),
+    bosses,
     damageTaken: PLAYER.maxHealth - state.player.health,
     hitsTaken,
     bossHitTicks,
@@ -524,9 +597,9 @@ export function analyzeFight(
   // `study` is missing in records of schema version 1: those analyse as a fight without a study.
   record: Pick<FightRecord, 'bossId' | 'dials' | 'seed' | 'input'> & { study?: FightRecord['study'] },
 ): Analysis {
-  const boss = applyDials(resolveBoss(record.bossId, record.seed).boss, record.dials);
+  const fight = applyDialsToFight(resolveFight(record.bossId, record.seed).fight, record.dials);
   const study = record.study ?? 0;
-  return analyzeRun(boss, createInitialState(boss, record.seed, study), decodeInputs(record.input), study);
+  return analyzeRun(fight, createInitialState(fight, record.seed, study), decodeInputs(record.input), study);
 }
 
 /** Analyzes a fight just recorded, taking everything (boss, dials, seed, study) from its meta, so none can be forgotten. */

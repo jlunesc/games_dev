@@ -85,11 +85,12 @@ Computed by `analyzeFight` by replaying the record. Nothing here is guessed: a v
 | `ticks` | number | Updates the whole session ran, the study included (same as the record's `ticks`). |
 | `seconds` | number | `ticks / 60` (not rounded): the **whole session**, the study included. |
 | `fightSeconds` | number | The real fight only: `(ticks - study.ticks) / 60` (not rounded). Equal to `seconds` when there was no study. |
-| `phaseReached` | number | Highest boss phase reached, 1-based. |
-| `phaseCount` | number | How many phases the boss has. |
-| `bossHpLeft` | number | Boss health at the end. |
-| `bossMaxHp` | number | Boss health at the start, with the Health dial applied. |
+| `phaseReached` | number | Highest phase the primary boss reached, 1-based. In a fight of two bosses the partner's is in `bosses`. |
+| `phaseCount` | number | How many phases the primary boss has. |
+| `bossHpLeft` | number | Boss health at the end, summed over every boss of the fight. |
+| `bossMaxHp` | number | Boss health at the start, with the Health dial applied (and a pair's health scale), summed over every boss of the fight. |
 | `damageDealt` | number | `bossMaxHp - bossHpLeft`. |
+| `bosses` | array | One entry per boss of the fight, the primary boss first (7.1a). A fight of one boss has one entry. Added in schema version 6. |
 | `damageTaken` | number | Health the player actually lost. A blow larger than the health left counts only what was left (a 2-health hit on 1 health counts 1). The study takes no health, so it never counts here. |
 | `hitsTaken` | number | How many times the player was hit (a count of hits, not of health). A demonstration that reaches the player in the study (`studyHit`) is not counted here; it is counted in `study.hits`. |
 | `bossHitTicks` | number[] | The tick of each hit the player landed on the boss. The boss cannot be hurt in the study, so every entry is from the real fight. |
@@ -104,6 +105,20 @@ Computed by `analyzeFight` by replaying the record. Nothing here is guessed: a v
 | `study` | object | The study phase (7.5). |
 | `behavior` | object | 7.3. |
 
+### 7.1a A boss (each entry of `bosses`)
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | string | The boss's id in its boss file. |
+| `name` | string | Its name. |
+| `maxHp` | number | Its health at the start, with the Health dial and the pair's health scale applied. |
+| `hpLeft` | number | Its health at the end (0 for a boss that fell). |
+| `phaseReached` | number | The highest phase this boss reached, 1-based. |
+| `phaseCount` | number | How many phases this boss has. |
+| `damageDealt` | number | `maxHp - hpLeft`. |
+
+In a fight of two bosses the `behavior` distance bands (7.3) are measured to the nearest boss that still stands, and an attack's `distance` (7.2) to the boss that made it.
+
 ### 7.2 An attack occurrence (each entry of `attacks`)
 
 One boss attack, from the moment its warning began. Entries are in the order the attacks began.
@@ -111,6 +126,7 @@ One boss attack, from the moment its warning began. Entries are in the order the
 | Field | Type | Meaning |
 |---|---|---|
 | `attackId` | string | The attack's id in the boss file (for example `"sweep"`). |
+| `boss` | number | Which boss of the fight made the attack: 0 is the primary boss, 1 its partner. Always 0 in a fight of one boss. Added in schema version 6; an analysis stored in an older record does not have it, and every attack in it is the primary boss's. |
 | `phase` | number | The boss phase (1-based) when the warning began. |
 | `startTick` | number | The tick on which the warning began. This is attack time 0. |
 | `windupTicks` | number | The length of the warning (the attack's windup, after the Warning length dial). |
