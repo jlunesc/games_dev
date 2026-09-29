@@ -11,8 +11,11 @@ import {
   TREMOR_BRUTE,
   STORM_KITE,
   VESPER_SAGE,
+  BOSS_CHOICES,
   bossById,
+  bossChoiceName,
 } from '../src/bosses';
+import { PAIRS } from '../src/bosses/pairs';
 
 describe('the boss list', () => {
   it('lists every shipped boss, the Duelist and the Hound first, in menu order', () => {
@@ -35,5 +38,30 @@ describe('the boss list', () => {
     expect(bossById('ember-duelist')).toBe(EMBER_DUELIST);
     expect(bossById('ashen-hound')).toBe(ASHEN_HOUND);
     expect(bossById('nobody')).toBe(EMBER_DUELIST);
+  });
+});
+
+describe('the Boss row choices', () => {
+  it('are the named bosses, then each pair, then Generated', () => {
+    expect(BOSS_CHOICES.map((c) => c.id)).toEqual([
+      ...BOSSES.map((b) => b.id),
+      ...PAIRS.map((p) => p.id),
+      'generated',
+    ]);
+    expect(BOSS_CHOICES.map((c) => c.id)).toContain('hound-and-sage');
+    expect(BOSS_CHOICES[BOSS_CHOICES.length - 1]).toEqual({ id: 'generated', name: 'Generated' });
+    expect(BOSS_CHOICES[BOSSES.length]).toEqual({ id: 'hound-and-sage', name: 'Hound and Sage' });
+  });
+
+  it('never repeat an id', () => {
+    const ids = BOSS_CHOICES.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('give the name of a boss, a pair and Generated, and the Duelist name for an unknown id', () => {
+    expect(bossChoiceName('ashen-hound')).toBe('Ashen Hound');
+    expect(bossChoiceName('hound-and-sage')).toBe('Hound and Sage');
+    expect(bossChoiceName('generated')).toBe('Generated');
+    expect(bossChoiceName('a-pair-that-was-removed')).toBe(EMBER_DUELIST.name);
   });
 });

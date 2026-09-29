@@ -29,7 +29,7 @@ If the controller shows nothing, note which mode it was in and whether the page 
 ### The menu
 Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Study**, **Tweak difficulty**, **Stats**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
 
-How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty, Study). On the Boss row they switch between the two bosses, the Ember Duelist and the Ashen Hound (from the last one it goes round to the first). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
+How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty, Study). On the Boss row they switch between the bosses, the pairs and Generated, in the order the row lists them (from the last one it goes round to the first). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
 
 The menu remembers your last choices (boss, difficulty, study and any tweaks), even after you close the app. It opens with Fight highlighted, so pressing the bottom button once starts the same fight as last time. After a fight the summary comes first, so it takes two presses: one to leave the summary, one for Fight.
 
@@ -105,7 +105,7 @@ The Hound has four attacks. It has no gold attack, so there is no counter agains
 A soft shadow on the floor shows where the Hound is while it is in the air.
 
 ### Checklist
-- [ ] The Boss row switches between the Ember Duelist and the Ashen Hound with left and right, and the menu remembers the choice after closing and reopening the app.
+- [ ] The Boss row switches between the choices with left and right, and the menu remembers the choice after closing and reopening the app.
 - [ ] The Duelist still plays exactly as before: the same feel, and about the same numbers on the summary for a similar fight.
 - [ ] Before a pounce the Hound crouches (it gets lower), and you can see it coming.
 - [ ] When the Hound leaves the floor, a red bar appears on the floor that starts at the landing spot and runs to the side the Hound is facing (even if you crossed it during the crouch, so the bar then points back over where it flew).
@@ -299,7 +299,7 @@ Nothing should stutter. Watch these moments in particular, because they draw the
 A third choice on the **Boss** row, after the Ashen Hound: **Generated**. Instead of a boss someone built by hand, this one is built fresh, at random, right before the fight starts.
 
 ### How to pick it
-Go to the **Boss** row and press left or right until it shows "Generated" (it cycles Ember Duelist, Ashen Hound, Generated and back). Then choose Fight as usual. Easy, Normal, Hard and the Tweak screen all work on it too, the same as on the other two bosses.
+Go to the **Boss** row and press left or right until it shows "Generated" (it is the last choice on the row, and one more press goes back to the first). Then choose Fight as usual. Easy, Normal, Hard and the Tweak screen all work on it too, the same as on the other bosses.
 
 ### What to expect
 - **Every time you press Fight it builds a new boss for that attempt.** Retrying (after a win, a loss, or leaving) gives you a different one: different attacks, different timings, a different size. There is no way to fight the "same" generated boss again, except by keeping the seed from an exported record and asking me to look it up.
@@ -309,7 +309,7 @@ Go to the **Boss** row and press left or right until it shows "Generated" (it cy
 - The fairness check can fail three times in a row for the seed it tried — measured at about **1 in 5 fights** now that arenas are part of generation (up from roughly 1 in 50 before). When that happens the fight still uses that generated boss (not a fallback boss) but you'll see a short note at the top of the screen at the start of the real fight, roughly "This generated boss couldn't be checked as fair. Good luck!", for about 2 seconds. So expect to see this banner fairly often, not rarely. Please tell me whether the boss it accompanied actually felt unfair to fight (impossible to avoid damage, or impossible to beat) or felt fine despite the warning — that comparison is exactly what tells us whether the check is too strict or the banner is doing its job.
 
 ### Checklist
-- [ ] The Boss row cycles Ember Duelist, Ashen Hound, Generated and back to Ember Duelist.
+- [ ] Generated is the last choice on the Boss row, and one more press goes back to the Ember Duelist.
 - [ ] Picking Generated and fighting several times in a row gives visibly different attack sets, timings and boss sizes each time.
 - [ ] Every generated boss you meet is readable: within a couple of tries you can tell what is coming from its pose and glow.
 - [ ] Every generated boss you meet is beatable.

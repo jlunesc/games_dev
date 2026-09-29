@@ -153,3 +153,51 @@ describe('choosing in the menu', () => {
     expect(JSON.stringify(start)).toBe(before);
   });
 });
+
+describe('the Boss row with a pair', () => {
+  const valueOf = (m: MenuModel) => menuRows(m).find((r) => r.id === 'boss')!.value;
+  const withBoss = (bossId: string): MenuModel => at('boss', createMenu({ ...DEFAULT_PREFS, bossId }));
+
+  it('right from the last named boss lands on the pair, and right again on Generated', () => {
+    const lastNamed = BOSS_CHOICES[BOSS_CHOICES.findIndex((c) => c.id === 'hound-and-sage') - 1]!;
+    let m = withBoss(lastNamed.id);
+    m = press(m, 'right');
+    expect(m.prefs.bossId).toBe('hound-and-sage');
+    expect(valueOf(m)).toBe('Hound and Sage');
+    m = press(m, 'right');
+    expect(m.prefs.bossId).toBe('generated');
+    m = press(m, 'left', 'left');
+    expect(m.prefs.bossId).toBe(lastNamed.id);
+  });
+
+  it('shows an old or unknown boss id as the Duelist, and the next step goes to the second choice', () => {
+    const m = withBoss('a-pair-that-was-removed');
+    expect(valueOf(m)).toBe(EMBER_DUELIST.name);
+    expect(press(m, 'right').prefs.bossId).toBe(BOSS_CHOICES[1]!.id);
+  });
+
+  it('keeps the choice of a pair when other rows change', () => {
+    const m = press(withBoss('hound-and-sage'), 'down', 'right');
+    expect(m.prefs.bossId).toBe('hound-and-sage');
+  });
+});
+
+describe('the Study row with a pair', () => {
+  const studyOf = (m: MenuModel) => menuRows(m).find((r) => r.id === 'study')!.value;
+
+  it('left and right change nothing while a pair is chosen, and the stored setting comes back with a normal boss', () => {
+    const pair = at('study', createMenu({ ...DEFAULT_PREFS, bossId: 'hound-and-sage', study: 2 }));
+    expect(studyOf(pair)).toBe('Off (pairs)');
+    const after = press(pair, 'right', 'right', 'left');
+    expect(after.prefs.study).toBe(2);
+    expect(studyOf(after)).toBe('Off (pairs)');
+    const solo = press({ ...after, prefs: { ...after.prefs, bossId: 'ashen-hound' } });
+    expect(studyOf(solo)).toBe('Twice');
+  });
+
+  it('still cycles with a normal boss', () => {
+    const solo = at('study', createMenu({ ...DEFAULT_PREFS, study: 1 }));
+    expect(press(solo, 'right').prefs.study).toBe(2);
+    expect(press(solo, 'left').prefs.study).toBe(0);
+  });
+});

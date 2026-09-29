@@ -1,4 +1,5 @@
 import { BOSS_CHOICES, bossChoiceName } from '../bosses';
+import { pairById } from '../bosses/pairs';
 import { PRESETS } from '../game/difficulty';
 import { wrap, type NavAction } from './nav';
 import { isCustom, nextStudy, selectPreset, studyLabelFor, type Prefs } from './prefs';
@@ -81,6 +82,7 @@ export function menuStep(
 
   const direction: 1 | -1 = action === 'left' ? -1 : 1;
   if (item === 'study') {
+    if (pairById(model.prefs.bossId) !== undefined) return stay(model);
     return stay({ ...model, prefs: { ...model.prefs, study: nextStudy(model.prefs.study, direction) } });
   }
   if (item === 'difficulty') {

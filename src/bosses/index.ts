@@ -1,3 +1,4 @@
+import { PAIRS } from './pairs';
 import { BOSSES, EMBER_DUELIST } from './roster';
 import type { BossDef } from './schema';
 
@@ -8,15 +9,16 @@ export function bossById(id: string): BossDef {
   return BOSSES.find((boss) => boss.id === id) ?? EMBER_DUELIST;
 }
 
-/** One choice in the menu's Boss row: a named boss, or `'generated'` for a freshly generated one. */
+/** One choice in the menu's Boss row: a named boss, a pair (two bosses in one fight), or 'generated' for a freshly generated one. */
 export interface BossChoice {
   id: string;
   name: string;
 }
 
-/** Every choice the menu's Boss row offers, in menu order: the named bosses, then `'Generated'`. */
+/** Every choice the menu's Boss row offers, in menu order: the named bosses, then each pair, then `'Generated'`. */
 export const BOSS_CHOICES: readonly BossChoice[] = [
   ...BOSSES.map((b) => ({ id: b.id, name: b.name })),
+  ...PAIRS.map((p) => ({ id: p.id, name: p.name })),
   { id: 'generated', name: 'Generated' },
 ];
 

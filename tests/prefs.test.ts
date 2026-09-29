@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMBER_DUELIST, bossById } from '../src/bosses';
+import { resolveFight } from '../src/bosses/resolve';
 import { DIALS, NORMAL_DIALS, PRESETS, presetDials } from '../src/game/difficulty';
 import {
   DEFAULT_PREFS,
@@ -155,5 +156,20 @@ describe('the study setting', () => {
     expect(studyLabel(0)).toBe('Off');
     expect(studyLabel(1)).toBe('Once');
     expect(studyLabel(2)).toBe('Twice');
+  });
+});
+
+describe('a pair as the saved boss choice', () => {
+  it('is kept through save and load', () => {
+    const storage = new MemoryStorage();
+    savePrefs(storage, { ...DEFAULT_PREFS, bossId: 'hound-and-sage' });
+    expect(loadPrefs(storage).bossId).toBe('hound-and-sage');
+    expect(resolveFight(loadPrefs(storage).bossId, 1).fight.bosses).toHaveLength(2);
+  });
+
+  it('a stored id that is no longer a pair or a boss gives a fight of the Duelist', () => {
+    const parsed = parsePrefs('{"bossId":"a-pair-that-was-removed"}');
+    expect(parsed.bossId).toBe('a-pair-that-was-removed');
+    expect(resolveFight(parsed.bossId, 1).fight.bosses).toEqual([EMBER_DUELIST]);
   });
 });
