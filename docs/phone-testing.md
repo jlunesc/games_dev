@@ -46,7 +46,7 @@ The menu remembers your last choices (boss, difficulty, study and any tweaks), e
 
 The last row, **Reset to preset**, puts every value back to the preset (Easy, Normal or Hard) you started from. It reacts to the bottom button. Choosing a different preset in the Difficulty row also starts again from that preset's values.
 
-**Settings** switches five things on or off: **Hit freeze** (a tiny pause when a hit lands), **Screen shake**, **Flashes** (white and red flashes when something is hit), **Effects** (sparks, dust and other particles, the drifting embers and the moving background, see "The looks (M5d)" below) and **Sound**. They only change how a fight looks and sounds, and the fight rules stay the same. One honest catch: switching Hit freeze off does not change the rules, but you get slightly less time to react after a hit, so timing can feel different. Left, right or the bottom button switch one; the top button goes back.
+**Settings** has four switches and a volume row: **Hit freeze** (a tiny pause when a hit lands), **Screen shake**, **Flashes** (white and red flashes when something is hit), **Effects** (sparks, dust and other particles, the drifting embers and the moving background, see "The looks (M5d)" below), and **Volume** (Off, Low, Medium or High, for every sound and the music). They only change how a fight looks and sounds, and the fight rules stay the same. One honest catch: switching Hit freeze off does not change the rules, but you get slightly less time to react after a hit, so timing can feel different. Left, right or the bottom button change the row you are on (Volume steps through its four levels); the top button goes back.
 
 **The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time (the real fight only; if you played a study first, a "Study time" line shows how long it took), the phase reached, the hits you took, the boss's health left, and the attack that hurt you most (if nothing hit you, it says "You were never hit."). The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident. Under the lines, a last line says whether the fight was saved on the phone (see "Stats and export" below).
 
@@ -78,7 +78,7 @@ The menu and the summary (M3a):
 - [ ] The menu opens with Fight highlighted; up and down move the highlight and it wraps around.
 - [ ] Left and right on Difficulty switch between Easy, Normal and Hard. Easy feels clearly easier (longer warnings, slower and less frequent attacks, less boss health) and Hard clearly harder.
 - [ ] In Tweak, each value changes with left and right, the menu then shows "Custom (from ...)", "Reset to preset" puts it back, and your choice is still there after closing and reopening the app.
-- [ ] In Settings, switching off Hit freeze, Screen shake, Flashes, Effects or Sound removes exactly that effect in a fight, and the fight itself plays the same.
+- [ ] In Settings, switching off Hit freeze, Screen shake, Flashes or Effects, or setting Volume to Off, removes exactly that effect in a fight, and the fight itself plays the same.
 - [ ] After a win, a loss, and after leaving with the top button, the summary appears with time, phase reached, hits taken, boss health left, and the attack that hurt you most (or "You were never hit." if nothing hit you); the bottom button returns to the menu.
 - [ ] The menu rows show only their names, with no "top button" or "bottom button" text inside them.
 - [ ] Tapping Fight with no controller connected does nothing except show a message ("Connect a controller and press a button first.").
@@ -184,7 +184,7 @@ In the menu, **Study** sits between **Difficulty** and **Tweak difficulty**. Lef
 - The fight starts in the study. For about one second a small note near the top of the screen says "Study: watch what it can do. Nothing can hurt you." (it does not cover the action and it never blocks a tap), and then it goes away. The boss's name at the top right has "STUDY" in front of it for the whole study, as the reminder.
 - The boss shows the attacks of its **first phase** only, one after another, in random order. Each one has its normal warning, its normal speed and its normal pause before the next one. For the Ember Duelist that is the slam, the sweep and the lunge (not the ground burst, which only comes in phase 2, so you meet it for the first time in the real fight). For the Ashen Hound it is the bite, the rush, the slip and the pounce. Each attack is shown as the boss would use it: it walks towards you first if you are far away.
 - You can move, jump and dash as much as you like, to practise dodging. **Nothing can hurt you**: your hearts stay full. You **cannot hurt the boss** either: your swing does nothing to it, and the counter does not work.
-- When an attack would have hit you, you get the usual red flash and a soft, low sound, and you lose nothing. (The flash follows the Flashes switch in Settings and the sound follows the Sound switch. There is no freeze and no screen shake in the study.)
+- When an attack would have hit you, you get the usual red flash and a soft, low sound, and you lose nothing. (The flash follows the Flashes switch in Settings and the sound follows the Volume setting. There is no freeze and no screen shake in the study.)
 - When the last attack has been shown, the same small note at the top shows "The fight begins!" for about one second. From then on it is the real fight: the boss is at full health and waits its normal pause before its first real attack, and every hit that lands hurts you as usual. You stay where you were.
 - On **Easy**, the preset leaves some attacks out of the fight (the Duelist's lunge, the Hound's slip). The study shows only the attacks that are in that fight, so on Easy you will not see those either. Tweaking Variety does the same.
 - How long it is: with Once, roughly 6 to 9 seconds; with Twice, roughly 12 to 17 seconds.
@@ -242,7 +242,7 @@ The fight has a new look. Nothing about how a fight **plays** has changed: the h
 - **Order of drawing**, back to front: sky, background layers, embers, floor, ledges and wall, boss, you, then the effects, then the health bars and text. The effects can therefore cover the boss or you for a moment, but never the health bars.
 
 ### The Effects switch
-In **Settings**, the **Effects** row is the fourth of five (Hit freeze, Screen shake, Flashes, **Effects**, Sound) and it starts **On**. Switching it **off** gives a calm picture: the sky and the background shapes are still, there are **no embers** and there are **no** sparks, dust, trails, rings or bursts. It does **not** switch off the new figures (the cape, the legs and the breathing still move), the boss's glow outline, the white and red flashes (that is the Flashes switch) or the screen shake (that is the Screen shake switch). It changes nothing about how a fight plays, and the recording of a fight does not depend on it.
+In **Settings**, the **Effects** row is the fourth row (after Hit freeze, Screen shake and Flashes, and before Volume) and it starts **On**. Switching it **off** gives a calm picture: the sky and the background shapes are still, there are **no embers** and there are **no** sparks, dust, trails, rings or bursts. It does **not** switch off the new figures (the cape, the legs and the breathing still move), the boss's glow outline, the white and red flashes (that is the Flashes switch) or the screen shake (that is the Screen shake switch). It changes nothing about how a fight plays, and the recording of a fight does not depend on it.
 
 Two small things you might notice with Effects on: when a hit freezes the game for a moment, the background and the embers also pause for that moment (so the freeze looks like a real stop), while the sparks and rings that are already flying keep fading. And when the game is paused (controller off) everything is still.
 
@@ -281,7 +281,7 @@ Nothing should stutter. Watch these moments in particular, because they draw the
 - [ ] You look right facing left and facing right, and while running, jumping, dashing and swinging: no leg or cape that points the wrong way or stretches oddly.
 - [ ] The Duelist and the Hound look right facing both ways, while walking, attacking, staggered (light blue) and, for the Hound, crouching and jumping. No part looks detached or oddly stretched.
 - [ ] The Duelist and the Hound are easy to tell apart at a glance, on their shape, their body colour (orange against grey-blue) and the backdrop.
-- [ ] In Settings, the Effects row is the fourth of five. Switch it off and start a fight: the sky and shapes are still, there are no embers and no sparks, dust, trails, rings or bursts, and the figures still move. Switch it back on: all of it returns.
+- [ ] In Settings, the Effects row is the fourth row. Switch it off and start a fight: the sky and shapes are still, there are no embers and no sparks, dust, trails, rings or bursts, and the figures still move. Switch it back on: all of it returns.
 - [ ] With **Flashes** off, the boss and you no longer flash white and red. With **Screen shake** off, the screen no longer shakes. Each of them still works on its own, whether Effects is on or off.
 - [ ] A fight plays exactly as before: the same feel, and about the same numbers on the summary for a similar fight. The stats still save and Export works.
 
@@ -519,6 +519,32 @@ A new choice on the **Boss** row, after the single bosses and before Generated: 
 - Is the angry survivor too easy, right, or a wall?
 - Did one of the two bosses feel like it did most of the work?
 - Did the Sage's bolts and the Hound's rushes ever feel like they came at once, even though only one boss attacks at a time?
+
+## Sound (M7)
+The ten placeholder beeps are gone. Every sound is made in code, so nothing extra was downloaded. **Settings** now has a **Volume** row (Off, Low, Medium, High; it starts on **Medium**). An old saved "Sound off" becomes Volume Off. Sound still needs one tap on the screen after the app starts.
+
+### What to expect
+- **Fight sounds**: a hit on the boss is a short thump with a tick, and its pitch shifts a little from hit to hit; a counter rings brighter on top; getting hurt is the loudest, low and rough; a dash whooshes; a phase change growls; a boss going down or you going down is a falling tone.
+- **Warnings**: gold (you can counter it) is a clear high ting, red (dodge it) is low and rough, as before. On top of that each attack has a sound of its own: a wind-up swell that is higher for a raised arm and lower for a crouch, a rising whine when a boss charges a shot, a swipe when the danger starts, a whoosh for a lunge, a rising launch and a heavy slam for a leap, a falling whistle for a dive, a launch sound for each bolt or lob, a thud where a lob lands, a soft tick when the floor is about to erupt and a blast when it does, and a quiet swish when a bolt passes close.
+- **In the Hound and Sage fight** the Hound's sounds come from the left and the Sage's from the right.
+- **Music**: it starts with the fight. A bass pulse and a soft pad from the start, drums from the boss's second phase or at half health, a light melody in the last phase or at a quarter health. New layers come in on the next bar, never abruptly. Each boss has its own key and tempo; a generated boss gets one from its seed. In the **study** only the quiet pad plays. A short rising figure plays when you win, a falling one when you lose, and the music stops when you leave the fight. The music dips for a moment whenever a warning sounds, so the warning cuts through.
+
+### Checklist
+- [ ] Settings shows four switches and a Volume row; Left or Right on Volume steps Off, Low, Medium, High and the change is audible in the next fight. Off is completely silent (no music either). The choice is remembered after closing the app.
+- [ ] Every boss sounds different in its opening seconds (key and tempo), and the layers grow as the boss loses health.
+- [ ] You can tell, with your eyes off the boss, which of two attacks is coming (a leap and a lunge, a bolt and a lob).
+- [ ] Gold and red warnings are still easy to tell apart, and neither is lost under the music.
+- [ ] The music does not drown the study, and the drums arrive when the fight gets serious.
+- [ ] The win and loss figures play once, and the music stops; a new fight starts the music from the beginning.
+- [ ] The fight stays smooth on the S21 with everything on: no stutter when many sounds overlap (two bolts, a counter and a warning at once), and the frame rate looks the same with Volume Off and High.
+- [ ] Leaving the fight, pausing when the controller drops out and turning the phone screen off do not leave a note hanging.
+
+### Questions
+- Is the music too loud or too busy next to the effects? Which layer is too much?
+- Which sounds get annoying when they repeat (the hit, the warning, the swell)?
+- Is any attack still unreadable by ear?
+- Would you like a separate Music on/off switch, or is one Volume enough? Should the music keep playing on the summary screen?
+- In the pair fight, does the left and right split help you know who is acting?
 
 ## Redo after a fight
 - [ ] After a win or a loss, the summary shows three choices under the result: Redo, Fight again and Back to the menu. Tapping works, and so does the controller (up and down, bottom button to pick, the other button goes back to the menu).

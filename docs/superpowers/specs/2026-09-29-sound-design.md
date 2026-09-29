@@ -1,6 +1,6 @@
 # Sound: richer effects, attack sounds and music
 
-Status: design approved by the owner 2026-09-29, not built. All numbers are first guesses to be tuned on the phone.
+Status: design approved by the owner 2026-09-29, built 2026-09-29 (plan in docs/superpowers/plans/2026-09-29-sound.md), awaiting the owner's listen on the phone. All numbers are first guesses to be tuned on the phone.
 
 ## Why
 
@@ -93,10 +93,10 @@ Identical cues in the same update are merged (two hit events do not double the v
   Layers fade in over one bar and are never cut off abruptly.
 - **The study** plays only the pad at low volume, with no drums, so its purpose (watching) is not drowned. When the real fight begins the pulse comes in.
 - **Per boss**: the boss's `id` picks a `key` (root note), `mode` (major or minor) and `tempo` from a table in `tuning.ts`. The generated boss and unknown ids use a default and a seed-based key so each generated boss sounds a little different. A pair fight uses the first boss's key with the second boss's tempo blended in (default: the average).
-- **Stings**: a short victory sting on `bossDefeated` or the last of a pair, a short low sting on `playerDefeated`; the music stops on the next bar boundary and the sting plays over the fade.
+- **Stings**: a short victory sting on `bossDefeated` or the last of a pair, a short low sting on `playerDefeated`; the music stops with a quick fade (0.3 s) rather than waiting for a bar boundary (built that way: a win or a loss should not wait up to two seconds for the music to end), and the sting plays over the fade.
 - **`score.ts`** is pure: `notesFor(bossId, bar, layers) -> Note[]` with a fixed chord progression per mode, so tests can check which notes play at each layer without audio.
 - **Restart and quit**: leaving a fight (quit, retry, summary) stops the music with a short fade; a retry restarts from bar 0.
-- Music is a constant CPU cost on the phone: at most 4 sounding voices from music at once (bass, pad, kick or hat, lead), no reverb or convolution.
+- Music is a constant CPU cost on the phone: notes are made on the fly a fraction of a second ahead, one layer at a time (the pad is three quiet oscillators, the bass two, plus the drums and the lead), so at most about 27 short-lived sound sources (each with a small volume node) are created per bar with every layer on; no reverb or convolution. (The first design said "at most 4 sounding voices"; it counted layers, not oscillators.)
 
 ### Settings
 

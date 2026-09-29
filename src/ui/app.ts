@@ -26,7 +26,7 @@ import { analyzeRecording } from '../stats/analyze';
 import { buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
 import { buildRecord, type Recording } from '../stats/record';
 import { openIndexedDbStore, type FightStore } from '../stats/store';
-import { createSound } from './audio';
+import { createSound } from './sound';
 import { mountControllerScreen } from './controller-screen';
 import { el } from './dom';
 import { NO_FEEDBACK, advanceFeedback, applyEvents, flashBossFor, freezeFor, type FeedbackState } from './feedback';
@@ -115,11 +115,15 @@ export function mountApp(root: HTMLElement): void {
   const storeReady: Promise<FightStore | null> = openIndexedDbStore();
 
   const sound = createSound();
-  sound.setEnabled(settings.sound);
+  sound.setVolume(settings.volume);
   // A phone only counts some events as a tap for sound: touch needs pointerup or click, not just pointerdown.
   for (const type of ['pointerdown', 'pointerup', 'click']) {
     root.addEventListener(type, () => sound.unlock());
   }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) sound.suspend();
+    else sound.unlock();
+  });
 
   let screen: Screen = 'menu';
   let menu: MenuModel = createMenu(prefs);
@@ -208,6 +212,7 @@ export function mountApp(root: HTMLElement): void {
 
   /** Hides the fight and its overlays; the next screen fills the panel. */
   function leaveFightScreen(): void {
+    sound.endFight();
     exitHoldMs = 0;
     leaveHint.hidden = true;
     canvas.hidden = true;
@@ -226,7 +231,7 @@ export function mountApp(root: HTMLElement): void {
     if (next === settings) return;
     settings = next;
     saveSettings(storage, settings);
-    sound.setEnabled(settings.sound);
+    sound.setVolume(settings.volume);
   }
 
   // Menu
@@ -412,7 +417,7 @@ export function mountApp(root: HTMLElement): void {
     renderList(
       panel,
       'Settings',
-      'Left, right or the bottom button switch a setting, top button goes back.',
+      'Left, right or the bottom button change a setting, top button goes back.',
       settingsRows(settingsModel).map((row) => ({ label: row.label, value: row.value, help: row.help })),
       settingsModel.focus,
       (index) => {
@@ -575,6 +580,7 @@ export function mountApp(root: HTMLElement): void {
     setBanner(null);
     setStudyNote(null);
     sound.unlock();
+    sound.startFight(fight, seed);
   }
 
   banner.addEventListener('click', () => {
@@ -661,7 +667,7 @@ export function mountApp(root: HTMLElement): void {
       fx = spawnEffects(fx, before, state, fight, settings.effects);
       freezeLeft = Math.max(freezeLeft, freezeFor(state.events, settings));
       if (freezeLeft > 0) hitStopView = true;
-      sound.play(state.events);
+      sound.update(before, state, fight);
     }
     // The study note is separate from the bottom banner (which the paused-controller message uses).
     setStudyNote(studyBanner(state.study, state.tick, bossUnfair));
