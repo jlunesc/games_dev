@@ -148,13 +148,12 @@ function shotCues(before: GameState, after: GameState, fight: FightDef, out: Cue
  * changes nothing, so a fight plays and replays the same with or without sound. Most important first.
  */
 export function cuesFor(before: GameState, after: GameState, fight: FightDef): Cue[] {
+  // The killing blow is the end of the fight: the defeat thump and the loss jingle play alone, with no hurt sound, strike or blast over them.
+  if (after.events.includes('playerDefeated')) return [cue('defeat')];
   const cues: Cue[] = [];
-  // The killing blow is both a hit and a defeat; the buzzing hurt sound would play under the defeat thump and jingle.
-  const lastHit = after.events.includes('playerDefeated');
   for (const event of after.events) {
     const voice = PLAYER_EVENT_VOICE[event];
-    if (voice === undefined || (lastHit && voice === 'playerHurt')) continue;
-    cues.push(cue(voice));
+    if (voice !== undefined) cues.push(cue(voice));
   }
   if (after.events.includes('bossHit')) {
     cues.push(cue('hit', extra(hitPitch(after.tick), panOf(fight, struckBoss(before, after)))));

@@ -22,6 +22,18 @@ function setup() {
 const withEvents = (state: GameState, events: GameEvent[]): GameState => ({ ...state, events });
 const frequencies = (ctx: FakeContext): number[] => ctx.ofKind('oscillator').map((node) => node.frequency.calls[0]!.value);
 
+describe('the end of a fight', () => {
+  it('fades out a sound that is still ringing when the player is defeated', () => {
+    const { ctx, sound } = setup();
+    sound.startFight(fight, 1);
+    sound.update(calm(), withEvents(calm(), ['phaseChange']), fight);
+    const growl = ctx.ofKind('oscillator').find((node) => node.type === 'sawtooth')!;
+    const gain = growl.connections[0]!.connections[0]!;
+    sound.update(calm(), withEvents(calm(), ['playerDefeated']), fight);
+    expect(gain.gain.calls.some((call) => call.op === 'linear' && call.value === 0)).toBe(true);
+  });
+});
+
 describe('the music in the sound object', () => {
   it('does not play music until a fight has started', () => {
     const { timer, sound } = setup();

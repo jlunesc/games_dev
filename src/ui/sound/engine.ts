@@ -21,6 +21,8 @@ export interface Engine {
    * every live voice is at least as important (higher `priority` wins). `pan` runs from -1 (left) to 1 (right).
    */
   begin(priority: number, seconds: number, pan?: number): Voice | null;
+  /** Fades out every sound effect still ringing, so an ending starts clean. */
+  silence(): void;
   /** Dips the music for a moment so a warning cuts through. */
   duck(): void;
 }
@@ -96,6 +98,14 @@ export function createEngine(ctx: AudioContext, volume: Volume, cap: number = SO
       }
       live.push({ priority, end: now + seconds, out });
       return { out, start: now };
+    },
+    silence(): void {
+      const now = ctx.currentTime;
+      for (const voice of live.splice(0)) {
+        voice.out.gain.cancelScheduledValues(now);
+        voice.out.gain.setValueAtTime(voice.out.gain.value, now);
+        voice.out.gain.linearRampToValueAtTime(0, now + SOUND.stealFadeSeconds);
+      }
     },
     duck(): void {
       const now = ctx.currentTime;

@@ -94,6 +94,14 @@ describe('the sound engine', () => {
     expect(engine.begin(5, 0.5)).not.toBeNull();
   });
 
+  it('fades out every live voice on silence, and frees their slots', () => {
+    const { engine } = make('medium', 1);
+    const voice = engine.begin(5, 5)!;
+    engine.silence();
+    expect(node(voice.out).gain.calls.some((c) => c.op === 'linear' && c.value === 0)).toBe(true);
+    expect(engine.begin(1, 0.2)).not.toBeNull();
+  });
+
   it('ducks the music bus with a short ramp, holds, then recovers', () => {
     const { ctx, engine } = make();
     ctx.currentTime = 2;

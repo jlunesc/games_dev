@@ -72,6 +72,7 @@ export function createSound(env: SoundEnv = browserEnv): Sound {
     update(before, after, fight): void {
       if (engine === null || volume === 'off' || engine.ctx.state !== 'running') return;
       const cues = cuesFor(before, after, fight);
+      if (after.events.includes('playerDefeated')) engine.silence();
       for (const cue of cues) playCue(engine, cue);
       const player = band();
       if (player === null || theme === null || finished) return;

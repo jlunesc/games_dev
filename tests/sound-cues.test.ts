@@ -56,6 +56,15 @@ describe('cues from the game events', () => {
     expect(fromEvents(['playerHit', 'playerDefeated'])).toEqual(['defeat']);
   });
 
+  it('gives the killing blow the defeat sound alone even when a strike lands on the same update', () => {
+    const attack = fight.bosses[0]!.attacks.find((a) => a.hits.length > 0)!;
+    const base = idle();
+    const before = attacking(base, attack, attack.windup - 1);
+    const strike = attacking(base, attack, attack.windup);
+    expect(voices(cuesFor(before, strike, fight))).toContain('strike');
+    expect(voices(cuesFor(before, withEvents(['playerHit', 'playerDefeated'], strike), fight))).toEqual(['defeat']);
+  });
+
   it('merges identical cues, so two boss events in one update do not double up', () => {
     expect(fromEvents(['bossDefeated', 'bossDown'])).toEqual(['fall']);
     expect(fromEvents(['bossHit', 'bossHit'])).toEqual(['hit']);
