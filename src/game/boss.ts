@@ -3,7 +3,9 @@ import { DT } from '../engine/time';
 import { WORLD } from './params';
 import { nextRandom } from './rng';
 import { spawnShots } from './shots';
-import { bossAt, type BossState, type GameState } from './state';
+import type { FightDef } from './fight';
+import { bossAt, bossCount, isDowned, type BossState, type GameState } from './state';
+import { bossDefFor, pickCommitter } from './turns';
 
 export function attackById(boss: BossDef, id: string): AttackDef {
   const found = boss.attacks.find((attack) => attack.id === id);
@@ -400,5 +402,18 @@ export function updateBoss(s: GameState, boss: BossDef, index = 0, mayCommit = t
     case 'transition':
       if (b.modeTick >= boss.transitionTicks) finishTransition(s, boss, phase, index, mayCommit);
       break;
+  }
+}
+
+/**
+ * Moves every boss of the fight one update. With partners, only the boss that wins `pickCommitter` may start an attack
+ * on this update; a lone boss always may, so a one-boss fight behaves exactly as it did before turns existed.
+ */
+export function updateBosses(s: GameState, fight: FightDef): void {
+  const count = bossCount(s);
+  const committer = count > 1 ? pickCommitter(s, fight) : 0;
+  for (let i = 0; i < count; i++) {
+    if (isDowned(s, i)) continue;
+    updateBoss(s, bossDefFor(s, fight, i), i, i === committer);
   }
 }
