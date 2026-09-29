@@ -3,7 +3,7 @@ import { DT } from '../engine/time';
 import { WORLD } from './params';
 import { nextRandom } from './rng';
 import { spawnShots } from './shots';
-import type { BossState, GameState } from './state';
+import { bossAt, type BossState, type GameState } from './state';
 
 export function attackById(boss: BossDef, id: string): AttackDef {
   const found = boss.attacks.find((attack) => attack.id === id);
@@ -87,9 +87,9 @@ function moveBoss(b: BossState, boss: BossDef, direction: 1 | -1, speed: number)
  * probability `predictability` the next one in the fixed cycle, otherwise by weight. Both random numbers
  * are always drawn so the sequence does not depend on which branch is taken.
  */
-function chooseAttack(s: GameState, boss: BossDef, phase: PhaseDef): string | null {
+function chooseAttack(s: GameState, boss: BossDef, phase: PhaseDef, index: number): string | null {
   if (phase.attacks.length === 0) return null;
-  const b = s.boss;
+  const b = bossAt(s, index);
   const followCycle = draw(s) < boss.predictability;
   const weightRoll = draw(s);
 
@@ -123,8 +123,8 @@ function planChain(s: GameState, phase: PhaseDef): number {
   return draw(s) < phase.chainChance ? phase.maxChain - 1 : 0;
 }
 
-function startAttack(s: GameState, boss: BossDef, id: string): void {
-  const b = s.boss;
+function startAttack(s: GameState, boss: BossDef, id: string, index: number): void {
+  const b = bossAt(s, index);
   const attack = attackById(boss, id);
   b.mode = 'attack';
   b.modeTick = 0;
@@ -135,8 +135,8 @@ function startAttack(s: GameState, boss: BossDef, id: string): void {
   s.events.push(attack.class === 'counterable' ? 'bossWindupGold' : 'bossWindupRed');
 }
 
-function updateGap(s: GameState, boss: BossDef, phase: PhaseDef): void {
-  const b = s.boss;
+function updateGap(s: GameState, boss: BossDef, phase: PhaseDef, index: number, mayCommit: boolean): void {
+  const b = bossAt(s, index);
   const p = s.player;
   faceTarget(b, p.x);
   const distance = Math.abs(p.x - b.x);
@@ -146,7 +146,7 @@ function updateGap(s: GameState, boss: BossDef, phase: PhaseDef): void {
   } else if (distance < boss.spacing.min) {
     moveBoss(b, boss, toward === 1 ? -1 : 1, phase.retreatSpeed);
   }
-  if (b.modeTick >= phase.gap) {
+  if (b.modeTick >= phase.gap && mayCommit) {
     // During the study the attacks come from the planned queue: no random draws, no chains.
     let id: string | null;
     if (s.study.active) {
@@ -156,7 +156,7 @@ function updateGap(s: GameState, boss: BossDef, phase: PhaseDef): void {
       // Nothing left to show (cannot happen): end the study and let the fight go on as a normal one.
       if (id === null) endStudy(s);
     } else {
-      id = chooseAttack(s, boss, phase);
+      id = chooseAttack(s, boss, phase, index);
     }
     if (id !== null) {
       b.pendingAttackId = id;
@@ -167,8 +167,8 @@ function updateGap(s: GameState, boss: BossDef, phase: PhaseDef): void {
   }
 }
 
-function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef): void {
-  const b = s.boss;
+function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef, index: number): void {
+  const b = bossAt(s, index);
   const p = s.player;
   const id = b.pendingAttackId;
   if (id === null) {
@@ -180,7 +180,7 @@ function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef): void {
   const distance = Math.abs(p.x - b.x);
   const inRange = distance >= attack.range.min && distance <= attack.range.max;
   if (inRange || b.modeTick >= boss.approachTimeout) {
-    startAttack(s, boss, id);
+    startAttack(s, boss, id, index);
     return;
   }
   const toward: 1 | -1 = p.x < b.x ? -1 : 1;
@@ -189,12 +189,12 @@ function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef): void {
       ? moveBoss(b, boss, toward, phase.walkSpeed)
       : moveBoss(b, boss, toward === 1 ? -1 : 1, phase.retreatSpeed);
   // Pinned against a wall it cannot make progress, so it attacks from where it stands instead of waiting.
-  if (!moved) startAttack(s, boss, id);
+  if (!moved) startAttack(s, boss, id, index);
 }
 
 /** After an attack: straight into the next one of a chain, otherwise back to waiting. */
-function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
-  const b = s.boss;
+function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef, index: number): void {
+  const b = bossAt(s, index);
   // Defensive: a leap that did not reach its `to` before the attack ended must not leave the boss floating.
   endMotion(b, boss);
   if (s.study.active) {
@@ -204,7 +204,7 @@ function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
     return;
   }
   if (b.chainLeft > 0) {
-    const id = chooseAttack(s, boss, phase);
+    const id = chooseAttack(s, boss, phase, index);
     if (id !== null) {
       b.chainLeft -= 1;
       b.attackId = null;
@@ -219,8 +219,8 @@ function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
   enterGap(b, boss);
 }
 
-function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
-  const b = s.boss;
+function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef, index: number): void {
+  const b = bossAt(s, index);
   if (b.attackId === null) {
     enterGap(b, boss);
     return;
@@ -233,15 +233,15 @@ function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef): void {
     const direction: 1 | -1 = move.dir === 'back' ? (b.facing === 1 ? -1 : 1) : b.facing;
     moveBoss(b, boss, direction, move.speed);
   }
-  if (attack.leap !== undefined) updateLeap(s, boss, attack.leap);
-  if (attack.dive !== undefined) updateDive(s, boss, attack.dive);
-  spawnShots(s, boss, attack);
-  if (b.attackTick >= attackLength(attack)) finishAttack(s, boss, phase);
+  if (attack.leap !== undefined) updateLeap(s, boss, attack.leap, index);
+  if (attack.dive !== undefined) updateDive(s, boss, attack.dive, index);
+  spawnShots(s, boss, attack, index);
+  if (b.attackTick >= attackLength(attack)) finishAttack(s, boss, phase, index);
 }
 
 /** The x a leap will land on, fixed at take-off and kept inside the arena. */
-function leapLanding(s: GameState, boss: BossDef, leap: { target: LeapTarget; distance?: number }): number {
-  const b = s.boss;
+function leapLanding(s: GameState, boss: BossDef, leap: { target: LeapTarget; distance?: number }, index: number): number {
+  const b = bossAt(s, index);
   const half = boss.width / 2;
   let x = s.player.x;
   // The parser guarantees `distance` for 'forward' and 'back' (the 0 only satisfies the type).
@@ -272,8 +272,8 @@ function hoverLift(height: number, n: number, hang: number, k: number): number {
  * spot is fixed then, so the player can dodge by moving after take-off), flies until `to` and is on the
  * floor at the landing x from update `to` on.
  */
-function updateLeap(s: GameState, boss: BossDef, leap: LeapDef): void {
-  const b = s.boss;
+function updateLeap(s: GameState, boss: BossDef, leap: LeapDef, index: number): void {
+  const b = bossAt(s, index);
   const t = b.attackTick;
   if (t >= leap.from && t < leap.to) {
     // Take-off is captured lazily on the first flight update. This relies on two invariants: the parser forces
@@ -281,7 +281,7 @@ function updateLeap(s: GameState, boss: BossDef, leap: LeapDef): void {
     // (finish, counter, phase change, end of the fight) clears the leap points via landBoss.
     if (b.leapFromX === null || b.leapToX === null) {
       b.leapFromX = b.x;
-      b.leapToX = leapLanding(s, boss, leap);
+      b.leapToX = leapLanding(s, boss, leap, index);
     }
     // The flight has n = to - from updates; using n + 1 in the divisor keeps p strictly between 0 and 1,
     // so the boss is already off the floor on the first update of the flight and still up on the last.
@@ -322,13 +322,13 @@ function diveLift(dive: DiveDef, from: number, n: number, k: number): number {
  * Moves a flying boss along its dive for the current attack time, the way `updateLeap` moves a leaping one: the landing
  * x and the starting height are fixed at update `from`, so the player can dodge by moving after that.
  */
-function updateDive(s: GameState, boss: BossDef, dive: DiveDef): void {
-  const b = s.boss;
+function updateDive(s: GameState, boss: BossDef, dive: DiveDef, index: number): void {
+  const b = bossAt(s, index);
   const t = b.attackTick;
   if (t >= dive.from && t < dive.to) {
     if (b.leapFromX === null || b.leapToX === null || b.diveFromLift === null) {
       b.leapFromX = b.x;
-      b.leapToX = leapLanding(s, boss, dive);
+      b.leapToX = leapLanding(s, boss, dive, index);
       b.diveFromLift = b.lift;
     }
     const n = dive.to - dive.from;
@@ -344,10 +344,10 @@ function updateDive(s: GameState, boss: BossDef, dive: DiveDef): void {
   }
 }
 
-/** After the powering-up pause the boss opens with the new phase's opening attack, if it has one. */
-function finishTransition(s: GameState, boss: BossDef, phase: PhaseDef): void {
-  const b = s.boss;
-  if (phase.opening !== undefined) {
+/** After the powering-up pause the boss opens with the new phase's opening attack, if it has one and it may start it. */
+function finishTransition(s: GameState, boss: BossDef, phase: PhaseDef, index: number, mayCommit: boolean): void {
+  const b = bossAt(s, index);
+  if (phase.opening !== undefined && mayCommit) {
     b.pendingAttackId = phase.opening;
     b.chainLeft = planChain(s, phase);
     b.mode = 'approach';
@@ -357,9 +357,9 @@ function finishTransition(s: GameState, boss: BossDef, phase: PhaseDef): void {
   }
 }
 
-/** The boss moves on to the next phase: it drops what it was doing and powers up, unhurtable. */
-export function beginTransition(s: GameState, boss: BossDef): void {
-  const b = s.boss;
+/** The boss moves on to the next phase: it drops what it was doing and powers up, unhurtable. Its own shots vanish. */
+export function beginTransition(s: GameState, boss: BossDef, index = 0): void {
+  const b = bossAt(s, index);
   b.phase += 1;
   endMotion(b, boss);
   b.mode = 'transition';
@@ -368,13 +368,16 @@ export function beginTransition(s: GameState, boss: BossDef): void {
   b.attackTick = 0;
   b.pendingAttackId = null;
   b.chainLeft = 0;
-  s.shots = [];
+  s.shots = s.shots.filter((shot) => (shot.owner ?? 0) !== index);
   s.events.push('phaseChange');
 }
 
-/** Moves the boss one update. Mutates the (already cloned) state. */
-export function updateBoss(s: GameState, boss: BossDef): void {
-  const b = s.boss;
+/**
+ * Moves boss `index` one update. Mutates the (already cloned) state. `mayCommit` says whether the boss may start
+ * choosing an attack on this update (its chance to take the turn); a blocked boss keeps waiting and draws nothing.
+ */
+export function updateBoss(s: GameState, boss: BossDef, index = 0, mayCommit = true): void {
+  const b = bossAt(s, index);
   const phase = boss.phases[b.phase];
   if (phase === undefined) return;
   b.modeTick += 1;
@@ -383,19 +386,19 @@ export function updateBoss(s: GameState, boss: BossDef): void {
   }
   switch (b.mode) {
     case 'gap':
-      updateGap(s, boss, phase);
+      updateGap(s, boss, phase, index, mayCommit);
       break;
     case 'approach':
-      updateApproach(s, boss, phase);
+      updateApproach(s, boss, phase, index);
       break;
     case 'attack':
-      updateAttack(s, boss, phase);
+      updateAttack(s, boss, phase, index);
       break;
     case 'stagger':
       if (b.modeTick >= boss.counter.staggerTicks) enterGap(b, boss);
       break;
     case 'transition':
-      if (b.modeTick >= boss.transitionTicks) finishTransition(s, boss, phase);
+      if (b.modeTick >= boss.transitionTicks) finishTransition(s, boss, phase, index, mayCommit);
       break;
   }
 }

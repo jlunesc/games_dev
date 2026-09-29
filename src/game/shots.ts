@@ -1,14 +1,13 @@
 import type { AttackDef, BossDef, ShotDef } from '../bosses/schema';
 import { DT } from '../engine/time';
 import { PLAYER, WORLD } from './params';
-import type { GameState, ShotState } from './state';
+import { bossAt, type BossState, type GameState, type ShotState } from './state';
 
 /** Where a shot leaving the boss towards `dir` starts: at that edge of its body. */
-const muzzleX = (s: GameState, boss: BossDef, dir: 1 | -1): number => s.boss.x + dir * (boss.width / 2);
+const muzzleX = (b: BossState, boss: BossDef, dir: 1 | -1): number => b.x + dir * (boss.width / 2);
 
 /** The x an arc will land on, fixed at launch and kept inside the arena (the same targeting as a leap). */
-function arcLanding(s: GameState, boss: BossDef, shot: Extract<ShotDef, { kind: 'arc' }>): number {
-  const b = s.boss;
+function arcLanding(s: GameState, b: BossState, boss: BossDef, shot: Extract<ShotDef, { kind: 'arc' }>): number {
   let x = s.player.x;
   // The parser guarantees `distance` for 'forward' and 'back' (the 0 only satisfies the type).
   if (shot.target === 'forward') x = b.x + b.facing * (shot.distance ?? 0);
@@ -18,10 +17,12 @@ function arcLanding(s: GameState, boss: BossDef, shot: Extract<ShotDef, { kind: 
 }
 
 /** Fires the shots of `attack` that are due on the current attack update. Called by the boss after it advances. */
-export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef): void {
-  const b = s.boss;
+export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef, index = 0): void {
+  const b = bossAt(s, index);
   if (attack.shots === undefined) return;
   const originTick = s.tick - b.attackTick;
+  // Only a partner's shots carry an owner, so the shots of a one-boss fight are exactly what they always were.
+  const owner = index > 0 ? { owner: index } : {};
   for (const def of attack.shots) {
     if (def.at !== b.attackTick) continue;
     if (def.kind === 'eruption') {
@@ -36,6 +37,7 @@ export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef): void
         width: def.width,
         delay: def.delay,
         burst: def.burst,
+        ...owner,
       });
       continue;
     }
@@ -47,7 +49,7 @@ export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef): void
       let climb = 0;
       if (def.aim === true) {
         // A straight line at the player's body as it is now. Square roots are exact in every engine, so a replay agrees.
-        const dx = s.player.x - muzzleX(s, boss, b.facing);
+        const dx = s.player.x - muzzleX(b, boss, b.facing);
         const dy = WORLD.floorY - s.player.y + PLAYER.height / 2 - (lift + def.size / 2);
         const length = Math.sqrt(dx * dx + dy * dy);
         if (length > 1) {
@@ -56,7 +58,7 @@ export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef): void
           climb = (def.speed * dy) / length;
         }
       }
-      const x = muzzleX(s, boss, dir);
+      const x = muzzleX(b, boss, dir);
       s.shots.push({
         kind: 'bolt',
         attackId: attack.id,
@@ -68,9 +70,10 @@ export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef): void
         size: def.size,
         speed,
         climb,
+        ...owner,
       });
     } else {
-      const x = muzzleX(s, boss, b.facing);
+      const x = muzzleX(b, boss, b.facing);
       const launchLift = boss.height * 0.6 + b.lift;
       s.shots.push({
         kind: 'arc',
@@ -81,11 +84,12 @@ export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef): void
         age: 0,
         flight: def.flight,
         fromX: x,
-        toX: arcLanding(s, boss, def),
+        toX: arcLanding(s, b, boss, def),
         launchLift,
         peak: def.peak,
         radius: def.radius,
         burst: def.burst,
+        ...owner,
       });
     }
   }
