@@ -13,6 +13,7 @@ const base: FightSummary = {
   hitsTaken: 3,
   bossHpLeft: 0,
   bossMaxHp: 30,
+  bosses: [{ name: 'Ember Duelist', hpLeft: 0, maxHp: 30 }],
   mostDangerousAttack: { id: 'slam', name: 'Ember slam', hits: 2 },
 };
 
@@ -95,5 +96,29 @@ describe('summaryLines', () => {
     expect(onEnd.lines).not.toContain('You left during the study.');
     expect(onEnd.lines[0]).toBe('Time: 0:00');
     expect(summaryLines({ ...base, studySeconds: 12 }).lines).not.toContain('You left during the study.');
+  });
+});
+
+describe('summaryLines for a pair', () => {
+  const pairSummary: FightSummary = {
+    ...base,
+    phaseCount: 2,
+    bossHpLeft: 4,
+    bossMaxHp: 30,
+    bosses: [
+      { name: 'Ashen Hound', hpLeft: 0, maxHp: 18 },
+      { name: 'Vesper Sage', hpLeft: 4, maxHp: 12 },
+    ],
+    mostDangerousAttack: { id: 'single-bolt', name: "Vesper Sage's Single Bolt", hits: 1 },
+  };
+
+  it('shows the health of each boss by name and leaves out the phase line', () => {
+    expect(summaryLines(pairSummary).lines).toEqual([
+      'Time: 1:12',
+      'Hits taken: 3',
+      'Ashen Hound health left: 0 of 18',
+      'Vesper Sage health left: 4 of 12',
+      "Hurt you most: Vesper Sage's Single Bolt (1 hit)",
+    ]);
   });
 });

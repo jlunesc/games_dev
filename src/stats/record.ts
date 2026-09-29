@@ -1,7 +1,7 @@
-import { resolveBoss } from '../bosses/resolve';
+import { resolveFight } from '../bosses/resolve';
 import type { InputFrame } from '../engine/input-frame';
 import {
-  applyDials,
+  applyDialsToFight,
   changedDials,
   presetDials,
   type DialId,
@@ -13,7 +13,7 @@ import { step } from '../game/step';
 import type { FightResult } from '../game/summary';
 import { decodeInputs, pushFrame, type InputRun } from './input-log';
 
-export const STATS_SCHEMA_VERSION = 5;
+export const STATS_SCHEMA_VERSION = 6;
 
 /**
  * Bump when a change to the game numbers or a boss file changes how a recorded fight replays.
@@ -114,7 +114,10 @@ export function buildRecord<A>(
   };
 }
 
-/** Replays the recorded input through the real game and returns the state after the last update. */
+/**
+ * Replays the recorded input through the real game and returns the state after the last update.
+ * A pair id as bossId replays both bosses; a fight with partners has no study, so a study value is ignored for it.
+ */
 export function replayFinalState(record: {
   bossId: string;
   dials: Dials;
@@ -123,8 +126,8 @@ export function replayFinalState(record: {
   study?: 0 | 1 | 2;
   input: readonly InputRun[];
 }): GameState {
-  const boss = applyDials(resolveBoss(record.bossId, record.seed).boss, record.dials);
-  let state = createInitialState(boss, record.seed, record.study ?? 0);
-  for (const frame of decodeInputs(record.input)) state = step(state, frame, boss);
+  const fight = applyDialsToFight(resolveFight(record.bossId, record.seed).fight, record.dials);
+  let state = createInitialState(fight, record.seed, record.study ?? 0);
+  for (const frame of decodeInputs(record.input)) state = step(state, frame, fight);
   return state;
 }

@@ -1,5 +1,6 @@
 import { FEEDBACK } from '../game/params';
-import type { GameEvent } from '../game/state';
+import type { GameEvent, GameState } from '../game/state';
+import { struckBoss } from './look/who';
 import { DEFAULT_SETTINGS, type Settings } from './settings';
 
 /** Effect timers that only exist for the eyes: they never feed back into the simulation. */
@@ -22,7 +23,7 @@ export function freezeFor(
     if (event === 'bossHit') freeze = Math.max(freeze, FEEDBACK.freezeOnBossHit);
     if (event === 'playerHit') freeze = Math.max(freeze, FEEDBACK.freezeOnPlayerHit);
     if (event === 'counter') freeze = Math.max(freeze, FEEDBACK.freezeOnCounter);
-    if (event === 'bossDefeated') freeze = Math.max(freeze, FEEDBACK.freezeOnBossDefeated);
+    if (event === 'bossDefeated' || event === 'bossDown') freeze = Math.max(freeze, FEEDBACK.freezeOnBossDefeated);
   }
   return freeze;
 }
@@ -34,7 +35,7 @@ export function applyEvents(
 ): FeedbackState {
   const next = { ...fb };
   for (const event of events) {
-    if (event === 'bossHit' || event === 'counter' || event === 'bossDefeated') {
+    if (event === 'bossHit' || event === 'counter' || event === 'bossDefeated' || event === 'bossDown') {
       if (settings.shake) next.shakeTicks = FEEDBACK.shakeTicks;
       if (settings.flash) next.bossFlashTicks = FEEDBACK.bossFlashTicks;
     }
@@ -63,4 +64,15 @@ export function shakeOffset(fb: FeedbackState): number {
   if (fb.shakeTicks <= 0) return 0;
   const strength = fb.shakeTicks / FEEDBACK.shakeTicks;
   return (fb.shakeTicks % 2 === 0 ? 1 : -1) * FEEDBACK.shakeAmplitude * strength;
+}
+
+/** The boss that flashes white: the one just struck by a hit, a counter or a fall, otherwise the one that already was. */
+export function flashBossFor(
+  events: readonly GameEvent[],
+  before: GameState,
+  after: GameState,
+  current: number,
+): number {
+  const struck = events.some((e) => e === 'bossHit' || e === 'counter' || e === 'bossDefeated' || e === 'bossDown');
+  return struck ? struckBoss(before, after) : current;
 }

@@ -1,5 +1,4 @@
-import { resolveBoss } from '../bosses/resolve';
-import type { BossDef } from '../bosses/schema';
+import { resolveFight } from '../bosses/resolve';
 import {
   NO_INPUT,
   NO_PRESSES,
@@ -17,7 +16,8 @@ import {
 } from '../engine/input-profile';
 import { advanceHold } from '../engine/hold';
 import { planUpdates } from '../engine/loop';
-import { applyDials, redoDials, type Dials, type RedoChange } from '../game/difficulty';
+import { redoDials, type Dials, type RedoChange } from '../game/difficulty';
+import type { FightDef } from '../game/fight';
 import { GAME } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
@@ -29,8 +29,9 @@ import { openIndexedDbStore, type FightStore } from '../stats/store';
 import { createSound } from './audio';
 import { mountControllerScreen } from './controller-screen';
 import { el } from './dom';
-import { NO_FEEDBACK, advanceFeedback, applyEvents, freezeFor, type FeedbackState } from './feedback';
+import { NO_FEEDBACK, advanceFeedback, applyEvents, flashBossFor, freezeFor, type FeedbackState } from './feedback';
 import { advanceFlow, leaveRecording, leaveSummary, startFlow, type FightFlow } from './fight-flow';
+import { setUpFight } from './fight-setup';
 import { createMenu, menuRows, menuStep, type MenuAction, type MenuModel } from './menu-model';
 import { NAV_START, advanceNav, type NavState } from './nav';
 import { loadPrefs, savePrefs, type Prefs } from './prefs';
@@ -143,15 +144,15 @@ export function mountApp(root: HTMLElement): void {
   let nav: NavState = NAV_START;
   let held: HeldButtons = NOTHING_HELD;
   let pending: PendingPresses = NO_PRESSES;
-  // The boss as adjusted by the dials for the current fight.
-  let boss: BossDef = resolveBoss(prefs.bossId, 1).boss;
-  // True when `boss` is a generated boss that couldn't be verified as fair (shown as a banner).
+  // The bosses of the current fight, as adjusted by the dials (one boss, or a pair).
+  let fight: FightDef = resolveFight(prefs.bossId, 1).fight;
+  // True when the fight is a generated boss that couldn't be verified as fair (shown as a banner).
   let bossUnfair = false;
-  let state: GameState = createInitialState(boss);
+  let state: GameState = createInitialState(fight);
   // The summary tracker and, once the fight ends (win or loss), its result: the summary shows when the end pause is over.
   // This first flow is only a placeholder (seed 1 is the default of createInitialState); startFight makes the real one.
   let flow: FightFlow = startFlow({
-    bossId: boss.id,
+    bossId: fight.bosses[0]!.id,
     presetId: prefs.presetId,
     dials: prefs.dials,
     seed: 1,
@@ -159,6 +160,8 @@ export function mountApp(root: HTMLElement): void {
     playedAt: new Date().toISOString(),
   });
   let feedback: FeedbackState = NO_FEEDBACK;
+  // Which boss flashes white after a hit (0 is the primary; only a pair has another).
+  let flashBoss = 0;
   // The looks: particles and the pre-drawn background. Cosmetic only, never read by the simulation.
   let fx: EffectsState = NO_EFFECTS;
   let background: BackgroundCache | null = null;
@@ -523,7 +526,7 @@ export function mountApp(root: HTMLElement): void {
       saveLine = null;
       void saveFight(leaving.recording, 'left');
     }
-    showSummary(leaveSummary(flow, state, boss));
+    showSummary(leaveSummary(flow, state, fight));
   }
 
   function startFight(dials: Dials = prefs.dials): void {
@@ -533,25 +536,26 @@ export function mountApp(root: HTMLElement): void {
     saveLine = null;
     shownSummary = null;
     const seed = newSeed();
-    const resolved = resolveBoss(prefs.bossId, seed);
-    boss = applyDials(resolved.boss, dials);
-    bossUnfair = resolved.unfair;
-    state = createInitialState(boss, seed, prefs.study);
+    const setup = setUpFight(prefs.bossId, seed, dials, prefs.study);
+    fight = setup.fight;
+    bossUnfair = setup.unfair;
+    state = createInitialState(fight, seed, setup.study);
     flow = startFlow({
-      bossId: boss.id,
+      bossId: setup.recordBossId,
       presetId: prefs.presetId,
       dials,
       seed,
-      study: prefs.study,
+      study: setup.study,
       playedAt: new Date().toISOString(),
     });
     nav = NAV_START;
     exitHoldMs = 0;
     leaveHint.hidden = true;
     feedback = NO_FEEDBACK;
+    flashBoss = 0;
     fx = NO_EFFECTS;
     // Built once per mood and reused after (null when no canvas can be made: the plain gradient is drawn instead).
-    const mood = moodFor(boss.id, seed);
+    const mood = moodFor(fight.bosses[0]!.id, seed);
     let cached = backgroundCache.get(mood.id);
     if (cached === undefined) {
       // A generated fight's backdrop is used once: drop the last one so the cache does not grow with every fight.
@@ -585,10 +589,11 @@ export function mountApp(root: HTMLElement): void {
       canvas.width = width;
       canvas.height = height;
     }
-    drawFrame(context, width, height, state, boss, alpha, feedback, {
+    drawFrame(context, width, height, state, fight, alpha, feedback, {
       effects: fx,
       background,
       motion: settings.effects,
+      flashBoss,
     });
   }
 
@@ -638,10 +643,10 @@ export function mountApp(root: HTMLElement): void {
       hitStopView = false;
       const before = state;
       const frameInput = applyPresses(input, pending);
-      state = step(state, frameInput, boss);
+      state = step(state, frameInput, fight);
       pending = NO_PRESSES;
       // After a win or a loss the game shows its message, then starts a new fight: show the summary instead.
-      const advanced = advanceFlow(flow, before, state, boss, frameInput);
+      const advanced = advanceFlow(flow, before, state, fight, frameInput);
       flow = advanced.flow;
       if (advanced.finished !== null) {
         saveLine = null;
@@ -652,7 +657,8 @@ export function mountApp(root: HTMLElement): void {
         return;
       }
       feedback = applyEvents(feedback, state.events, settings);
-      fx = spawnEffects(fx, before, state, boss, settings.effects);
+      flashBoss = flashBossFor(state.events, before, state, flashBoss);
+      fx = spawnEffects(fx, before, state, fight, settings.effects);
       freezeLeft = Math.max(freezeLeft, freezeFor(state.events, settings));
       if (freezeLeft > 0) hitStopView = true;
       sound.play(state.events);

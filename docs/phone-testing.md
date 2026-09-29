@@ -29,7 +29,7 @@ If the controller shows nothing, note which mode it was in and whether the page 
 ### The menu
 Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Study**, **Tweak difficulty**, **Stats**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
 
-How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty, Study). On the Boss row they switch between the two bosses, the Ember Duelist and the Ashen Hound (from the last one it goes round to the first). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
+How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty, Study). On the Boss row they switch between the bosses, the pairs and Generated, in the order the row lists them (from the last one it goes round to the first). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
 
 The menu remembers your last choices (boss, difficulty, study and any tweaks), even after you close the app. It opens with Fight highlighted, so pressing the bottom button once starts the same fight as last time. After a fight the summary comes first, so it takes two presses: one to leave the summary, one for Fight.
 
@@ -105,7 +105,7 @@ The Hound has four attacks. It has no gold attack, so there is no counter agains
 A soft shadow on the floor shows where the Hound is while it is in the air.
 
 ### Checklist
-- [ ] The Boss row switches between the Ember Duelist and the Ashen Hound with left and right, and the menu remembers the choice after closing and reopening the app.
+- [ ] The Boss row switches between the choices with left and right, and the menu remembers the choice after closing and reopening the app.
 - [ ] The Duelist still plays exactly as before: the same feel, and about the same numbers on the summary for a similar fight.
 - [ ] Before a pounce the Hound crouches (it gets lower), and you can see it coming.
 - [ ] When the Hound leaves the floor, a red bar appears on the floor that starts at the landing spot and runs to the side the Hound is facing (even if you crossed it during the crouch, so the bar then points back over where it flew).
@@ -299,7 +299,7 @@ Nothing should stutter. Watch these moments in particular, because they draw the
 A third choice on the **Boss** row, after the Ashen Hound: **Generated**. Instead of a boss someone built by hand, this one is built fresh, at random, right before the fight starts.
 
 ### How to pick it
-Go to the **Boss** row and press left or right until it shows "Generated" (it cycles Ember Duelist, Ashen Hound, Generated and back). Then choose Fight as usual. Easy, Normal, Hard and the Tweak screen all work on it too, the same as on the other two bosses.
+Go to the **Boss** row and press left or right until it shows "Generated" (it is the last choice on the row, and one more press goes back to the first). Then choose Fight as usual. Easy, Normal, Hard and the Tweak screen all work on it too, the same as on the other bosses.
 
 ### What to expect
 - **Every time you press Fight it builds a new boss for that attempt.** Retrying (after a win, a loss, or leaving) gives you a different one: different attacks, different timings, a different size. There is no way to fight the "same" generated boss again, except by keeping the seed from an exported record and asking me to look it up.
@@ -309,7 +309,7 @@ Go to the **Boss** row and press left or right until it shows "Generated" (it cy
 - The fairness check can fail three times in a row for the seed it tried — measured at about **1 in 5 fights** now that arenas are part of generation (up from roughly 1 in 50 before). When that happens the fight still uses that generated boss (not a fallback boss) but you'll see a short note at the top of the screen at the start of the real fight, roughly "This generated boss couldn't be checked as fair. Good luck!", for about 2 seconds. So expect to see this banner fairly often, not rarely. Please tell me whether the boss it accompanied actually felt unfair to fight (impossible to avoid damage, or impossible to beat) or felt fine despite the warning — that comparison is exactly what tells us whether the check is too strict or the banner is doing its job.
 
 ### Checklist
-- [ ] The Boss row cycles Ember Duelist, Ashen Hound, Generated and back to Ember Duelist.
+- [ ] Generated is the last choice on the Boss row, and one more press goes back to the Ember Duelist.
 - [ ] Picking Generated and fighting several times in a row gives visibly different attack sets, timings and boss sizes each time.
 - [ ] Every generated boss you meet is readable: within a couple of tries you can tell what is coming from its pose and glow.
 - [ ] Every generated boss you meet is beatable.
@@ -486,6 +486,39 @@ Android can clear a browser's data by itself (for example when the phone is shor
 - [ ] The game still plays normally with airplane mode on, and fights are still saved offline.
 - [ ] Nothing pauses or stutters when a fight ends and is saved.
 - [ ] On a long fight (2 minutes or more) note whether the game pauses for a moment when the fight ends; how long?
+
+## Two bosses in one fight (Hound and Sage)
+A new choice on the **Boss** row, after the single bosses and before Generated: **Hound and Sage**. The Ashen Hound (a low, fast beast that dashes and leaps) and the Vesper Sage (a caster that keeps its distance and fires bolts and lobbed arcs) fight you together, on the Hound's flat floor. The point of the mode is to read two threats at once: who is about to attack, and where to stand between them.
+
+### What to expect
+- **Two health bars** at the top right, stacked: the Hound's on top and the Sage's under it, each in its boss's colour with its name. You have to bring both to zero.
+- **Turns**: the two bosses never attack at the same time. While one is walking up to an attack, attacking, or has its bolts still in the air, the other waits (it may still walk about). A small pulsing triangle above one boss shows who holds the turn, so you can tell who is about to attack.
+- **Your sword** hurts only the nearest boss in reach, one boss per swing. Counters work on whichever boss you counter.
+- **When one boss falls**: it drops out of the fight, its shots disappear, its health bar dims, and the other boss gets angrier: it waits less between attacks and walks faster. The fight ends when both are at zero.
+- **Study** is not used with this pair: Fight starts the real fight straight away, whatever the Study row says. With the pair chosen, the Study row reads "Off (pairs)" and left and right do nothing on it (a pair has no study yet). Easy, Normal, Hard and Tweak change both bosses at once.
+- The health numbers and the angry-survivor numbers are first guesses. Please say what they feel like.
+
+### Checklist
+- [ ] Hound and Sage is on the Boss row (after the single bosses, before Generated), the menu remembers it after closing and reopening the app, and Fight starts it.
+- [ ] With Hound and Sage chosen, the Study row reads "Off (pairs)" and left and right do nothing on it.
+- [ ] Both bosses are on screen at the start and stay in view during the fight, including when one is in a corner and the other is next to you. Neither hides behind the other for long.
+- [ ] The two health bars are readable at arm's length on the phone: you can tell which is which by colour and name, and read how much is left on each without stopping to look.
+- [ ] The turn marker is easy to see without being distracting, and it moves to the other boss when the turn changes. You can tell who is about to attack from it before the warning starts.
+- [ ] You never see the two bosses attack at the same time. One boss's bolts do not overlap with the other boss's attack.
+- [ ] A swing near both bosses hits only the nearer one, and the health bar of that boss goes down.
+- [ ] When the first boss falls, its bar dims, its shots vanish, and the survivor is clearly quicker (shorter waits, faster walking), but its warnings are still long enough to react to.
+- [ ] The fight ends in victory only when both bars are at zero.
+- [ ] After a win, a loss and leaving with the top button, the summary appears and shows the health left of each boss.
+- [ ] Stats save and export. In the file, that fight's `bossId` says `"hound-and-sage"`, `study` is 0, and the analysis has two entries in `bosses`.
+- [ ] Redo and Fight again work on the pair the same way as on a single boss.
+- [ ] The phone stays smooth (no stutter) with both bosses, their effects and the turn marker on screen.
+
+### Questions about the pair
+- On Normal, is the fight too short, too long or about right? (Each boss has 60% of its usual health, so the whole fight is about as long as one solo boss and a half.)
+- Is it clear whom to hit first and where to stand? Did you catch yourself watching only one boss?
+- Is the angry survivor too easy, right, or a wall?
+- Did one of the two bosses feel like it did most of the work?
+- Did the Sage's bolts and the Hound's rushes ever feel like they came at once, even though only one boss attacks at a time?
 
 ## Redo after a fight
 - [ ] After a win or a loss, the summary shows three choices under the result: Redo, Fight again and Back to the menu. Tapping works, and so does the controller (up and down, bottom button to pick, the other button goes back to the menu).

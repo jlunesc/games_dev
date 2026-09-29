@@ -65,7 +65,7 @@ describe('buildExport', () => {
     const parsed = JSON.parse(file.json) as ExportDocument;
     expect(parsed.format).toBe(EXPORT_FORMAT);
     expect(parsed.schemaVersion).toBe(STATS_SCHEMA_VERSION);
-    expect(parsed.schemaVersion).toBe(5);
+    expect(parsed.schemaVersion).toBe(6);
     expect(parsed.gameVersion).toBe(GAME_VERSION);
     expect(parsed.gameVersion).toBe('0.8.0');
     expect(parsed.exportedAt).toBe(NOW.toISOString());

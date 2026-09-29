@@ -30,7 +30,7 @@ A single JSON document (written without indentation), named `boss-trainer-YYYY-M
 | Field | Type | Meaning |
 |---|---|---|
 | `format` | string | Always `"boss-trainer-stats"`. |
-| `schemaVersion` | number | Version of this format (see section 9). Currently 5. |
+| `schemaVersion` | number | Version of this format (see section 9). Currently 6. |
 | `exportedAt` | string | ISO 8601 date-time (UTC) when the file was built. |
 | `gameVersion` | string | `GAME_VERSION` of the game that built the file (see section 9). Each fight also carries its own. |
 | `fights` | array | Every saved fight, oldest first (by `playedAt`, then `id`). Each is a fight record (section 5). |
@@ -41,17 +41,17 @@ One entry of `fights`. Every field is always present in a record written by the 
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schemaVersion` | number | The format version this record was written with (5 for records written by the current game; 1, 2, 3 and 4 for older ones, see section 9). |
+| `schemaVersion` | number | The format version this record was written with (6 for records written by the current game; 1 to 5 for older ones, see section 9). |
 | `gameVersion` | string | The game version it was played on. A replay is only valid with the same version (section 8). |
 | `id` | string | `<playedAt>#<seed in hexadecimal>`. Unique key of the record. |
 | `playedAt` | string | ISO 8601 date-time (UTC) when the fight began. |
 | `attempt` | number | The number of fights saved on the device when this one was saved, plus one. So it counts fights across all bosses and difficulties, and starts again from 1 after "Delete all fights". It is not per boss or per preset. |
-| `bossId` | string | The boss file's id, for example `"ember-duelist"`. `"generated"` means the boss was built at random (`docs/bosses.md`, "The boss generator"): there is no file to look up, and the boss must be reconstructed with `resolveBoss(record.bossId, record.seed)`, the same function the app uses to start the fight — never looked up by name (`bossById`), which knows nothing about `"generated"`. |
+| `bossId` | string | The boss file's id, for example `"ember-duelist"`, or the id of a pair (`"hound-and-sage"`, two bosses in one fight, `docs/bosses.md` section 5a). `"generated"` means the boss was built at random (`docs/bosses.md`, "The boss generator"): there is no file to look up, and the fight must be reconstructed with `resolveFight(record.bossId, record.seed)`, the same function the app uses to start the fight — never looked up by name (`bossById`), which knows nothing about `"generated"` or a pair id. |
 | `presetId` | string | The preset the fight began from: `"easy"`, `"normal"` or `"hard"`. |
 | `dials` | object | The seven difficulty dials actually used, as numbers where 1 is the boss file as written: `speed`, `frequency`, `readability`, `health`, `damage`, `range`, `variety` (ranges and meanings in `src/game/difficulty.ts`). |
 | `changedDials` | string[] | The dial ids whose value differs from the preset `presetId` (empty when the fight is that preset unchanged). |
 | `seed` | number | The seed of the fight's random generator, an unsigned 32-bit integer. |
-| `study` | number | The study setting the fight was played with: the number of study rounds before the real fight, 0 (Off), 1 (Once) or 2 (Twice). See section 7.5. A record of schema version 1 has no `study` field, and that means 0. |
+| `study` | number | The study setting the fight was played with: the number of study rounds before the real fight, 0 (Off), 1 (Once) or 2 (Twice). See section 7.5. A record of schema version 1 has no `study` field, and that means 0. A fight with two bosses has no study: the app stores 0, and a replay ignores any value. |
 | `result` | string | `"victory"`, `"defeat"` or `"left"` (the player left with the top button while the fight was still going). |
 | `ticks` | number | How many updates ran, the study included. A win or loss counts up to and including the update that ended it; the pause after it (before the game would restart) is not part of the fight. |
 | `input` | array | The input of every update, run-length encoded (section 6). |
@@ -85,11 +85,12 @@ Computed by `analyzeFight` by replaying the record. Nothing here is guessed: a v
 | `ticks` | number | Updates the whole session ran, the study included (same as the record's `ticks`). |
 | `seconds` | number | `ticks / 60` (not rounded): the **whole session**, the study included. |
 | `fightSeconds` | number | The real fight only: `(ticks - study.ticks) / 60` (not rounded). Equal to `seconds` when there was no study. |
-| `phaseReached` | number | Highest boss phase reached, 1-based. |
-| `phaseCount` | number | How many phases the boss has. |
-| `bossHpLeft` | number | Boss health at the end. |
-| `bossMaxHp` | number | Boss health at the start, with the Health dial applied. |
+| `phaseReached` | number | Highest phase the primary boss reached, 1-based. In a fight of two bosses the partner's is in `bosses`. |
+| `phaseCount` | number | How many phases the primary boss has. |
+| `bossHpLeft` | number | Boss health at the end, summed over every boss of the fight. |
+| `bossMaxHp` | number | Boss health at the start, with the Health dial applied (and a pair's health scale), summed over every boss of the fight. |
 | `damageDealt` | number | `bossMaxHp - bossHpLeft`. |
+| `bosses` | array | One entry per boss of the fight, the primary boss first (7.1a). A fight of one boss has one entry. Added in schema version 6. |
 | `damageTaken` | number | Health the player actually lost. A blow larger than the health left counts only what was left (a 2-health hit on 1 health counts 1). The study takes no health, so it never counts here. |
 | `hitsTaken` | number | How many times the player was hit (a count of hits, not of health). A demonstration that reaches the player in the study (`studyHit`) is not counted here; it is counted in `study.hits`. |
 | `bossHitTicks` | number[] | The tick of each hit the player landed on the boss. The boss cannot be hurt in the study, so every entry is from the real fight. |
@@ -104,6 +105,20 @@ Computed by `analyzeFight` by replaying the record. Nothing here is guessed: a v
 | `study` | object | The study phase (7.5). |
 | `behavior` | object | 7.3. |
 
+### 7.1a A boss (each entry of `bosses`)
+
+| Field | Type | Meaning |
+|---|---|---|
+| `id` | string | The boss's id in its boss file. |
+| `name` | string | Its name. |
+| `maxHp` | number | Its health at the start, with the Health dial and the pair's health scale applied. |
+| `hpLeft` | number | Its health at the end (0 for a boss that fell). |
+| `phaseReached` | number | The highest phase this boss reached, 1-based. |
+| `phaseCount` | number | How many phases this boss has. |
+| `damageDealt` | number | `maxHp - hpLeft`. |
+
+In a fight of two bosses the `behavior` distance bands (7.3) are measured to the nearest boss that still stands, and an attack's `distance` (7.2) to the boss that made it.
+
 ### 7.2 An attack occurrence (each entry of `attacks`)
 
 One boss attack, from the moment its warning began. Entries are in the order the attacks began.
@@ -111,6 +126,7 @@ One boss attack, from the moment its warning began. Entries are in the order the
 | Field | Type | Meaning |
 |---|---|---|
 | `attackId` | string | The attack's id in the boss file (for example `"sweep"`). |
+| `boss` | number | Which boss of the fight made the attack: 0 is the primary boss, 1 its partner. Always 0 in a fight of one boss. Added in schema version 6; an analysis stored in an older record does not have it, and every attack in it is the primary boss's. |
 | `phase` | number | The boss phase (1-based) when the warning began. |
 | `startTick` | number | The tick on which the warning began. This is attack time 0. |
 | `windupTicks` | number | The length of the warning (the attack's windup, after the Warning length dial). |
@@ -155,7 +171,7 @@ For a boss with no arena (the Ember Duelist) the cut and bare lists are the same
 
 | Field | Type | Meaning |
 |---|---|---|
-| `updatesClose` | number | Updates spent at a distance below 160 from the boss, over the **whole session** (study included). |
+| `updatesClose` | number | Updates spent at a distance below 160 from the boss (in a fight of two, the nearest boss still standing, see 7.1a), over the **whole session** (study included). |
 | `updatesMid` | number | Updates at 160 to 400 (both included), whole session. |
 | `updatesFar` | number | Updates above 400, whole session. The three add up to `ticks`. |
 | `studyUpdatesClose` | number | How many of `updatesClose` happened in the study. |
@@ -218,18 +234,19 @@ How to read a study fight:
 To rebuild a fight exactly (this is what `replayFinalState` and `analyzeFight` do):
 
 1. Use the same game: the record's `gameVersion` must equal the game's `GAME_VERSION`. Attack timings and player numbers live in the code and the boss file, so a different version may replay differently.
-2. `boss = applyDials(resolveBoss(record.bossId, record.seed), record.dials)`. Use `resolveBoss`, not `bossById`: a `'generated'` record needs the seed to rebuild the same boss (section 9's M5e note); `bossById` alone would silently fall back to the Ember Duelist.
-3. `state = createInitialState(boss, record.seed, record.study ?? 0)`. The third argument is the number of study rounds (a value is clamped to 0 to 2 and a fraction is rounded down; the game only uses 0, 1 and 2). A record of schema version 1 has no `study`, so it replays with 0.
-4. Expand `input` (section 6) into one frame per update. For each frame, `state = step(state, frame, boss)`. The frame's other fields (`moveY`, `confirm`, `alt`) are set to neutral.
+2. `fight = applyDialsToFight(resolveFight(record.bossId, record.seed).fight, record.dials)`. Use `resolveFight`, not `bossById`: a `'generated'` record needs the seed to rebuild the same boss (section 9's M5e note), and a pair id needs the pair file (`bossById` alone would silently fall back to the Ember Duelist). For a boss id or `'generated'` the fight is one boss, identical to the old `applyDials(resolveBoss(...))`, so a record of schema version 1 to 5 replays exactly as before.
+3. `state = createInitialState(fight, record.seed, record.study ?? 0)`. The third argument is the number of study rounds (a value is clamped to 0 to 2 and a fraction is rounded down; the game only uses 0, 1 and 2). A record of schema version 1 has no `study`, so it replays with 0. A fight with two bosses has no study, so the value is ignored for it.
+4. Expand `input` (section 6) into one frame per update. For each frame, `state = step(state, frame, fight)`. The frame's other fields (`moveY`, `confirm`, `alt`) are set to neutral.
 
 After `ticks` steps the state is the one the fight ended in (or the state the study was still running in, if the fight was left during it). A test (`tests/record.test.ts`) checks that a recorded fight and its replay reach the same final state.
 
 ## 9. Versioning
 
 - `schemaVersion` (`STATS_SCHEMA_VERSION` in `src/stats/record.ts`) is bumped **whenever the shape changes**: a field added, removed, renamed or given a new meaning, in the export, the record or `analysis`. Bump it and update this document and the tests in the same commit.
-- `gameVersion` (`GAME_VERSION` in `src/stats/record.ts`, a string such as `"0.4.0"`) is bumped **when a change to the game numbers or to a boss file changes how a recorded fight replays**. Old records keep their old `gameVersion`, so it is clear which ones cannot be replayed by the current game.
+- `gameVersion` (`GAME_VERSION` in `src/stats/record.ts`, a string such as `"0.4.0"`) is bumped **when a change to the game numbers or to a boss or pair file changes how a recorded fight replays**. Old records keep their old `gameVersion`, so it is clear which ones cannot be replayed by the current game.
 - Adding a new measurement to the analyzer changes the shape, so it also bumps `schemaVersion`.
-- **Version 1** was the format of M3b and M5a. **Version 2** (M5b, the study phase) added the record's `study`, the analysis's `study` object, `fightSeconds` and `behavior.studyUpdatesClose/Mid/Far`, and the `study` flag on each attack occurrence. Version-1 records and files remain valid: `study` missing means 0, and replaying or re-analysing one with `record.study ?? 0` gives the same fight as before (with the new fields filled in as for a fight without a study: `study.rounds` 0, `study.ticks` 0, `fightSeconds` equal to `seconds`, every `study` flag false, the study distance bands all 0). An analysis stored inside an old record was computed then and is not rewritten, so it has no `study` block and no `fightSeconds`. **Version 3** (M5c, the arena) added the evasion values `"platform"` and `"cover"` (a change of meaning: an attack that used to be `"distance"` or `"jump"` can now be one of them, see 7.2) and `behavior.updatesOnPlatform`. Version-1 and version-2 records and files remain valid and readable: the record itself has the same fields as in version 2, and an analysis stored inside an old record was computed then and is not rewritten (it has no `updatesOnPlatform`). **Version 4** (projectiles) added `shotsFired` to each attack occurrence and changed the meaning of `outcome` for attacks with shots (resolved when the last shot is gone, see 7.4). No boss before the Vesper Sage has shots, so an older record or analysis reads exactly as before (an older analysis has no `shotsFired`, which means 0). The schema version is 4 in the export document and in every record written before game version 0.7.0. **Version 5** (game version 0.7.0, up and down swings) added bits 6-7 to the packed input (the vertical aim, section 6); nothing else changed. Records of versions 1 to 4 stay valid and replay exactly as before (they have no aim). The schema version is 5 in the export document and in every record the current game writes.
+- **Version 1** was the format of M3b and M5a. **Version 2** (M5b, the study phase) added the record's `study`, the analysis's `study` object, `fightSeconds` and `behavior.studyUpdatesClose/Mid/Far`, and the `study` flag on each attack occurrence. Version-1 records and files remain valid: `study` missing means 0, and replaying or re-analysing one with `record.study ?? 0` gives the same fight as before (with the new fields filled in as for a fight without a study: `study.rounds` 0, `study.ticks` 0, `fightSeconds` equal to `seconds`, every `study` flag false, the study distance bands all 0). An analysis stored inside an old record was computed then and is not rewritten, so it has no `study` block and no `fightSeconds`. **Version 3** (M5c, the arena) added the evasion values `"platform"` and `"cover"` (a change of meaning: an attack that used to be `"distance"` or `"jump"` can now be one of them, see 7.2) and `behavior.updatesOnPlatform`. Version-1 and version-2 records and files remain valid and readable: the record itself has the same fields as in version 2, and an analysis stored inside an old record was computed then and is not rewritten (it has no `updatesOnPlatform`). **Version 4** (projectiles) added `shotsFired` to each attack occurrence and changed the meaning of `outcome` for attacks with shots (resolved when the last shot is gone, see 7.4). No boss before the Vesper Sage has shots, so an older record or analysis reads exactly as before (an older analysis has no `shotsFired`, which means 0). The schema version is 4 in the export document and in every record written before game version 0.7.0. **Version 5** (game version 0.7.0, up and down swings) added bits 6-7 to the packed input (the vertical aim, section 6); nothing else changed. Records of versions 1 to 4 stay valid and replay exactly as before (they have no aim). The schema version was 5 in the export document and in every record written before version 6.
+- **Version 6** (two bosses in one fight, game version stays 0.8.0) makes a fight with several bosses recordable. `bossId` may now be a pair id, and the fight is rebuilt with `resolveFight` (section 8). The record has the same fields as in version 5. A fight with partners has no study, so its record stores `study: 0`. The analysis gains `bosses` (one entry per boss: `id`, `name`, `maxHp`, `hpLeft`, `phaseReached`, `phaseCount`, `damageDealt`) and each attack occurrence gains `boss` (0 for the primary boss, 1 for the partner); the existing top-level boss fields stay, with `bossMaxHp`, `bossHpLeft` and `damageDealt` summed over all bosses and `phaseReached` and `phaseCount` those of the primary boss (section 7). Records and files of versions 1 to 5 remain valid and readable: they read as a fight of one boss (an analysis stored in an old record has no `bosses` and no `boss`, which means one boss and boss 0), and replaying them gives exactly the same fight as before. The schema version is 6 in the export document and in every record the current game writes.
 - **Game version 0.4.0** goes with schema 3. Giving the Ashen Hound an arena (ledges to stand on, cover that cuts its hit windows) changes how Hound fights play out, so **Hound records made by 0.3.0 (or earlier) no longer replay exactly** with the current game. Their stored `analysis` was computed at the time and stays valid as data, but replaying or re-analysing them now gives a different fight. **Ember Duelist records still replay exactly** (it has no arena, and `tests/duelist-golden.test.ts` is unchanged). So for an old Hound file, trust its stored `analysis`, not a fresh replay (section 8 says a replay is only valid with the same game version).
 - **The boss generator (M5e, still game version 0.4.0, no bump for it).** `bossId: "generated"` has no file, so its replay stability is a different promise from a named boss's: a `"generated"` record's replay is only guaranteed to match while the generator's algorithm and its tuning (`src/bosses/generate/`) are unchanged, in addition to `GAME_VERSION` itself. A future change to the generator (a tuning number, or the algorithm) will need a `GAME_VERSION` bump exactly like a change to a named boss file would, so old `"generated"` records stay identifiable as no-longer-exact. A version-1, version-2 or version-3 record with a real boss id (`"ember-duelist"` or `"ashen-hound"`) is unaffected by anything about the generator.
 - **Game version 0.5.0: generated arenas (M6a).** Drawing an arena is one more random choice the generator makes, so it reorders the whole random stream: a `"generated"` record made by game version 0.4.0 no longer reproduces the same boss (arena included) from its seed. As with the 0.4.0 bump, only `"generated"` records are affected; the Ember Duelist and Ashen Hound are unchanged.

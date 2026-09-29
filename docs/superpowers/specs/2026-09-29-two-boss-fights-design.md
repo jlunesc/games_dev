@@ -1,6 +1,6 @@
 # Two bosses in one fight: design
 
-Status: design agreed with the owner on 2026-09-29, one decision at a time. Not built. Not yet in `docs/SPEC.md`; when the work starts, add it there with a status tag.
+Status: design agreed with the owner on 2026-09-29, one decision at a time. Built 2026-09-29 (engine and first pair, Hound and Sage); recorded in `docs/SPEC.md` section 11 with status tags.
 
 ## Goal
 
@@ -15,7 +15,7 @@ Train a skill the game does not train yet: reading two threats at once, choosing
 | Sword | A swing hurts only the nearest boss in reach, one boss per swing. |
 | Survivor | When one boss falls, the other is enraged: shorter waits and faster walking, strength set per pair. |
 | Making a pair | A named pair file built from two existing bosses. Each pair is its own entry in the Boss row. Not "any two bosses", not new bosses per pair. |
-| Study | Each boss shows its attacks in turn, under the same turn rule. The Off, Once and Twice setting works as today. |
+| Study | Each boss shows its attacks in turn, under the same turn rule. The Off, Once and Twice setting works as today. **Deferred:** the first version switches the study off for pair fights (the row reads "Off (pairs)"); see `docs/backlog.md`. |
 | Tie | If both are ready in the same update, the boss that has waited longer goes first, then the first-listed boss. Deterministic, no extra random draws. (Set by the assistant, not asked.) |
 | Difficulty dials | Apply to both bosses at once, as today. |
 | Generated bosses | Stay solo in this first version. |
@@ -32,7 +32,7 @@ The game state today holds one boss (`GameState.boss`; about 47 references in 12
 - **A boss going down.** A boss at 0 health while its partner still stands falls: it stops acting, cannot be hit, and its shots vanish. The fight ends only when every boss is at 0.
 - **Sword.** The swing looks for the nearest boss in reach and applies the hit, the counter and the phase change to that boss only.
 - **Enrage.** When one boss is beaten the other switches to a boosted copy of its numbers (shorter gap, faster walking), set in the pair file. The boost is part of the fight rules, so it is replayed exactly.
-- **Study.** The study queue holds each boss's first-phase attacks; the bosses take turns to demonstrate them. Nothing can hurt the player.
+- **Study.** The study queue holds each boss's first-phase attacks; the bosses take turns to demonstrate them. Nothing can hurt the player. (Deferred: not built yet, pairs have no study in the first version.)
 - **Winning.** The fight is won when every boss is at zero health.
 
 ## Pair file

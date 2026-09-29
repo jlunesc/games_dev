@@ -1,4 +1,5 @@
 import { EMBER_DUELIST } from '../bosses';
+import { pairById } from '../bosses/pairs';
 import {
   DIALS,
   NORMAL_DIALS,
@@ -68,6 +69,11 @@ export function nextStudy(value: StudySetting, direction: 1 | -1): StudySetting 
 
 export function studyLabel(value: StudySetting): 'Off' | 'Once' | 'Twice' {
   return value === 0 ? 'Off' : value === 2 ? 'Twice' : 'Once';
+}
+
+/** The text of the menu's Study row: a pair has no study, so the row says so instead of the stored setting. */
+export function studyLabelFor(bossId: string, value: StudySetting): string {
+  return pairById(bossId) !== undefined ? 'Off (pairs)' : studyLabel(value);
 }
 
 /** Reads stored choices; anything missing, unknown or out of range falls back safely. */

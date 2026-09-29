@@ -157,3 +157,13 @@ Idea: sample real performance during a fight, either shown live (a small debug o
 
 ## Up and down swings, left out (raised 2026-09-29)
 Built: hold up (ground or air) or down (air only) and press attack (SPEC section 11, "Up and down swings"). The pogo bounce off the boss was added right after (2026-09-29). Not built: bouncing off spikes or hazards, an up or down counter, a swing that changes the boss's attacks (bosses that can only be hit from above or below), and the fairness bots (`src/bosses/generate/fairness.ts`) using up and down swings.
+
+## Two-boss fights, left out (raised 2026-09-29)
+Built: two bosses in one fight as a named pair, first pair Hound and Sage (`docs/SPEC.md` section 11, "Two bosses in one fight"; checklist in `docs/phone-testing.md`). Not built:
+- **A study for pairs**: each boss showing its attacks in turn (agreed in the design). The first version switches the study off for pair fights and records `study: 0`.
+- **More pairs**: only Hound and Sage exists. A new pair is a small file plus the same checks in `tests/hound-and-sage.test.ts`; bosses were tuned for solo fights, so each pair needs its own health scales and enrage strength.
+- **Generated pairs, and "any two bosses" chosen from the menu**: generated bosses stay solo, and every pair is its own file.
+- **Bosses attacking at the same time**: a later step could allow overlap as a difficulty dial, or in a pair's second stage.
+- **Bosses that move with or shield each other, or share attacks.**
+- **A fairness check for pairs in the generator**: `checkFairness` and its skilled bot (`src/bosses/generate/fairness.ts`) work on one boss and read only the primary. Pairs are checked by `tests/hound-and-sage.test.ts` (an idle player loses, the turn rule holds, both bosses get turns, a player who cannot die and only chases and swings can win); there is no scripted player that dodges a pair, so "a good player can win without being hit" is not checked for pairs.
+- **A partner's arena in hit windows**: `resolveBossHits` in `src/game/step.ts` cuts a partner's hit windows with the partner's own `arena.covers`, while the player and shots use the primary boss's arena. Hound and Sage have no arena, so it does not matter for the first pair; a pair of bosses with different arenas would need this settled.
