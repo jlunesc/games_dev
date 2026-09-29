@@ -52,8 +52,7 @@ export interface BossLook {
  * How the boss looks right now: gold glow while a counterable attack winds up or is active, red for a
  * must-dodge one, blue when staggered, white while powering up between phases.
  */
-export function bossLook(b: BossState, boss: BossDef): BossLook {
-  const base = moodFor(boss.id).bodyColor;
+export function bossLook(b: BossState, boss: BossDef, base: string = moodFor(boss.id).bodyColor): BossLook {
   if (b.mode === 'transition') return { body: base, glow: BOSS_COLORS.power };
   if (b.mode === 'stagger') return { body: BOSS_COLORS.stagger, glow: null };
   if (b.mode === 'attack' && b.attackId !== null) {

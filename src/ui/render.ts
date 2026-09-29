@@ -301,7 +301,7 @@ function drawBoss(
   mood: Mood | null,
 ): void {
   const b = state.boss;
-  const look = bossLook(b, boss);
+  const look = bossLook(b, boss, mood?.bodyColor);
   const pulse = 0.55 + 0.35 * Math.sin(state.tick / 6);
   const attack =
     b.mode === 'attack' && b.attackId !== null
@@ -503,7 +503,7 @@ export function drawFrame(
   feedback: FeedbackState,
   look?: FrameLook,
 ): void {
-  const mood = look === undefined ? null : moodFor(boss.id);
+  const mood = look === undefined ? null : moodFor(boss.id, state.seed);
   const view = computeViewport(canvasWidth, canvasHeight);
   const shake = shakeOffset(feedback);
 

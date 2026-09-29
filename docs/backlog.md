@@ -64,6 +64,9 @@ Notes for the design:
 - Art is kept separate from fight logic (SPEC section 8) and everything drawn lives in `src/ui/render.ts` and `src/ui/look/`, so a visual pass should not change how a fight plays; the Ember Duelist golden test (`tests/duelist-golden.test.ts`) would show it if it did.
 - The readability of telegraphs (pose, glow, the landing bar of a leap) comes first; anything decorative must not hide them. The owner's play test of the Ashen Hound will say whether the red landing bar is readable enough.
 
+## Backgrounds (original M6 item 5)
+**Step 1 done 2026-09-29 (awaiting the owner's look on the phone): varied backdrops for generated bosses.** Each generated fight gets a backdrop and body colour invented from its seed (`src/ui/look/generated-mood.ts`, checklist in `docs/phone-testing.md` "Generated backdrops"). The owner chose, one decision at a time: work on **both** generated and hand-built backdrops, **generated first**, and **built from random colours** (not a set of hand-made themes). Look only; the fight and the recording do not depend on it. **Step 2, not started:** a richer pass on the hand-built bosses' backdrops (more layers, moving clouds, lightning, weather).
+
 ## The boss generator (raised 2026-09-22, built as M5e)
 **Built in M5e** (awaiting the owner's play test on the phone; `docs/SPEC.md` section 11, mechanism and format in `docs/bosses.md` section 3b, checklist in `docs/phone-testing.md`): a "Generated" entry in the Boss row that assembles a boss at random from the same hit/move/leap primitives a hand-written boss file uses, checked for fairness before every fight and rebuilt fresh from that fight's seed each time.
 

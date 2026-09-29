@@ -223,7 +223,7 @@ The fight has a new look. Nothing about how a fight **plays** has changed: the h
 
 ### What you should see
 - **The background.** Behind the fight there is a dark sky that fades from a darker top to a lighter bottom, and two or three layers of dark shapes in front of it (tall pillars, a ridge of peaks, thin spires). The farther layers are lighter and nearly still, the nearer ones darker and a little faster; they all drift slowly **to the left**, so you feel some depth. The nearest layer takes about a minute to cross the screen, and the farthest one moves so little that you may only notice it by watching a shape for a while. On top of that a few small glowing **embers** (26) rise slowly from the floor, sway a little from side to side and fade in and out. The floor has a bright edge line, a soft glow just above it and faint tile lines.
-- **Each boss has its own mood.** The **Ember Duelist** is warm: a dark red-brown sky, orange embers, a brown floor with an orange edge. The **Ashen Hound** is cold: a blue-black sky, pale blue-grey embers, a slate floor with a grey-blue edge. (Any other boss, for example one made later by the generator, gets a plain dark blue-grey mood.) The ledges and the wall in the Hound's arena now are drawn with more contrast: the wall has a lighter outline, the ledges a dark underside and a soft glow, and both have a bright top edge in the boss's accent colour (pale blue for the Hound), so they should stand out clearly from the backdrop.
+- **Each boss has its own mood.** The **Ember Duelist** is warm: a dark red-brown sky, orange embers, a brown floor with an orange edge. The **Ashen Hound** is cold: a blue-black sky, pale blue-grey embers, a slate floor with a grey-blue edge. (Any other boss gets a plain dark blue-grey mood; a generated boss gets its own invented one, see "Generated backdrops".) The ledges and the wall in the Hound's arena now are drawn with more contrast: the wall has a lighter outline, the ledges a dark underside and a soft glow, and both have a bright top edge in the boss's accent colour (pale blue for the Hound), so they should stand out clearly from the backdrop.
 - **The figures.**
   - **You** are a small fighter: a round head with a light-blue visor, a body, two legs and a light-blue **cape** that trails behind you. The legs step while you run and tuck in the air; you lean forward when you dash or swing; the cape gets longer the faster you go and sways a little; standing still you breathe slowly. While you dash you turn light blue all over, after a hit you flash red (Flashes on) and then blink faint for about a second.
   - **The Ember Duelist** stands on two legs, with a head that has a glowing eye slit and a weapon arm with a **blade** on the end. Its arm still shows the attack: raised, sideways, pulled back or pointing down, as before. Its arm turns gold or red while the warning and the attack run (gold: can be countered, red: dodge it), and the blade takes the same colour. When nothing glows the blade is steel white. It walks with a small bob and breathes when it waits, and leans towards you as an attack winds up.
@@ -400,6 +400,15 @@ A new choice on the **Boss** row, last in the list: **Storm Kite**, a winged bir
 - [ ] The Kite looks different from the other bosses, and its attacks have their own blue-white colour.
 - [ ] In the study, the dives and bolts are shown and do not hurt.
 - [ ] Stats save and export, and in the file that fight's `bossId` says `"storm-kite"`.
+
+## Generated backdrops
+Every **Generated** fight now gets its own backdrop, invented fresh from that fight's seed (the same seed always looks the same): a random colour family (reds, greens, teals, purples, browns and so on), two or three layers of shapes (pillars, ridges or spires) at random heights and speeds, and embers, floor and edge in matching colours. The skies stay dark on purpose, so the boss and its warnings stand out. The boss's body colour is picked opposite the sky on the colour wheel. The hand-built bosses keep their own backdrops. The shot and strike colours of a generated boss are still the default ones.
+
+### Checklist
+- [ ] Two generated fights in a row look clearly different.
+- [ ] The boss, its red and gold warnings, the player and the platforms are easy to see in every one you get.
+- [ ] Nothing is too bright or too busy behind the fight.
+- [ ] Any colour combination that looks bad or clashes (note the colours; the seed is in the stats export).
 
 ## Stats and export (M3b)
 ### What is recorded

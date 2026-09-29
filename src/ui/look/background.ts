@@ -29,7 +29,7 @@ export interface BackgroundCache {
 const SKY_BLEED = 8;
 
 /** A small deterministic random number generator (mulberry32): the same seed always gives the same run of numbers. */
-function rng(seed: number): () => number {
+export function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;

@@ -522,9 +522,11 @@ export function mountApp(root: HTMLElement): void {
     feedback = NO_FEEDBACK;
     fx = NO_EFFECTS;
     // Built once per mood and reused after (null when no canvas can be made: the plain gradient is drawn instead).
-    const mood = moodFor(boss.id);
+    const mood = moodFor(boss.id, seed);
     let cached = backgroundCache.get(mood.id);
     if (cached === undefined) {
+      // A generated fight's backdrop is used once: drop the last one so the cache does not grow with every fight.
+      for (const id of backgroundCache.keys()) if (id.startsWith('generated-')) backgroundCache.delete(id);
       cached = createBackground(mood);
       backgroundCache.set(mood.id, cached);
     }

@@ -1,3 +1,4 @@
+import { generatedMood } from './generated-mood';
 import { LOOK } from './tuning';
 
 /** One parallax layer of the backdrop. Farther layers are darker, lower and slower. */
@@ -201,7 +202,8 @@ export const MOODS: Record<string, Mood> = {
   },
 };
 
-/** The mood for a boss id; an unknown id gets the neutral one. */
-export function moodFor(bossId: string): Mood {
+/** The mood for a boss id; an unknown id gets the neutral one. A generated boss gets a mood made from the fight's `seed` (without one, the neutral mood). */
+export function moodFor(bossId: string, seed?: number): Mood {
+  if (bossId === 'generated' && seed !== undefined) return generatedMood(seed);
   return Object.hasOwn(MOODS, bossId) ? MOODS[bossId]! : MOODS.neutral!;
 }

@@ -7,7 +7,8 @@
  * floor, ledge and wall colours. Colours that are NOT in this file:
  * - The backdrop of each boss (sky, background layers, embers, floor colours, the bright ledge edge) is in
  *   `moods.ts`, one block per boss. Those floor and edge colours replace `floor`, `floorLine` and `platformGlow` here
- *   whenever a mood is drawn (which is every fight); the ones here only serve the old plain drawing.
+ *   whenever a mood is drawn (which is every fight); the ones here only serve the old plain drawing. A generated
+ *   boss has no block there: its backdrop and body colour are invented from the fight's seed in `generated-mood.ts`.
  * - The health bars, the black bars round the screen, the arena fill, the white hit flash and the white slash box are
  *   in `render.ts`.
  * The shapes of the figures (proportions of the legs, the body and the head) are in `figures.ts`.
