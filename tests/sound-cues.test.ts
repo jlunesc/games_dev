@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EMBER_DUELIST } from '../src/bosses';
 import { asFight } from '../src/game/fight';
 import { createInitialState, type GameEvent, type GameState } from '../src/game/state';
-import { cuesFor } from '../src/ui/sound/cues';
+import { cuesFor, hitPitch } from '../src/ui/sound/cues';
 import { PRIORITY } from '../src/ui/sound/tuning';
 
 const fight = asFight(EMBER_DUELIST);
@@ -39,5 +39,25 @@ describe('cues from the game events', () => {
   it('carries the priority of its sound', () => {
     const [cue] = cuesFor(idle(), withEvents(['playerHit']), fight);
     expect(cue!.priority).toBe(PRIORITY.playerHurt);
+  });
+});
+
+describe('hit pitch variation', () => {
+  it('varies with the tick, stays within eight percent, and is the same for the same tick', () => {
+    const seen = new Set<number>();
+    for (let tick = 0; tick < 40; tick++) {
+      const pitch = hitPitch(tick);
+      expect(pitch).toBeGreaterThanOrEqual(0.919);
+      expect(pitch).toBeLessThanOrEqual(1.081);
+      expect(hitPitch(tick)).toBe(pitch);
+      seen.add(pitch);
+    }
+    expect(seen.size).toBeGreaterThan(3);
+  });
+
+  it('applies to a boss hit cue', () => {
+    const state = { ...withEvents(['bossHit']), tick: 5 };
+    const [cue] = cuesFor(idle(), state, fight);
+    expect(cue!.pitch).toBe(hitPitch(5));
   });
 });

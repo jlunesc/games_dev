@@ -38,18 +38,66 @@ export type Part =
   | { tone: OscillatorType; from: number; to?: number; seconds: number; volume: number; delay?: number }
   | { noise: BiquadFilterType; freq: number; to?: number; q?: number; seconds: number; volume: number; delay?: number };
 
-/** The sounds. Task 4 replaces the first ten beeps with richer ones; these are the old placeholders, ported unchanged. */
+/** The pitch of a boss hit shifts by up to `steps / 2` times `spread` either way, so it does not repeat identically. */
+export const HIT_VARIATION = { steps: 9, spread: 0.02 } as const;
+
+/** The sounds. Every number is a first guess for the phone. */
 export const RECIPES: Record<VoiceName, readonly Part[]> = {
-  hit: [{ tone: 'square', from: 220, seconds: 0.09, volume: 0.15 }],
-  playerHurt: [{ tone: 'sawtooth', from: 110, seconds: 0.2, volume: 0.2 }],
-  counter: [{ tone: 'triangle', from: 1100, seconds: 0.16, volume: 0.18 }],
-  dash: [{ tone: 'triangle', from: 660, seconds: 0.07, volume: 0.1 }],
-  studyHit: [{ tone: 'sine', from: 150, seconds: 0.09, volume: 0.08 }],
-  phaseChange: [{ tone: 'sawtooth', from: 140, seconds: 0.45, volume: 0.18 }],
-  defeat: [{ tone: 'sawtooth', from: 80, seconds: 0.5, volume: 0.2 }],
-  fall: [{ tone: 'triangle', from: 523, seconds: 0.32, volume: 0.2 }],
-  warningGold: [{ tone: 'sine', from: 880, seconds: 0.14, volume: 0.14 }],
-  warningRed: [{ tone: 'sawtooth', from: 330, seconds: 0.14, volume: 0.1 }],
+  // Short and punchy: a low thump plus a noise tick.
+  hit: [
+    { tone: 'sine', from: 170, to: 70, seconds: 0.09, volume: 0.32 },
+    { noise: 'bandpass', freq: 1800, q: 0.8, seconds: 0.05, volume: 0.16 },
+  ],
+  // Low, rough, downward sweep, the loudest sound in the game.
+  playerHurt: [
+    { tone: 'sawtooth', from: 200, to: 60, seconds: 0.28, volume: 0.3 },
+    { tone: 'square', from: 130, to: 50, seconds: 0.22, volume: 0.18, delay: 0.02 },
+    { noise: 'lowpass', freq: 900, to: 300, seconds: 0.25, volume: 0.2 },
+  ],
+  // A thump, then a rising two-note ring.
+  counter: [
+    { tone: 'sine', from: 160, to: 70, seconds: 0.08, volume: 0.18 },
+    { tone: 'sine', from: 660, seconds: 0.12, volume: 0.16 },
+    { tone: 'sine', from: 990, seconds: 0.2, volume: 0.16, delay: 0.07 },
+    { tone: 'triangle', from: 1980, seconds: 0.18, volume: 0.05, delay: 0.07 },
+  ],
+  // A quick filtered whoosh.
+  dash: [
+    { noise: 'bandpass', freq: 500, to: 2200, q: 1.2, seconds: 0.12, volume: 0.14 },
+    { tone: 'triangle', from: 400, to: 900, seconds: 0.08, volume: 0.04 },
+  ],
+  // Soft and low: the study hurts nobody.
+  studyHit: [
+    { tone: 'sine', from: 130, to: 90, seconds: 0.12, volume: 0.07 },
+    { noise: 'lowpass', freq: 500, seconds: 0.06, volume: 0.04 },
+  ],
+  // A rising growl and a low pulse.
+  phaseChange: [
+    { tone: 'sawtooth', from: 70, to: 260, seconds: 0.55, volume: 0.22 },
+    { tone: 'sine', from: 55, to: 45, seconds: 0.6, volume: 0.3 },
+    { noise: 'lowpass', freq: 400, to: 1200, seconds: 0.5, volume: 0.1 },
+  ],
+  // The player goes down: a long falling tone and a fading tail.
+  defeat: [
+    { tone: 'sawtooth', from: 160, to: 40, seconds: 0.7, volume: 0.22 },
+    { tone: 'sine', from: 70, to: 30, seconds: 0.8, volume: 0.28 },
+    { noise: 'lowpass', freq: 700, to: 150, seconds: 0.7, volume: 0.12 },
+  ],
+  // A boss goes down: a falling tone and a fading noise tail.
+  fall: [
+    { tone: 'triangle', from: 420, to: 110, seconds: 0.5, volume: 0.2 },
+    { noise: 'lowpass', freq: 1400, to: 200, seconds: 0.6, volume: 0.12, delay: 0.05 },
+  ],
+  // Counterable: a clear high two-note ting.
+  warningGold: [
+    { tone: 'sine', from: 880, seconds: 0.14, volume: 0.14 },
+    { tone: 'sine', from: 1320, seconds: 0.14, volume: 0.08, delay: 0.07 },
+  ],
+  // Must-dodge: low and rough.
+  warningRed: [
+    { tone: 'sawtooth', from: 330, to: 260, seconds: 0.16, volume: 0.11 },
+    { noise: 'bandpass', freq: 250, seconds: 0.1, volume: 0.05 },
+  ],
 };
 
 /** When more sounds arrive than the voice cap allows, the higher number wins. */

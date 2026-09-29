@@ -1,6 +1,6 @@
 import type { FightDef } from '../../game/fight';
 import type { GameEvent, GameState } from '../../game/state';
-import { PRIORITY, type VoiceName } from './tuning';
+import { HIT_VARIATION, PRIORITY, type VoiceName } from './tuning';
 
 /** One sound to play: which recipe, a pitch multiplier (1 = as written), a pan from -1 to 1, and its priority. */
 export interface Cue {
@@ -43,6 +43,12 @@ export function mergeCues(cues: readonly Cue[]): Cue[] {
   return merged;
 }
 
+/** A pitch multiplier for a boss hit that shifts a little with the tick, so repeated hits do not sound identical. Deterministic. */
+export function hitPitch(tick: number): number {
+  const step = (tick * 7919) % HIT_VARIATION.steps;
+  return 1 + (step - (HIT_VARIATION.steps - 1) / 2) * HIT_VARIATION.spread;
+}
+
 /**
  * The sounds for one update, worked out from the game state before and after it. Pure: it reads the states and
  * changes nothing, so a fight plays and replays the same with or without sound.
@@ -51,7 +57,8 @@ export function cuesFor(_before: GameState, after: GameState, _fight: FightDef):
   const cues: Cue[] = [];
   for (const event of after.events) {
     const voice = EVENT_VOICE[event];
-    if (voice !== undefined) cues.push(cue(voice));
+    if (voice === undefined) continue;
+    cues.push(voice === 'hit' ? cue(voice, { pitch: hitPitch(after.tick) }) : cue(voice));
   }
   return mergeCues(cues);
 }
