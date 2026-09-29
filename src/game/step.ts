@@ -186,6 +186,12 @@ function resolvePlayerAttack(s: GameState, boss: BossDef, studying: boolean): vo
   if (studying || b.mode === 'transition') return;
   if (!attackActive(p) || p.attackConnected || !overlaps(attackBox(p), bossBox(b, boss))) return;
   p.attackConnected = true;
+  if (p.attackAim === 'down') {
+    // The pogo: a downward hit bounces the player up, and the bounce is not cut short by letting go of jump.
+    p.vy = -PLAYER.attack.pogoSpeed;
+    p.onGround = false;
+    p.jumpCut = true;
+  }
   const damage = b.mode === 'stagger' ? boss.counter.damageMultiplier : 1;
   b.hp = Math.max(0, b.hp - damage);
   s.events.push('bossHit');

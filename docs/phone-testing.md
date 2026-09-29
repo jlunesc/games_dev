@@ -414,7 +414,8 @@ You can now swing **up** and **down** with no new button. **Hold up on the stick
 - [ ] Down + attack in the air swings down under your feet; on the ground it stays forward.
 - [ ] Holding up while running does not make the run feel different, and a plain attack still swings forward.
 - [ ] Against the Storm Kite, an upward swing reaches it when it hangs above you; a downward swing reaches things under you.
-- [ ] Anything to change: the box size and reach (`PLAYER.attack.upDownReach` and `upDownWidth` in `src/game/params.ts`), or a bounce off the boss on a downward hit (not built yet, say if you want it).
+- [ ] A downward hit on the boss bounces you up (the **pogo**), once per swing, and a miss does not. Bounce too high or too low? `PLAYER.attack.pogoSpeed` (760; a full jump is 900).
+- [ ] Anything to change: the box size and reach (`PLAYER.attack.upDownReach` and `upDownWidth` in `src/game/params.ts`).
 
 ## Generated backdrops
 Every **Generated** fight now gets its own backdrop, invented fresh from that fight's seed (the same seed always looks the same): a random colour family (reds, greens, teals, purples, browns and so on), two or three layers of shapes (pillars, ridges or spires) at random heights and speeds, and embers, floor and edge in matching colours. The skies stay dark on purpose, so the boss and its warnings stand out. The boss's body colour is picked opposite the sky on the colour wheel. The hand-built bosses keep their own backdrops. The shot and strike colours of a generated boss are still the default ones.

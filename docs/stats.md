@@ -236,6 +236,7 @@ After `ticks` steps the state is the one the fight ended in (or the state the st
 - **Game version 0.5.1: the Vesper Sage without its cover.** The Sage's middle wall was removed because it kept the player on one side of the arena, so Vesper Sage records made by 0.5.0 no longer replay exactly. Every other boss is unchanged.
 - **Game version 0.6.0: the variety pass.** The Quill Warden, Cinder Golem, Veil Dancer, Gale Reaver and Brass Sentinel gained new attacks (hovering leaps, strikes on both sides, aimed bolts) and bolt heights are measured above the boss's feet, so records of those five bosses made by 0.5.1 no longer replay exactly. The schema stays 4 (the export's shape is unchanged; `shotsFired` counts the new bolts). Other bosses, including the Ember Duelist, replay as before.
 - **Game version 0.7.0: up and down swings.** The player can swing up and down (owner request). Records made by 0.6.1 or earlier still replay exactly (they carry no aim); a new record replays only with 0.7.0 or later. The schema goes to 5 (section 6).
+- **Game version 0.7.1: the pogo.** A downward swing that hits the boss bounces the player up, so a record made by 0.7.0 that contains a downward hit no longer replays exactly. Schema stays 5.
 - **Game version 0.6.1: the Ashen Hound without its arena.** The Hound's two platforms and its cover were removed (owner request), so Hound records made by 0.6.0 or earlier no longer replay exactly (their stored analysis stays valid). The schema stays 4. Every other boss replays as before.
 
 ## 10. Derived later, not stored

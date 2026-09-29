@@ -122,12 +122,12 @@ describe('buildRecord', () => {
 
   it('carries the study rounds and is schema version 5', () => {
     expect(STATS_SCHEMA_VERSION).toBe(5);
-    expect(GAME_VERSION).toBe('0.7.0');
+    expect(GAME_VERSION).toBe('0.7.1');
     for (const study of [0, 1, 2] as const) {
       const record = buildRecord(startRecording(metaOf({ study })), 'left', 1, null);
       expect(record.study).toBe(study);
       expect(record.schemaVersion).toBe(5);
-      expect(record.gameVersion).toBe('0.7.0');
+      expect(record.gameVersion).toBe('0.7.1');
     }
   });
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT } from '../src/engine/input-frame';
-import { WORLD } from '../src/game/params';
+import { PLAYER, WORLD } from '../src/game/params';
 import { createInitialState, type AttackAim, type GameState } from '../src/game/state';
 import { solo, standAt, updatesWith, windupUpdates } from './boss-helpers';
 import { DUELIST, QUIET_BOSS, advance, run, withInput } from './helpers';
@@ -71,6 +71,25 @@ describe('an upward or downward swing hitting the boss', () => {
   });
 });
 
+describe('the pogo bounce', () => {
+  it('a downward hit throws the player up, once per swing, and a forward or upward hit does not', () => {
+    const states = run(scene({ airborne: true }), 12, (n) => withInput({ attackPressed: n === 1, moveY: 1 }));
+    const hit = updatesWith(states, 'bossHit')[0]!;
+    expect(states[hit - 1]!.player.vy).toBe(-PLAYER.attack.pogoSpeed);
+    expect(states[hit]!.player.y).toBeLessThan(states[hit - 1]!.player.y);
+    expect(states[hit]!.player.vy).toBeGreaterThan(-PLAYER.attack.pogoSpeed);
+    const up = run(scene({ bossLift: 150 }), 12, (n) => withInput({ attackPressed: n === 1, moveY: -1 }));
+    expect(up.every((s) => s.player.vy >= 0)).toBe(true);
+  });
+
+  it('a downward swing that misses does not bounce', () => {
+    const s = scene({ airborne: true });
+    s.boss.x = 900;
+    const states = run(s, 12, (n) => withInput({ attackPressed: n === 1, moveY: 1 }));
+    expect(states.every((st) => st.player.vy >= 0)).toBe(true);
+  });
+});
+
 describe('the counter', () => {
   const slam = DUELIST.attacks.find((a) => a.id === 'slam')!;
   const boss: BossDef = solo('slam');
@@ -88,6 +107,7 @@ describe('the counter', () => {
 describe('the floor below a downward swing', () => {
   it('does not change where the player lands', () => {
     let s = scene({ airborne: true });
+    s.boss.x = 900;
     s = advance(s, 60, withInput({ attackPressed: true, moveY: 1 }));
     expect(s.player.y).toBe(WORLD.floorY);
     expect(s.player.onGround).toBe(true);

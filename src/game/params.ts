@@ -17,7 +17,7 @@ export const PLAYER = {
   inputBuffer: 3,
   maxHealth: 5,
   hitInvulnerability: 60,
-  attack: { startup: 3, active: 4, recovery: 9, reach: 90, height: 80, moveFactor: 0.5, upDownReach: 90, upDownWidth: 90 },
+  attack: { startup: 3, active: 4, recovery: 9, reach: 90, height: 80, moveFactor: 0.5, upDownReach: 90, upDownWidth: 90, pogoSpeed: 760 },
   dash: { duration: 11, speed: 1450, cooldown: 24 },
 };
 

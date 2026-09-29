@@ -31,8 +31,10 @@ export const STATS_SCHEMA_VERSION = 5;
  * longer replay exactly. Every other boss is unchanged.
  * 0.7.0: the player can swing up (up held, on the ground or in the air) and down (down held, in the air), so the
  * recorded input now carries the vertical aim. Records made by 0.6.1 or earlier have no aim and replay exactly as before.
+ * 0.7.1: a downward swing that hits the boss bounces the player up (the pogo), so records made by 0.7.0 with a
+ * downward hit no longer replay exactly. Records without a downward hit replay as before.
  */
-export const GAME_VERSION = '0.7.0';
+export const GAME_VERSION = '0.7.1';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {
