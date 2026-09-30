@@ -18,6 +18,8 @@ export const LOOK = {
   maxParticles: 160,
   maxRings: 12,
   sparksOnBossHit: 8,
+  /** Sparks when a hit is blocked by a shield (fewer than a real hit: nothing was hurt). */
+  sparksOnBlock: 5,
   sparksOnPlayerHit: 10,
   sparksOnCounter: 14,
   sparksOnStudyHit: 4,
@@ -30,6 +32,8 @@ export const LOOK = {
   spark: '#ffe9a8',
   counterRing: '#f5c542',
   hurtSpark: '#ff4a44',
+  /** The sparks and ring of a blocked hit: cold steel, unlike the warm spark of a real hit. */
+  block: '#dfe6f5',
   dust: '#b9b3a6',
   trail: '#7fd6ff',
   shockwave: '#ff9a4a',
@@ -256,6 +260,18 @@ export const LOOK = {
     /** How much of a crescent's depth is hollowed out on the boss's side (0 to 1). */
     crescentInner: 0.55,
   },
+
+  // ---- Signs of the newer boss mechanics (see identityfx.ts) ----
+  /** A vanished boss: a bar on the floor where it will reappear (as wide as the boss) and a faint ghost column over it. */
+  blink: { color: '#b58cff', markHeight: 6, markAlpha: 0.8, ghostAlpha: 0.16 },
+  /** Lingering fire on the floor: at most `maxTongues` flames per patch, each `flickerTicks` long, over a low base. The flames never rise above the real hit box (`EMBER.height`). */
+  ember: { maxTongues: 12, tongueWidth: 26, flickerTicks: 6, lowShare: 0.7, baseShare: 0.35, alpha: 0.9 },
+  /** The arrow that shows a bolt is coming from a side edge: `inset` from the edge, `length` and `half` (half its height) of the arrow, dimmest at first (`minAlpha`), red like every danger. */
+  edgeWarn: { inset: 6, length: 34, half: 20, minAlpha: 0.35, color: '#e0403a' },
+  /** The shield plate in front of a boss: `gap` off the body, `width` thick, `heightShare` of the body's height. */
+  shield: { gap: 6, width: 16, heightShare: 0.85, edge: '#6f7b93', color: '#c9d2e3' },
+  /** An angry boss (see `temperLevel`): an outline that starts at `from` (0 to 1) and reaches `alphaMax` at full temper. */
+  temper: { from: 0.35, alphaMax: 0.55, color: '#ff5a3a', lineWidth: 5 },
 
   // ---- Signs on a boss that show what its attack will do (see `attackMarks` in figures.ts) ----
   mark: {

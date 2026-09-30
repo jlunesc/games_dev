@@ -185,6 +185,12 @@ export function spawnEffects(
         out.smallRing(c.x, c.y, LOOK.spark);
         break;
       }
+      case 'bossBlocked': {
+        const c = centreOf(attackBox(after.player));
+        out.sparks(LOOK.sparksOnBlock, c.x, c.y, LOOK.block);
+        out.smallRing(c.x, c.y, LOOK.block);
+        break;
+      }
       case 'counter': {
         const c = bossCentre(struckBoss(before, after));
         out.sparks(LOOK.sparksOnCounter, c.x, c.y, LOOK.counterRing, LOOK.spark);

@@ -243,11 +243,14 @@ function bossPose(state: GameState, boss: BossDef, index: number): BossPose {
 function marksOf(attack: AttackDef): AttackMarks | null {
   const hover = attack.leap?.hang !== undefined;
   const both = attack.hits.some((h) => h.both === true);
-  const shots = (attack.shots ?? []).map((shot) => ({
-    kind: shot.kind,
-    aimed: shot.kind === 'bolt' && shot.aim === true,
-    back: shot.kind === 'bolt' && shot.dir === 'back',
-  }));
+  // A bolt from the arena edge does not leave the boss: its warning is the arrow at the edge (identityfx.ts).
+  const shots = (attack.shots ?? [])
+    .filter((shot) => !(shot.kind === 'bolt' && shot.edge !== undefined))
+    .map((shot) => ({
+      kind: shot.kind,
+      aimed: shot.kind === 'bolt' && shot.aim === true,
+      back: shot.kind === 'bolt' && shot.dir === 'back',
+    }));
   return hover || both || shots.length > 0 ? { hover, both, shots } : null;
 }
 

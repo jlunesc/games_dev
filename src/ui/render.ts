@@ -1,5 +1,6 @@
 import type { BossDef } from '../bosses/schema';
-import { activeHitBoxes, attackActive, attackBox, shotBox } from '../game/geometry';
+import { activeHitBoxes, attackActive, attackBox, bossHidden, shotBox } from '../game/geometry';
+import { temperLevel } from '../game/boss';
 import { ERUPTION, PLAYER, WORLD } from '../game/params';
 import { asFight, type FightDef } from '../game/fight';
 import { bossAt, isDowned, type ArcState, type BossState, type EruptionState, type GameState } from '../game/state';
@@ -10,6 +11,7 @@ import { fallenFigure, healthBars, turnMarker } from './look/duo';
 import { bossFigure, drawPrimitives, playerFigure } from './look/figures';
 import { attackPalette, boltTrail, slashShape } from './look/attackfx';
 import { playerSwing } from './look/playerfx';
+import { blinkMark, edgeArrow, edgeWarnings, emberSpan, emberTongues, shieldPlate, temperGlow } from './look/identityfx';
 import { moodFor, type Mood } from './look/moods';
 import { BOSS_COLORS, armRect, bossDrawBox, bossLook, type BossLook, type Rect } from './look/pose';
 import { LOOK } from './look/tuning';
@@ -237,6 +239,11 @@ function drawShots(ctx: CanvasRenderingContext2D, state: GameState, bossIds: rea
   for (const shot of state.shots) {
     const look = looks[shot.owner ?? 0] ?? looks[0]!;
     if (shot.kind === 'eruption') {
+      const ember = emberSpan(shot);
+      if (ember !== null) {
+        drawPrimitives(ctx, emberTongues(ember, state.tick, { edge: look.edge, core: look.eruptionCore }), LOOK.ember.alpha);
+        continue;
+      }
       const mark = eruptionMark(shot);
       if (mark === null) continue;
       const width = mark.right - mark.left;
@@ -324,6 +331,22 @@ function drawBoss(
     return;
   }
 
+  if (bossHidden(b, boss)) {
+    const mark = blinkMark(b, boss);
+    if (mark !== null) {
+      const t = LOOK.blink;
+      const flicker = 0.6 + 0.4 * Math.sin(state.tick / 3);
+      ctx.save();
+      ctx.fillStyle = t.color;
+      ctx.globalAlpha = t.markAlpha * flicker;
+      ctx.fillRect(mark.x - mark.width / 2, WORLD.floorY - t.markHeight, mark.width, t.markHeight);
+      ctx.globalAlpha = t.ghostAlpha * flicker;
+      ctx.fillRect(mark.x - mark.width / 2, WORLD.floorY - boss.height, mark.width, boss.height);
+      ctx.restore();
+    }
+    return;
+  }
+
   const look = bossLook(b, boss, own?.bodyColor);
   const pulse = 0.55 + 0.35 * Math.sin(state.tick / 6);
   const attack =
@@ -379,6 +402,22 @@ function drawBoss(
     ctx.lineWidth = 8;
     ctx.strokeRect(left - 4, top - 4, boss.width + 8, height + 8);
     ctx.globalAlpha = 1;
+  }
+
+  // A shield blocks only in a lone fight (see `step.ts`), so it is drawn only there.
+  if (state.partners.length === 0) drawPrimitives(ctx, shieldPlate(b, boss));
+  const anger = temperGlow(temperLevel(state, boss, b));
+  if (anger > 0 && look.glow === null) {
+    ctx.save();
+    ctx.globalAlpha = anger * pulse;
+    ctx.strokeStyle = LOOK.temper.color;
+    ctx.lineWidth = LOOK.temper.lineWidth;
+    ctx.strokeRect(left - 3, top - 3, boss.width + 6, height + 6);
+    ctx.restore();
+  }
+  for (const warning of edgeWarnings(b, boss)) {
+    const arrow = edgeArrow(warning, state.tick);
+    drawPrimitives(ctx, arrow.primitives, arrow.alpha);
   }
 
   if (own === null) {
