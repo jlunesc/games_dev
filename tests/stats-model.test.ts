@@ -16,8 +16,8 @@ const press = (model: StatsModel, ...actions: MenuAction[]): StatsModel =>
   actions.reduce((m, a) => statsStep(m, a).model, model);
 
 describe('the stats rows', () => {
-  it('are Export, Delete and Back', () => {
-    expect(statsRows(createStats(3, null)).map((r) => r.id)).toEqual(['export', 'delete', 'back']);
+  it('are Export, Save to device, Copy to clipboard, Delete and Back', () => {
+    expect(statsRows(createStats(3, null)).map((r) => r.id)).toEqual(['export', 'save', 'copy', 'delete', 'back']);
   });
 
   it.each([
@@ -36,16 +36,16 @@ describe('the stats rows', () => {
 
   it('label Delete, and ask again while confirming', () => {
     const model = createStats(2, null);
-    const plain = statsRows(model)[1]!;
+    const plain = statsRows(model)[3]!;
     expect(plain.label).toBe('Delete all fights');
     expect(plain.help).toBe('Removes every saved fight from this device. Export first.');
-    expect(statsRows({ ...model, confirmingDelete: true })[1]!.label).toBe(
+    expect(statsRows({ ...model, confirmingDelete: true })[3]!.label).toBe(
       'Really delete all fights? Press again.',
     );
   });
 
   it('give Back its help', () => {
-    const row = statsRows(createStats(2, null))[2]!;
+    const row = statsRows(createStats(2, null))[4]!;
     expect(row.label).toBe('Back');
     expect(row.help).toBe('Return to the menu.');
   });
@@ -64,12 +64,12 @@ describe('a new stats model', () => {
 });
 
 describe('moving on the stats screen', () => {
-  it('wraps over the three rows', () => {
+  it('wraps over the five rows', () => {
     const start = createStats(1, null);
     expect(press(start, 'down').focus).toBe(1);
-    expect(press(start, 'up').focus).toBe(2);
-    expect(press(start, 'down', 'down', 'down').focus).toBe(0);
-    expect(press(start, 'up', 'up', 'up').focus).toBe(0);
+    expect(press(start, 'up').focus).toBe(4);
+    expect(press(start, 'down', 'down', 'down', 'down', 'down').focus).toBe(0);
+    expect(press(start, 'up', 'up', 'up', 'up', 'up').focus).toBe(0);
   });
 
   it('clears the confirm state and the notice', () => {
@@ -107,8 +107,26 @@ describe('export', () => {
   });
 });
 
+describe('save to device and copy to clipboard', () => {
+  it.each([
+    [1, 'save'],
+    [2, 'copy'],
+  ] as const)('row %s starts a %s when there are fights', (focus, outcome) => {
+    expect(statsStep(at(focus, createStats(3, null)), 'confirm').outcome).toBe(outcome);
+  });
+
+  it.each([1, 2])('row %s says so and stays when there is nothing to export', (focus) => {
+    const none = statsStep(at(focus, createStats(0, null)), 'confirm');
+    expect(none.outcome).toBe('stay');
+    expect(none.model.notice).toBe('No fights saved yet.');
+    const unavailable = statsStep(at(focus, createStats(null, null)), 'confirm');
+    expect(unavailable.outcome).toBe('stay');
+    expect(unavailable.model.notice).toBe('This device cannot store stats.');
+  });
+});
+
 describe('delete', () => {
-  const onDelete = (count: number | null): StatsModel => at(1, createStats(count, null));
+  const onDelete = (count: number | null): StatsModel => at(3, createStats(count, null));
 
   it('needs two presses', () => {
     const first = statsStep(onDelete(5), 'confirm');
@@ -145,7 +163,7 @@ describe('going back', () => {
   });
 
   it('confirm on the Back row gives back', () => {
-    expect(statsStep(at(2, createStats(2, null)), 'confirm').outcome).toBe('back');
+    expect(statsStep(at(4, createStats(2, null)), 'confirm').outcome).toBe('back');
   });
 });
 

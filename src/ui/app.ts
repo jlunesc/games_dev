@@ -24,7 +24,7 @@ import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
 import type { FightResult, FightSummary } from '../game/summary';
 import { analyzeRecording } from '../stats/analyze';
-import { buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
+import { buildExport, copyToClipboard, downloadFile, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
 import { buildRecord, type Recording } from '../stats/record';
 import { openIndexedDbStore, type FightStore } from '../stats/store';
 import { createSound } from './sound';
@@ -344,7 +344,7 @@ export function mountApp(root: HTMLElement): void {
     renderList(
       panel,
       'Stats',
-      "Up and down move, bottom button chooses, top button goes back. Tap Export with a finger to use the phone's share sheet.",
+      "Up and down move, bottom button chooses, top button goes back. Tap Export with a finger to use the phone's share sheet. Save to device puts the file in Downloads; Copy to clipboard is for pasting into a chat.",
       statsRows(statsModel).map((row) => ({ label: row.label, value: row.value, help: row.help })),
       statsModel.focus,
       (index) => {
@@ -388,7 +388,9 @@ export function mountApp(root: HTMLElement): void {
       return;
     }
     renderStats();
-    if (result.outcome === 'export') void runExport(statsSession);
+    if (result.outcome === 'export' || result.outcome === 'save' || result.outcome === 'copy') {
+      void runExport(statsSession, result.outcome);
+    }
     else if (result.outcome === 'delete') void runDelete(statsSession);
   }
 
@@ -410,19 +412,23 @@ export function mountApp(root: HTMLElement): void {
     renderStats();
   }
 
-  function runExport(session: number): Promise<void> {
+  function runExport(session: number, how: 'export' | 'save' | 'copy'): Promise<void> {
     return runStatsTask(session, async () => {
       const store = await storeReady;
       if (store === null) return (model) => withNotice(model, 'This device cannot store stats.');
       const fights = await store.all();
-      const result = await shareOrDownload(buildExport(fights, new Date()));
-      if (result === 'shared' || result === 'downloaded') {
+      const file = buildExport(fights, new Date());
+      const result =
+        how === 'copy' ? await copyToClipboard(file) : how === 'save' ? downloadFile(file) : await shareOrDownload(file);
+      if (result === 'shared' || result === 'downloaded' || result === 'copied') {
         const iso = new Date().toISOString();
         saveLastExport(storage, iso);
-        const message = result === 'shared' ? 'Sent.' : 'File saved to your downloads.';
+        const message =
+          result === 'shared' ? 'Sent.' : result === 'copied' ? 'Copied. Paste it into the chat.' : 'File saved to your downloads.';
         return (model) => withNotice(withExported(model, iso), message);
       }
-      const message = result === 'cancelled' ? 'Export cancelled.' : 'Export failed.';
+      const message =
+        result === 'cancelled' ? 'Export cancelled.' : how === 'copy' ? 'Copy failed. Tap the row with a finger.' : 'Export failed.';
       return (model) => withNotice(model, message);
     });
   }

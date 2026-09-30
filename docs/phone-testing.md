@@ -462,7 +462,9 @@ Everything stays **on the phone**. Nothing is uploaded anywhere: the file only g
 
 ### The Stats screen
 In the menu, the **Stats** row sits between **Tweak difficulty** and **Settings**. It shows when you last exported ("Last export: never." at first) and a reminder that Android can clear browser data, so export now and then. It has three rows:
-- **Export**: shows how many fights are saved. While it works the screen says "Working…". It packs them into one file (its name ends in `.stats.txt`, for example `boss-trainer-2026-09-21.stats.txt`; the content is JSON, the `.txt` name lets chat apps accept it) and hands it to the phone.
+- **Export**: shows how many fights are saved. While it works the screen says "Working…". It packs them into one file (its name ends in `.stats.txt`, for example `boss-trainer-2026-09-21.stats.txt`; the content is JSON, the `.txt` name lets chat apps accept it) and hands it to the phone's share sheet.
+- **Save to device**: builds the same file but skips the share sheet and saves it straight to the phone's Downloads folder. Then in the Claude app use + and pick the file from Downloads.
+- **Copy to clipboard**: copies the same stats as text so you can paste them into a chat. Tap it with a finger; the phone may refuse a controller press.
 - **Delete all fights**: asks twice. The first press changes the row to "Really delete all fights? Press again.", the second press deletes. Moving to another row cancels it. Export first.
 - **Back**: return to the menu.
 
@@ -480,6 +482,8 @@ Android can clear a browser's data by itself (for example when the phone is shor
 - [ ] A fight left before it started is not saved. This is hard to do on purpose (holding the top button takes about a second, and the fight is already running by then), so skip it if you cannot. One way: start a fight and switch the controller off at once, then tap the "No usable controller" message (if a moment of the fight already ran, it will be saved as a left fight, which is also fine). You should land in the menu and the count should not go up.
 - [ ] The Stats row is between Tweak difficulty and Settings, and the number next to Export matches the fights you played.
 - [ ] Tapping Export opens the phone's share sheet (or, if the phone cannot, downloads a file). Note which one happened.
+- [ ] Save to device puts a `.stats.txt` file in the phone's Downloads folder, and the Claude app can attach it.
+- [ ] Copy to clipboard says "Copied. Paste it into the chat." and pasting into a chat shows the stats text. Also note what happens if you press it with the controller.
 - [ ] Pressing Export with the controller instead of a finger: note what happens (share sheet, only a download, or nothing).
 - [ ] The file's name ends in `.stats.txt`.
 - [ ] After a successful export, "Last export" shows today's date.

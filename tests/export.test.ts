@@ -5,7 +5,7 @@ import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 import type { InputFrame } from '../src/engine/input-frame';
 import { analyzeFight } from '../src/stats/analyze';
-import { buildExport, EXPORT_FORMAT, loadLastExport, saveLastExport, shareOrDownload, type ExportDocument, type ExportFile } from '../src/stats/export';
+import { buildExport, copyToClipboard, downloadFile, EXPORT_FORMAT, loadLastExport, saveLastExport, shareOrDownload, type ExportDocument, type ExportFile } from '../src/stats/export';
 import {
   buildRecord,
   GAME_VERSION,
@@ -216,5 +216,32 @@ describe('shareOrDownload', () => {
     vi.stubGlobal('navigator', {});
     vi.stubGlobal('document', undefined);
     expect(await shareOrDownload(file)).toBe('failed');
+  });
+});
+
+describe('downloadFile and copyToClipboard', () => {
+  const file: ExportFile = { name: 'boss-trainer-2026-09-21.stats.txt', json: '{"fights":[]}', count: 0 };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('copies the export text to the clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    expect(await copyToClipboard(file)).toBe('copied');
+    expect(writeText).toHaveBeenCalledWith(file.json);
+  });
+
+  it('fails cleanly when the clipboard is missing or refuses', async () => {
+    vi.stubGlobal('navigator', {});
+    expect(await copyToClipboard(file)).toBe('failed');
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } });
+    expect(await copyToClipboard(file)).toBe('failed');
+  });
+
+  it('fails cleanly when there is no document to download into', () => {
+    vi.stubGlobal('document', undefined);
+    expect(downloadFile(file)).toBe('failed');
   });
 });

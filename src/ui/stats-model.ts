@@ -12,16 +12,16 @@ export interface StatsModel {
   notice: string | null;
 }
 
-export type StatsOutcome = 'stay' | 'export' | 'delete' | 'back';
+export type StatsOutcome = 'stay' | 'export' | 'save' | 'copy' | 'delete' | 'back';
 
 export interface StatsRow {
-  id: 'export' | 'delete' | 'back';
+  id: 'export' | 'save' | 'copy' | 'delete' | 'back';
   label: string;
   value?: string;
   help: string;
 }
 
-const ROW_IDS: ReadonlyArray<StatsRow['id']> = ['export', 'delete', 'back'];
+const ROW_IDS: ReadonlyArray<StatsRow['id']> = ['export', 'save', 'copy', 'delete', 'back'];
 
 export const createStats = (count: number | null, lastExportAt: string | null): StatsModel => ({
   focus: 0,
@@ -43,6 +43,16 @@ export function statsRows(model: StatsModel): StatsRow[] {
       label: 'Export',
       value: describeCount(model.count),
       help: 'Send your saved fights as a file: the share sheet on the phone, a download on the PC.',
+    },
+    {
+      id: 'save',
+      label: 'Save to device',
+      help: 'Save the file straight to the phone\'s downloads folder, without the share sheet.',
+    },
+    {
+      id: 'copy',
+      label: 'Copy to clipboard',
+      help: 'Copy the stats as text, to paste into a chat. Tap it with a finger; a controller press may be refused.',
     },
     {
       id: 'delete',
@@ -74,10 +84,10 @@ export function statsStep(
 
   const id = ROW_IDS[model.focus];
   if (id === 'back') return { model, outcome: 'back' };
-  if (id === 'export') {
+  if (id === 'export' || id === 'save' || id === 'copy') {
     const notice = nothingToDo(model.count);
     if (notice !== null) return { model: { ...model, notice }, outcome: 'stay' };
-    return { model, outcome: 'export' };
+    return { model, outcome: id };
   }
   if (id === 'delete') {
     const notice = nothingToDo(model.count);
