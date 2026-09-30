@@ -1,4 +1,4 @@
-import type { BossDef } from '../src/bosses/schema';
+import type { AttackDef, BossDef, PhaseAttack, PhaseDef } from '../src/bosses/schema';
 import { DT } from '../src/engine/time';
 import { PLAYER } from '../src/game/params';
 import { step } from '../src/game/step';
@@ -67,4 +67,49 @@ export function runCrowding(state: GameState, count: number, boss: BossDef): Gam
     states.push(s);
   }
   return states;
+}
+
+/** A plain must-dodge swing (wind-up 6, active 4, recovery 4) that can be started from any distance. */
+export const melee = (id: string, over: Partial<AttackDef> = {}): AttackDef => ({
+  id,
+  name: id,
+  pose: 'sideways',
+  class: 'mustDodge',
+  damage: 1,
+  windup: 6,
+  active: 4,
+  recovery: 4,
+  range: { min: 0, max: 1e9 },
+  hits: [{ from: 6, to: 10, x0: 0, x1: 50, bottom: 0, top: 50 }],
+  ...over,
+});
+
+/**
+ * The Duelist's body with the given attacks and a single phase that never walks and never chains. Pass what the phase
+ * should change (at least its `attacks`) in `phaseOver`, and boss-level changes in `bossOver`.
+ */
+export function customBoss(
+  attacks: AttackDef[],
+  phaseOver: Partial<PhaseDef> & { attacks: PhaseAttack[] },
+  bossOver: Partial<BossDef> = {},
+): BossDef {
+  return {
+    ...DUELIST,
+    spacing: { min: 0, max: 1e9 },
+    predictability: 0,
+    attacks,
+    phases: [
+      {
+        name: 'Only phase',
+        startsAtHpFraction: 1,
+        gap: 1,
+        maxChain: 1,
+        chainChance: 0,
+        walkSpeed: 100,
+        retreatSpeed: 100,
+        ...phaseOver,
+      },
+    ],
+    ...bossOver,
+  };
 }

@@ -155,6 +155,13 @@ export interface PhaseDef {
   attacks: PhaseAttack[];
   /** The attack the boss opens with when this phase begins (after the powering-up pause). */
   opening?: string;
+  /**
+   * Fixed sequences of attacks, 2 to 4 ids each. When the boss's normal pick is the first id of a combo, the rest follow
+   * straight after it, one at a time, with no pause. The first id must be in `attacks`; the others need only exist in the boss.
+   */
+  combos?: string[][];
+  /** Where the boss likes to stand in this phase; replaces `BossDef.spacing` while the phase is on. */
+  spacing?: { min: number; max: number };
   /** Updates the boss waits (walking and keeping its distance) before choosing its next attack. */
   gap: number;
   /** Attacks in a chain, in total: the first plus `maxChain - 1` follow-ups with no gap between them. 1 means never chain. */

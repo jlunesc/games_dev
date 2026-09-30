@@ -269,9 +269,12 @@ function adjustPhase(phase: PhaseDef, d: Dials): PhaseDef {
     .slice(0, keep)
     .sort((a, b) => a.index - b.index)
     .map((entry) => entry.attack);
+  const keptIds = new Set(kept.map((entry) => entry.id));
+  const combos = phase.combos?.filter((steps) => keptIds.has(steps[0]!));
   return {
     ...phase,
     attacks: kept,
+    ...(combos === undefined ? {} : { combos }),
     gap: Math.max(0, Math.round(phase.gap / d.frequency)),
     walkSpeed: phase.walkSpeed * d.speed,
     retreatSpeed: phase.retreatSpeed * d.speed,

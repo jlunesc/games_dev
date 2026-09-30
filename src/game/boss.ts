@@ -66,6 +66,7 @@ function enterGap(b: BossState, boss: BossDef): void {
   b.attackTick = 0;
   b.pendingAttackId = null;
   b.chainLeft = 0;
+  b.comboQueue = [];
 }
 
 /** The study is over: the fight proper starts clean, with no leftover untouchability from a demonstration. */
@@ -134,6 +135,12 @@ function planChain(s: GameState, phase: PhaseDef): number {
   return draw(s) < phase.chainChance ? phase.maxChain - 1 : 0;
 }
 
+/** When the pick that was just made opens one of the phase's combos, the combo's other steps wait in the queue. */
+function startCombo(b: BossState, phase: PhaseDef, id: string): void {
+  const combo = phase.combos?.find((steps) => steps[0] === id);
+  b.comboQueue = combo === undefined ? [] : combo.slice(1);
+}
+
 function startAttack(s: GameState, boss: BossDef, id: string, index: number): void {
   const b = bossAt(s, index);
   const attack = attackById(boss, id);
@@ -152,9 +159,10 @@ function updateGap(s: GameState, boss: BossDef, phase: PhaseDef, index: number, 
   faceTarget(b, p.x);
   const distance = Math.abs(p.x - b.x);
   const toward: 1 | -1 = p.x < b.x ? -1 : 1;
-  if (distance > boss.spacing.max) {
+  const spacing = phase.spacing ?? boss.spacing;
+  if (distance > spacing.max) {
     moveBoss(b, boss, toward, phase.walkSpeed);
-  } else if (distance < boss.spacing.min) {
+  } else if (distance < spacing.min) {
     moveBoss(b, boss, toward === 1 ? -1 : 1, phase.retreatSpeed);
   }
   const anger = boss.temper === undefined ? 0 : boss.temper * temperLevel(s, boss, b);
@@ -170,6 +178,7 @@ function updateGap(s: GameState, boss: BossDef, phase: PhaseDef, index: number, 
       if (id === null) endStudy(s);
     } else {
       id = chooseAttack(s, boss, phase, index);
+      if (id !== null) startCombo(b, phase, id);
     }
     if (id !== null) {
       b.pendingAttackId = id;
@@ -216,9 +225,19 @@ function finishAttack(s: GameState, boss: BossDef, phase: PhaseDef, index: numbe
     enterGap(b, boss);
     return;
   }
+  const nextStep = b.comboQueue.shift();
+  if (nextStep !== undefined) {
+    b.attackId = null;
+    b.attackTick = 0;
+    b.pendingAttackId = nextStep;
+    b.mode = 'approach';
+    b.modeTick = 0;
+    return;
+  }
   if (b.chainLeft > 0) {
     const id = chooseAttack(s, boss, phase, index);
     if (id !== null) {
+      startCombo(b, phase, id);
       b.chainLeft -= 1;
       b.attackId = null;
       b.attackTick = 0;
@@ -386,6 +405,7 @@ export function beginTransition(s: GameState, boss: BossDef, index = 0): void {
   b.attackTick = 0;
   b.pendingAttackId = null;
   b.chainLeft = 0;
+  b.comboQueue = [];
   s.shots = s.shots.filter((shot) => (shot.owner ?? 0) !== index);
   s.events.push('phaseChange');
 }

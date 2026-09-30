@@ -326,7 +326,42 @@ function phase(value: unknown, path: string, attackIds: ReadonlySet<string>): Ph
     walkSpeed: num(o.walkSpeed, `${path}.walkSpeed`, { min: 1 }),
     retreatSpeed: num(o.retreatSpeed, `${path}.retreatSpeed`, { min: 1 }),
   };
-  return opening === undefined ? result : { ...result, opening };
+  let combos: string[][] | undefined;
+  if (o.combos !== undefined) {
+    const firsts = new Set<string>();
+    const parsed = list(o.combos, `${path}.combos`).map((entry, i) => {
+      const at = `${path}.combos[${i}]`;
+      const steps = list(entry, at).map((step, j) => {
+        const id = text(step, `${at}[${j}]`);
+        if (!attackIds.has(id)) fail(`${at}[${j}]`, `unknown attack "${id}"`);
+        return id;
+      });
+      if (steps.length < 2 || steps.length > 4) fail(at, 'needs 2 to 4 steps');
+      const first = steps[0]!;
+      if (!attacks.some((a) => a.id === first)) fail(`${at}[0]`, 'the first step must be one of the phase attacks');
+      if (firsts.has(first)) fail(at, 'two combos start with the same attack');
+      firsts.add(first);
+      return steps;
+    });
+    if (parsed.length > 0) combos = parsed;
+  }
+
+  let spacing: { min: number; max: number } | undefined;
+  if (o.spacing !== undefined) {
+    const sp = object(o.spacing, `${path}.spacing`);
+    spacing = {
+      min: num(sp.min, `${path}.spacing.min`, { min: 0 }),
+      max: num(sp.max, `${path}.spacing.max`, { min: 0 }),
+    };
+    if (spacing.max <= spacing.min) fail(`${path}.spacing`, '"max" must be greater than "min"');
+  }
+
+  return {
+    ...result,
+    ...(opening === undefined ? {} : { opening }),
+    ...(combos === undefined ? {} : { combos }),
+    ...(spacing === undefined ? {} : { spacing }),
+  };
 }
 
 const ARENA_MAX_PIECES = 6;

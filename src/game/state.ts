@@ -76,6 +76,8 @@ export interface BossState {
   cycleIndex: number;
   /** Updates spent in the real fight (not the study), capped; a hit lowers it. See `TEMPER`. */
   temper: number;
+  /** The attacks still to come in the running combo (see `PhaseDef.combos`); empty when no combo is running. */
+  comboQueue: string[];
 }
 
 interface ShotBase {
@@ -234,6 +236,7 @@ function initialBoss(boss: BossDef): BossState {
     lastAttacks: [],
     cycleIndex: 0,
     temper: 0,
+    comboQueue: [],
   };
 }
 
