@@ -22,6 +22,8 @@ export type MenuAction = NavAction | 'confirm' | 'back';
 export interface MenuModel {
   focus: number;
   prefs: Prefs;
+  /** While the Boss dropdown is open, the highlighted index in `BOSS_CHOICES`; null when it is closed. */
+  bossDropdown: number | null;
 }
 
 export type MenuOutcome =
@@ -36,7 +38,7 @@ export interface MenuRow {
 }
 
 /** The menu opens with Fight focused, so one press of the bottom button starts the same fight again. */
-export const createMenu = (prefs: Prefs): MenuModel => ({ focus: 0, prefs });
+export const createMenu = (prefs: Prefs): MenuModel => ({ focus: 0, prefs, bossDropdown: null });
 
 /** The preset name, or `Custom (from <preset>)` once the dials differ from it. */
 export function difficultyLabel(prefs: Prefs): string {
@@ -68,12 +70,30 @@ export function menuStep(
   });
   const item = MENU_ITEMS[model.focus] ?? 'fight';
 
+  if (model.bossDropdown !== null) {
+    const open = model.bossDropdown;
+    if (action === 'up' || action === 'down') {
+      return stay({ ...model, bossDropdown: wrap(open, action === 'up' ? -1 : 1, BOSS_CHOICES.length) });
+    }
+    if (action === 'back') return stay({ ...model, bossDropdown: null });
+    if (action === 'confirm') {
+      const picked = BOSS_CHOICES[open];
+      if (picked === undefined) return stay({ ...model, bossDropdown: null });
+      return stay({ ...model, bossDropdown: null, prefs: { ...model.prefs, bossId: picked.id } });
+    }
+    return stay(model);
+  }
+
   if (action === 'up' || action === 'down') {
     return stay({ ...model, focus: wrap(model.focus, action === 'up' ? -1 : 1, MENU_ITEMS.length) });
   }
   if (action === 'back') return stay(model);
 
   if (action === 'confirm') {
+    if (item === 'boss') {
+      const current = BOSS_CHOICES.findIndex((c) => c.id === model.prefs.bossId);
+      return stay({ ...model, bossDropdown: Math.max(0, current) });
+    }
     if (item === 'fight') return { model, outcome: { kind: 'fight' } };
     if (item === 'tweak' || item === 'stats' || item === 'settings' || item === 'test') {
       return { model, outcome: { kind: 'open', screen: item } };

@@ -1,3 +1,4 @@
+import { BOSS_CHOICES } from '../bosses';
 import { resolveFight } from '../bosses/resolve';
 import {
   NO_INPUT,
@@ -32,7 +33,7 @@ import { el } from './dom';
 import { NO_FEEDBACK, advanceFeedback, applyEvents, flashBossFor, freezeFor, type FeedbackState } from './feedback';
 import { advanceFlow, leaveRecording, leaveSummary, startFlow, type FightFlow } from './fight-flow';
 import { setUpFight } from './fight-setup';
-import { createMenu, menuRows, menuStep, type MenuAction, type MenuModel } from './menu-model';
+import { MENU_ITEMS, createMenu, menuRows, menuStep, type MenuAction, type MenuModel } from './menu-model';
 import { NAV_START, advanceNav, type NavState } from './nav';
 import { loadPrefs, savePrefs, type Prefs } from './prefs';
 import { createBackground, type BackgroundCache } from './look/background';
@@ -246,11 +247,28 @@ export function mountApp(root: HTMLElement): void {
       panel,
       'Boss Trainer',
       'Up and down to move, bottom button to choose, top button to go back. During a fight, hold the top button for a second to leave.',
-      menuRows(menu).map((row) => ({ label: row.label, value: row.value })),
+      menuRows(menu).map((row) => ({
+        label: row.label,
+        value: row.value,
+        dropdown:
+          row.id === 'boss' && menu.bossDropdown !== null
+            ? {
+                options: BOSS_CHOICES.map((choice) => choice.name),
+                focus: menu.bossDropdown,
+                onPick: (optionIndex: number) => {
+                  menu = { ...menu, bossDropdown: optionIndex };
+                  handleMenu('confirm');
+                },
+              }
+            : undefined,
+      })),
       menu.focus,
       (index) => {
-        menu = { ...menu, focus: index };
-        handleMenu('confirm');
+        // A tap on any row while the dropdown is open closes it; a tap on the Boss row itself only closes it.
+        const wasOpen = menu.bossDropdown !== null;
+        menu = { ...menu, focus: index, bossDropdown: null };
+        if (wasOpen && MENU_ITEMS[index] === 'boss') renderMenu();
+        else handleMenu('confirm');
       },
       [statusLine],
     );

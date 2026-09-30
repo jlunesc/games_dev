@@ -4,6 +4,8 @@ export interface ListRow {
   label: string;
   value?: string;
   help?: string;
+  /** When set, the row is open: these options are listed right under it and `onPick` gets the tapped one. */
+  dropdown?: { options: readonly string[]; focus: number; onPick: (index: number) => void };
 }
 
 /**
@@ -20,13 +22,33 @@ export function renderList(
   footer: readonly HTMLElement[] = [],
 ): void {
   const list = el('div', 'rows');
+  let focusedNode: Element | undefined;
   rows.forEach((row, index) => {
     const button = el('button', index === focus ? 'row focused' : 'row');
     button.type = 'button';
     button.append(el('span', 'row-label', row.label));
     if (row.value !== undefined) button.append(el('span', 'row-value', row.value));
     button.addEventListener('click', () => onPick(index));
+    if (row.dropdown !== undefined) {
+      button.setAttribute('aria-expanded', 'true');
+      button.classList.add('open');
+    }
     list.append(button);
+    if (index === focus) focusedNode = button;
+    if (row.dropdown !== undefined) {
+      const { options, focus: optionFocus, onPick: pickOption } = row.dropdown;
+      const menu = el('div', 'dropdown');
+      menu.setAttribute('role', 'listbox');
+      options.forEach((option, optionIndex) => {
+        const item = el('button', optionIndex === optionFocus ? 'option focused' : 'option', option);
+        item.type = 'button';
+        item.setAttribute('role', 'option');
+        item.addEventListener('click', () => pickOption(optionIndex));
+        menu.append(item);
+        if (optionIndex === optionFocus) focusedNode = item;
+      });
+      list.append(menu);
+    }
   });
   const help = rows[focus]?.help;
   panel.replaceChildren(
@@ -36,8 +58,8 @@ export function renderList(
     ...(help === undefined || help === '' ? [] : [el('p', 'help', help)]),
     ...footer,
   );
-  // With a controller only the focus moves: keep the focused row on screen.
-  list.children[focus]?.scrollIntoView({ block: 'nearest' });
+  // With a controller only the focus moves: keep the focused row (or open option) on screen.
+  focusedNode?.scrollIntoView({ block: 'nearest' });
 }
 
 /** Draws the summary screen: a title, one line per fact, then the choices for what to do next with the focused one highlighted. */

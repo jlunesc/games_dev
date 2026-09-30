@@ -87,7 +87,7 @@ describe('choosing in the menu', () => {
 
   it('choosing a preset drops any tweaks and loads the preset dials', () => {
     const custom = nudgeDial(DEFAULT_PREFS, 'health', 1);
-    const m = press({ focus: MENU_ITEMS.indexOf('difficulty'), prefs: custom }, 'right');
+    const m = press({ ...createMenu(custom), focus: MENU_ITEMS.indexOf('difficulty') }, 'right');
     expect(difficultyLabel(m.prefs)).toBe('Hard');
     expect(m.prefs.dials).toEqual(selectPreset(DEFAULT_PREFS, 'hard').dials);
   });
@@ -117,8 +117,42 @@ describe('choosing in the menu', () => {
     expect(valueOf(m)).toBe(EMBER_DUELIST.name);
   });
 
-  it('confirm on the Boss row does nothing (only left and right choose)', () => {
-    expect(menuStep(at('boss'), 'confirm').outcome).toEqual({ kind: 'stay' });
+  it('confirm on the Boss row opens the dropdown on the current boss, and changes nothing else', () => {
+    const start = at('boss', createMenu({ ...DEFAULT_PREFS, bossId: BOSS_CHOICES[2]!.id }));
+    const result = menuStep(start, 'confirm');
+    expect(result.outcome).toEqual({ kind: 'stay' });
+    expect(result.model.bossDropdown).toBe(2);
+    expect(result.model.prefs).toEqual(start.prefs);
+  });
+
+  it('in the dropdown, up and down move the highlight and wrap without changing the boss', () => {
+    const open = press(at('boss'), 'confirm');
+    expect(open.bossDropdown).toBe(0);
+    expect(press(open, 'down').bossDropdown).toBe(1);
+    expect(press(open, 'up').bossDropdown).toBe(BOSS_CHOICES.length - 1);
+    expect(press(open, 'down').prefs.bossId).toBe(EMBER_DUELIST.id);
+    expect(press(open, 'left', 'right').bossDropdown).toBe(0);
+  });
+
+  it('confirm in the dropdown picks the highlighted boss and closes it', () => {
+    const m = press(at('boss'), 'confirm', 'down', 'down', 'confirm');
+    expect(m.prefs.bossId).toBe(BOSS_CHOICES[2]!.id);
+    expect(m.bossDropdown).toBeNull();
+    expect(m.focus).toBe(MENU_ITEMS.indexOf('boss'));
+  });
+
+  it('back closes the dropdown without changing the boss', () => {
+    const m = press(at('boss'), 'confirm', 'down', 'back');
+    expect(m.bossDropdown).toBeNull();
+    expect(m.prefs.bossId).toBe(EMBER_DUELIST.id);
+  });
+
+  it('the dropdown can reach every boss choice, Generated included', () => {
+    let m = press(at('boss'), 'confirm');
+    for (const choice of BOSS_CHOICES) {
+      expect(BOSS_CHOICES[m.bossDropdown!]!.id).toBe(choice.id);
+      m = press(m, 'down');
+    }
   });
 
   it('left, right and confirm cycle the Study setting and wrap, staying on the menu', () => {
@@ -139,7 +173,7 @@ describe('choosing in the menu', () => {
 
   it('changing Study touches nothing else', () => {
     const custom = nudgeDial(selectPreset({ ...DEFAULT_PREFS, bossId: ASHEN_HOUND.id }, 'hard'), 'speed', 1);
-    const start = at('study', { focus: 0, prefs: custom });
+    const start = at('study', createMenu(custom));
     const after = press(start, 'right');
     expect(after.focus).toBe(start.focus);
     expect(after.prefs).toEqual({ ...custom, study: 2 });

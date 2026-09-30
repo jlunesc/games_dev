@@ -29,7 +29,7 @@ If the controller shows nothing, note which mode it was in and whether the page 
 ### The menu
 Open the app with the controller connected. The menu lists these rows: **Fight**, **Boss**, **Difficulty**, **Study**, **Tweak difficulty**, **Stats**, **Settings** and **Controller test**. The line at the bottom says which controller the phone found; if it says "No controller detected", press any button on the controller so the phone notices it.
 
-How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty, Study). On the Boss row they switch between the bosses, the pairs and Generated, in the order the row lists them (from the last one it goes round to the first). The bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
+How to move: up and down (d-pad or left stick) move the highlight, and it wraps around from the last row to the first. Left and right change the value of the row you are on (Boss, Difficulty, Study). On the Boss row they switch between the bosses, the pairs and Generated, in the order the row lists them (from the last one it goes round to the first). The bottom button on the Boss row (or a tap) opens a **dropdown** listing every boss, pair and Generated under the row: up and down move the highlight, the bottom button picks it, the top button closes the list without changing anything, and a tap on an option picks it. On the other rows the bottom button chooses the row, and the top button goes back. During a fight, hold the top button for about a second to leave. You can also tap any row with a finger.
 
 The menu remembers your last choices (boss, difficulty, study and any tweaks), even after you close the app. It opens with Fight highlighted, so pressing the bottom button once starts the same fight as last time. After a fight the summary comes first, so it takes two presses: one to leave the summary, one for Fight.
 
@@ -83,6 +83,8 @@ The menu and the summary (M3a):
 - [ ] The menu rows show only their names, with no "top button" or "bottom button" text inside them.
 - [ ] Tapping Fight with no controller connected does nothing except show a message ("Connect a controller and press a button first.").
 - [ ] Tapping the rows with a finger works too.
+- [ ] Turn the phone sideways: the menu panel now stretches across the whole width instead of a narrow column.
+- [ ] The Boss row opens a dropdown (bottom button or tap): up and down move, the bottom button or a tap picks a boss and the backdrop changes to it, the top button or tapping the Boss row again closes it unchanged. In landscape the list scrolls and the focused boss stays visible.
 
 All of the Duelist's attacks are meant to be dodged from their warning (the arm pose and the glow), not reacted to after they start: jump or dash during the warning. If you feel you "could not dodge in time", tell me, that is useful to know and the timing can be tuned.
 
