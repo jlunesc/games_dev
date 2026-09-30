@@ -74,6 +74,8 @@ export interface BossState {
   lastAttacks: string[];
   /** Position in the phase's attack list used when following the fixed cycle. */
   cycleIndex: number;
+  /** Updates spent in the real fight (not the study), capped; a hit lowers it. See `TEMPER`. */
+  temper: number;
 }
 
 interface ShotBase {
@@ -231,6 +233,7 @@ function initialBoss(boss: BossDef): BossState {
     chainLeft: 0,
     lastAttacks: [],
     cycleIndex: 0,
+    temper: 0,
   };
 }
 

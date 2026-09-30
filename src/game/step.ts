@@ -14,7 +14,7 @@ import {
   playerBox,
   shotBox,
 } from './geometry';
-import { GAME, PLAYER, WORLD } from './params';
+import { GAME, PLAYER, TEMPER, WORLD } from './params';
 import { nextRandom } from './rng';
 import { moveShots } from './shots';
 import {
@@ -242,6 +242,7 @@ function resolvePlayerAttack(s: GameState, fight: FightDef, studying: boolean): 
   const damage = b.mode === 'stagger' ? boss.counter.damageMultiplier : 1;
   b.hp = Math.max(0, b.hp - damage);
   s.events.push('bossHit');
+  b.temper = Math.max(0, b.temper - TEMPER.relief);
   if (b.hp <= 0) {
     if (allBosses(s).every((each) => each.hp <= 0)) {
       s.phase = 'victory';

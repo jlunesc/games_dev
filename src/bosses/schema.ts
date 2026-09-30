@@ -144,6 +144,8 @@ export interface AttackDef {
 export interface PhaseAttack {
   id: string;
   weight: number;
+  /** A heavy attack becomes more likely as the boss's temper rises (see `BossDef.temper`). */
+  heavy?: boolean;
 }
 
 export interface PhaseDef {
@@ -215,6 +217,8 @@ export interface BossDef {
   phases: PhaseDef[];
   /** Present for a boss that flies (see `FlightDef`); absent for a boss that walks. */
   flight?: FlightDef;
+  /** 0 to 1: how strongly the boss gets angrier the longer it is not hit (heavy attacks likelier, shorter pauses). Absent means not at all. */
+  temper?: number;
   /** Platforms and cover in the arena. Absent means a bare arena. */
   arena?: ArenaDef;
 }

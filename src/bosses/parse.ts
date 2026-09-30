@@ -297,7 +297,13 @@ function phase(value: unknown, path: string, attackIds: ReadonlySet<string>): Ph
     const e = object(entry, `${path}.attacks[${i}]`);
     const id = text(e.id, `${path}.attacks[${i}].id`);
     if (!attackIds.has(id)) fail(`${path}.attacks[${i}].id`, `unknown attack "${id}"`);
-    return { id, weight: num(e.weight, `${path}.attacks[${i}].weight`, { min: 0.0001 }) };
+    const heavy = e.heavy;
+    if (heavy !== undefined && typeof heavy !== 'boolean') fail(`${path}.attacks[${i}].heavy`, 'expected true or false');
+    return {
+      id,
+      weight: num(e.weight, `${path}.attacks[${i}].weight`, { min: 0.0001 }),
+      ...(heavy === true ? { heavy: true } : {}),
+    };
   });
   if (attacks.length === 0) fail(`${path}.attacks`, 'needs at least one attack');
 
@@ -461,6 +467,8 @@ export function parseBoss(data: unknown): BossDef {
     }
   });
 
+  const parsedTemper = o.temper === undefined ? undefined : num(o.temper, 'boss.temper', { min: 0, max: 1 });
+
   return {
     id: text(o.id, 'boss.id'),
     name: text(o.name, 'boss.name'),
@@ -476,6 +484,7 @@ export function parseBoss(data: unknown): BossDef {
     attacks,
     phases,
     ...(parsedFlight === undefined ? {} : { flight: parsedFlight }),
+    ...(parsedTemper === undefined ? {} : { temper: parsedTemper }),
     ...(parsedArena === undefined ? {} : { arena: parsedArena }),
   };
 }

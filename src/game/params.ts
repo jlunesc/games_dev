@@ -44,3 +44,10 @@ export const SHOT = { arcBurstHeight: 90 };
 
 /** Eruptions: how tall a blast is (from the floor up), world units. A jump peaks near 163, so it does not clear it. */
 export const ERUPTION = { height: 220 };
+
+/**
+ * Temper: a boss that is left alone gets angrier. It builds for `start` + `ramp` updates (level 0 up to `start`, then rising to 1
+ * over `ramp`), each hit takes `relief` off. At level 1 a `heavy` attack is `1 + headWeight * strength` times as likely and the
+ * pause between attacks is `gapCut * strength` shorter.
+ */
+export const TEMPER = { start: 240, ramp: 360, relief: 180, headWeight: 2.5, gapCut: 0.5 };

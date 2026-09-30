@@ -1,6 +1,6 @@
-import type { AttackDef, BossDef, DiveDef, FlightDef, LeapDef, LeapTarget, PhaseDef } from '../bosses/schema';
+import type { AttackDef, BossDef, DiveDef, FlightDef, LeapDef, LeapTarget, PhaseAttack, PhaseDef } from '../bosses/schema';
 import { DT } from '../engine/time';
-import { WORLD } from './params';
+import { TEMPER, WORLD } from './params';
 import { nextRandom } from './rng';
 import { spawnShots } from './shots';
 import type { FightDef } from './fight';
@@ -22,6 +22,12 @@ function draw(s: GameState): number {
   const next = nextRandom(s.rng);
   s.rng = next.state;
   return next.value;
+}
+
+/** 0 to 1: how angry the boss is. Zero without a `temper` strength, during the study, and in a fight with partners. */
+export function temperLevel(s: GameState, boss: BossDef, b: BossState): number {
+  if (boss.temper === undefined || s.study.active || s.partners.length > 0) return 0;
+  return Math.min(1, Math.max(0, (b.temper - TEMPER.start) / TEMPER.ramp));
 }
 
 /**
@@ -111,10 +117,13 @@ function chooseAttack(s: GameState, boss: BossDef, phase: PhaseDef, index: numbe
     }
   }
 
-  const total = pool.reduce((sum, entry) => sum + entry.weight, 0);
+  const anger = boss.temper === undefined ? 0 : boss.temper * temperLevel(s, boss, b);
+  const weightOf = (entry: PhaseAttack): number =>
+    entry.heavy === true ? entry.weight * (1 + anger * TEMPER.headWeight) : entry.weight;
+  const total = pool.reduce((sum, entry) => sum + weightOf(entry), 0);
   let roll = weightRoll * total;
   for (const entry of pool) {
-    roll -= entry.weight;
+    roll -= weightOf(entry);
     if (roll < 0) return entry.id;
   }
   return pool[pool.length - 1]?.id ?? null;
@@ -148,7 +157,9 @@ function updateGap(s: GameState, boss: BossDef, phase: PhaseDef, index: number, 
   } else if (distance < boss.spacing.min) {
     moveBoss(b, boss, toward === 1 ? -1 : 1, phase.retreatSpeed);
   }
-  if (b.modeTick >= phase.gap && mayCommit) {
+  const anger = boss.temper === undefined ? 0 : boss.temper * temperLevel(s, boss, b);
+  const wait = Math.round(phase.gap * (1 - TEMPER.gapCut * anger));
+  if (b.modeTick >= wait && mayCommit) {
     // During the study the attacks come from the planned queue: no random draws, no chains.
     let id: string | null;
     if (s.study.active) {
@@ -388,6 +399,7 @@ export function updateBoss(s: GameState, boss: BossDef, index = 0, mayCommit = t
   const phase = boss.phases[b.phase];
   if (phase === undefined) return;
   b.modeTick += 1;
+  if (!s.study.active) b.temper = Math.min(b.temper + 1, TEMPER.start + TEMPER.ramp);
   if (boss.flight !== undefined && (b.mode === 'gap' || b.mode === 'approach' || b.mode === 'transition')) {
     settleLift(b, boss.flight);
   }
