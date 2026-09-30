@@ -462,7 +462,7 @@ Everything stays **on the phone**. Nothing is uploaded anywhere: the file only g
 
 ### The Stats screen
 In the menu, the **Stats** row sits between **Tweak difficulty** and **Settings**. It shows when you last exported ("Last export: never." at first) and a reminder that Android can clear browser data, so export now and then. It has three rows:
-- **Export**: shows how many fights are saved. While it works the screen says "Working…". It packs them into one file (its name ends in `.stats.json`, for example `boss-trainer-2026-09-21.stats.json`) and hands it to the phone.
+- **Export**: shows how many fights are saved. While it works the screen says "Working…". It packs them into one file (its name ends in `.stats.txt`, for example `boss-trainer-2026-09-21.stats.txt`; the content is JSON, the `.txt` name lets chat apps accept it) and hands it to the phone.
 - **Delete all fights**: asks twice. The first press changes the row to "Really delete all fights? Press again.", the second press deletes. Moving to another row cancels it. Export first.
 - **Back**: return to the menu.
 
@@ -481,7 +481,7 @@ Android can clear a browser's data by itself (for example when the phone is shor
 - [ ] The Stats row is between Tweak difficulty and Settings, and the number next to Export matches the fights you played.
 - [ ] Tapping Export opens the phone's share sheet (or, if the phone cannot, downloads a file). Note which one happened.
 - [ ] Pressing Export with the controller instead of a finger: note what happens (share sheet, only a download, or nothing).
-- [ ] The file's name ends in `.stats.json`.
+- [ ] The file's name ends in `.stats.txt`.
 - [ ] After a successful export, "Last export" shows today's date.
 - [ ] Delete asks twice, and afterwards the count is 0 and the screen says "All fights deleted." (Export first if you want to keep the fights.)
 - [ ] Close the app fully and open it again: the fights are still there (the count on the Stats screen is the same).

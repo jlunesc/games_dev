@@ -7,7 +7,7 @@ What the game records about every fight, how it is stored and exported, and what
 - Every fight that ran is saved on the device, in the browser's IndexedDB (database `boss-trainer`, store `fights`, key `id`). A fight that is left before its first update ran is not saved.
 - Nothing is uploaded. There is no backend and no account. The Stats screen has an **Export** row that builds one file and hands it to the phone's share sheet (or saves it as a download on a PC). The player then sends the file wherever they choose, for example to Claude for analysis.
 - Android can clear browser data, so export now and then. Delete on the Stats screen removes every saved fight from the device (it asks twice).
-- Exports are never committed. `.gitignore` covers `*.stats.json`, `*.stats.csv`, `/stats/`, `/stats-export/` and `/exports/` (SPEC section 4, rule 6).
+- Exports are never committed. `.gitignore` covers `*.stats.txt`, `*.stats.json`, `*.stats.csv`, `/stats/`, `/stats-export/` and `/exports/` (SPEC section 4, rule 6).
 - CSV is not built (SPEC section 9, still open).
 
 ## 2. The main idea: record the input, measure by replay
@@ -25,7 +25,7 @@ The game is deterministic. A fight is fully described by the boss, the difficult
 
 ## 4. The export file
 
-A single JSON document (written without indentation), named `boss-trainer-YYYY-MM-DD.stats.json` where the date is the UTC date of the export (for example `boss-trainer-2026-09-21.stats.json`). The name always ends in `.stats.json`, which git ignores.
+A single JSON document (written without indentation) saved as a plain text file, named `boss-trainer-YYYY-MM-DD.stats.txt` where the date is the UTC date of the export (for example `boss-trainer-2026-09-21.stats.txt`). The name always ends in `.stats.txt`, which git ignores. The content is JSON; it has a `.txt` name only because chat apps (the Claude app, for one) refuse `.json` attachments. Exports made before this change are named `.stats.json`, have the same content and stay valid.
 
 | Field | Type | Meaning |
 |---|---|---|

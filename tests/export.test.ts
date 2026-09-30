@@ -56,12 +56,12 @@ function playScripted(updates: number): { state: GameState; fight: StoredFight }
 const NOW = new Date('2026-09-21T10:00:00Z');
 
 describe('buildExport', () => {
-  it('wraps the fights in a versioned document with a dated .stats.json name', () => {
+  it('wraps the fights in a versioned document with a dated .stats.txt name', () => {
     const { fight } = playScripted(300);
     const file = buildExport([fight], NOW);
     expect(file.count).toBe(1);
-    expect(file.name).toBe('boss-trainer-2026-09-21.stats.json');
-    expect(file.name).toMatch(/\.stats\.json$/);
+    expect(file.name).toBe('boss-trainer-2026-09-21.stats.txt');
+    expect(file.name).toMatch(/\.stats\.txt$/);
     const parsed = JSON.parse(file.json) as ExportDocument;
     expect(parsed.format).toBe(EXPORT_FORMAT);
     expect(parsed.schemaVersion).toBe(STATS_SCHEMA_VERSION);
@@ -112,7 +112,7 @@ describe('last export date', () => {
 });
 
 describe('shareOrDownload', () => {
-  const file: ExportFile = { name: 'boss-trainer-2026-09-21.stats.json', json: '{"fights":[]}', count: 0 };
+  const file: ExportFile = { name: 'boss-trainer-2026-09-21.stats.txt', json: '{"fights":[]}', count: 0 };
 
   afterEach(() => {
     vi.useRealTimers();
@@ -182,23 +182,14 @@ describe('shareOrDownload', () => {
     expect(anchor.click).toHaveBeenCalledTimes(1);
   });
 
-  it('shares the same content as plain text when the browser refuses a JSON file', async () => {
+  it('shares the file as plain text', async () => {
     const share = vi.fn().mockResolvedValue(undefined);
-    const canShare = vi.fn((data: { files: File[] }) => data.files[0]!.type === 'text/plain');
-    vi.stubGlobal('navigator', { canShare, share });
+    vi.stubGlobal('navigator', { canShare: () => true, share });
     expect(await shareOrDownload(file)).toBe('shared');
-    expect(canShare).toHaveBeenCalledTimes(2);
     const shared = share.mock.calls[0]![0] as { files: File[] };
     expect(shared.files[0]!.type).toBe('text/plain');
     expect(shared.files[0]!.name).toBe(file.name);
     expect(await shared.files[0]!.text()).toBe(file.json);
-  });
-
-  it('shares a JSON file first when the browser accepts it', async () => {
-    const share = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { canShare: () => true, share });
-    await shareOrDownload(file);
-    expect((share.mock.calls[0]![0] as { files: File[] }).files[0]!.type).toBe('application/json');
   });
 
   it('removes the link even when the click fails', async () => {

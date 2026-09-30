@@ -18,7 +18,7 @@ export interface ExportFile {
   count: number;
 }
 
-/** The export document as a file. The name ends in `.stats.json`, which git ignores (exports are never committed). */
+/** The export document as a file. The content is JSON, but the name ends in `.stats.txt` (plain text) so chat apps accept it as an attachment; git ignores it (exports are never committed). */
 export function buildExport(fights: readonly StoredFight[], now: Date): ExportFile {
   const document: ExportDocument = {
     format: EXPORT_FORMAT,
@@ -28,7 +28,7 @@ export function buildExport(fights: readonly StoredFight[], now: Date): ExportFi
     fights: [...fights],
   };
   return {
-    name: `boss-trainer-${now.toISOString().slice(0, 10)}.stats.json`,
+    name: `boss-trainer-${now.toISOString().slice(0, 10)}.stats.txt`,
     json: JSON.stringify(document),
     count: fights.length,
   };
@@ -42,15 +42,12 @@ export type ShareResult = 'shared' | 'downloaded' | 'cancelled' | 'failed';
  */
 export async function shareOrDownload(file: ExportFile): Promise<ShareResult> {
   try {
-    // Some browsers only accept a file type they know: try JSON first, then the same text as plain text.
     if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
       try {
-        for (const type of ['application/json', 'text/plain']) {
-          const shareable = new File([file.json], file.name, { type });
-          if (navigator.canShare({ files: [shareable] })) {
-            await navigator.share({ files: [shareable], title: 'Boss Trainer stats' });
-            return 'shared';
-          }
+        const shareable = new File([file.json], file.name, { type: 'text/plain' });
+        if (navigator.canShare({ files: [shareable] })) {
+          await navigator.share({ files: [shareable], title: 'Boss Trainer stats' });
+          return 'shared';
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
@@ -58,7 +55,7 @@ export async function shareOrDownload(file: ExportFile): Promise<ShareResult> {
       }
     }
     if (typeof document === 'undefined') return 'failed';
-    const url = URL.createObjectURL(new Blob([file.json], { type: 'application/json' }));
+    const url = URL.createObjectURL(new Blob([file.json], { type: 'text/plain' }));
     const link = document.createElement('a');
     try {
       link.href = url;

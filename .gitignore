@@ -9,4 +9,5 @@ dist/
 /stats-export/
 /exports/
 *.stats.json
+*.stats.txt
 *.stats.csv
