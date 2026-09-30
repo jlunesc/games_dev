@@ -18,6 +18,9 @@ export const MID_UP_TO = 400;
 /** The player's x is sampled once every this many updates (10 per second). */
 export const POSITION_EVERY = 6;
 
+/** A travel dash that ended more than this many world units closer to (or farther from) the nearest boss than it began counts as closer (or farther); otherwise even. */
+export const TRAVEL_DASH_CHANGE = 40;
+
 export type PlayerAction = 'idle' | 'running' | 'airborne' | 'dashing' | 'attacking';
 /**
  * `interrupted`: the attack was cut short before its dangerous window finished (the fight ended or was left,
@@ -97,6 +100,20 @@ export interface BossAnalysis {
   damageDealt: number;
 }
 
+/** What the dashes of the real fight achieved. Every dash of the real fight is in exactly one counter. */
+export interface DashUse {
+  /** Dashes during an attack that was dodged with evasion `dash`. */
+  escaped: number;
+  /** Dashes during an attack that hit the player. */
+  hitAnyway: number;
+  /** Dashes during an attack that was dodged another way (distance, jump, platform or cover). */
+  notNeeded: number;
+  /** Dashes during an attack that was countered or cut short. */
+  other: number;
+  /** Dashes with no attack live, by what they did to the distance to the nearest boss. */
+  travel: { closer: number; farther: number; even: number };
+}
+
 export interface Analysis {
   ticks: number;
   /** The whole session, the study included. */
@@ -123,6 +140,8 @@ export interface Analysis {
   counters: number;
   dashes: number;
   jumps: number;
+  /** What the dashes of the real fight (the study excluded) achieved. */
+  dashUse: DashUse;
   attacks: AttackOccurrence[];
   study: StudyAnalysis;
   behavior: {
@@ -200,6 +219,8 @@ interface OpenAttack {
   /** The update the attack could first hurt has been seen (the swing check is made once, on it). */
   dangerSeen: boolean;
   swingAtDanger: boolean;
+  /** Dashes of the real fight begun while this attack was the live one. */
+  dashes: number;
 }
 
 function occurrence(open: OpenAttack): AttackOccurrence {
@@ -295,6 +316,9 @@ export function analyzeRun(
   const playerHitTicks: number[] = [];
   const positions: number[] = [];
   const punish: PunishWindows = { opened: 0, taken: 0, missed: 0 };
+  const dashUse: DashUse = { escaped: 0, hitAnyway: 0, notNeeded: 0, other: 0, travel: { closer: 0, farther: 0, even: 0 } };
+  /** Travel dashes begun but not yet judged: the update they end on, and the distance when they began. */
+  let travelling: { endTick: number; from: number }[] = [];
   let swings = 0;
   let swingsThatHit = 0;
   let counters = 0;
@@ -315,6 +339,31 @@ export function analyzeRun(
   /** Attacks that are over but whose shots are still flying; each is emitted once its last shot is gone. */
   let lingering: OpenAttack[] = [];
 
+  /** Emits an attack's occurrence and credits the dashes made during it by how it ended. */
+  const emit = (attack: OpenAttack): void => {
+    const made = occurrence(attack);
+    attacks.push(made);
+    if (attack.dashes === 0) return;
+    if (made.outcome === 'hit') dashUse.hitAnyway += attack.dashes;
+    else if (made.outcome === 'dodged') {
+      if (made.evasion === 'dash') dashUse.escaped += attack.dashes;
+      else dashUse.notNeeded += attack.dashes;
+    } else dashUse.other += attack.dashes;
+  };
+
+  /** The attack a dash begun on `tick` belongs to: of the live attacks (warning up to the end of the danger, or shots still flying) the one whose warning began first; null when none is live. */
+  const liveAttack = (tick: number): OpenAttack | null => {
+    const live = lingering.filter((x) => !x.study && !x.shotsDone && !x.shotsCleared);
+    if (open !== null && !open.study && tick - open.startTick - open.held <= open.dangerTo) live.push(open);
+    return live.reduce<OpenAttack | null>((first, x) => (first === null || x.startTick < first.startTick ? x : first), null);
+  };
+
+  const judgeTravel = (from: number, to: number): void => {
+    if (to < from - TRAVEL_DASH_CHANGE) dashUse.travel.closer += 1;
+    else if (to > from + TRAVEL_DASH_CHANGE) dashUse.travel.farther += 1;
+    else dashUse.travel.even += 1;
+  };
+
   // `cutShort`: the run ended while the attack was still going. A punish window that was cut short and never
   // saw a hit is not counted: the player did not get the chance to use it.
   const finish = (attack: OpenAttack, cutShort: boolean): void => {
@@ -325,7 +374,7 @@ export function analyzeRun(
       else punish.missed += 1;
     }
     if (attack.shotsFired > 0 && !attack.shotsDone && !attack.shotsCleared && !cutShort) lingering.push(attack);
-    else attacks.push(occurrence(attack));
+    else emit(attack);
   };
 
   const dodgeBegan = (before: GameState, after: GameState): boolean =>
@@ -464,6 +513,11 @@ export function analyzeRun(
     const jumpStarted = before.player.onGround && !after.player.onGround && after.player.vy < 0;
     const playerHit = events.includes('playerHit');
     if (dashStarted) dashes += 1;
+    if (dashStarted && !before.study.active) {
+      const live = liveAttack(tick);
+      if (live !== null) live.dashes += 1;
+      else travelling.push({ endTick: tick + PLAYER.dash.duration, from: nearestDistance(before) });
+    }
     if (jumpStarted) jumps += 1;
     if (after.player.attackTick === 0) swings += 1;
     if (events.includes('bossHit')) {
@@ -481,6 +535,11 @@ export function analyzeRun(
       maxPhases[i] = Math.max(reached, bossAt(after, i).phase);
     });
     const distance = nearestDistance(after);
+    travelling = travelling.filter((d) => {
+      if (tick < d.endTick) return true;
+      judgeTravel(d.from, distance);
+      return false;
+    });
     // An update belongs to the study when it ran while the study was on (the study's last update included).
     const inStudy = before.study.active;
     if (distance < CLOSE_BELOW) {
@@ -499,7 +558,7 @@ export function analyzeRun(
     for (const waiting of lingering) observeShots(waiting, before, after, frame);
     const settled = lingering.filter((x) => x.shotsDone || x.shotsCleared);
     if (settled.length > 0) {
-      for (const x of settled) attacks.push(occurrence(x));
+      for (const x of settled) emit(x);
       lingering = lingering.filter((x) => !settled.includes(x));
     }
     if (open !== null) observe(open, before, after, frame);
@@ -554,6 +613,7 @@ export function analyzeRun(
         held: 0,
         dangerSeen: false,
         swingAtDanger: false,
+        dashes: 0,
       };
       // What happened on the update the attack began (a dodge, or a counter that cancels it at once) counts too.
       observe(open, before, after, frame);
@@ -563,9 +623,10 @@ export function analyzeRun(
       }
     }
   }
+  for (const d of travelling) judgeTravel(d.from, nearestDistance(state));
   if (open !== null) finish(open, true);
   // Shots still flying when the run ended: their attacks are not resolved.
-  for (const waiting of lingering) attacks.push(occurrence(waiting));
+  for (const waiting of lingering) emit(waiting);
   attacks.sort((a, b) => a.startTick - b.startTick);
 
   const studyTicks = state.study.active ? studyUpdates : state.study.endTick;
@@ -599,6 +660,7 @@ export function analyzeRun(
     counters,
     dashes,
     jumps,
+    dashUse,
     attacks,
     study: {
       rounds: studyRounds,
