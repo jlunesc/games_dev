@@ -13,7 +13,7 @@ function soloWarden(id: string): BossDef {
     ...QUILL_WARDEN,
     spacing: { min: 0, max: 1e9 },
     attacks: QUILL_WARDEN.attacks.map((a) => ({ ...a, range: { min: 0, max: 1e9 } })),
-    phases: QUILL_WARDEN.phases.map((p) => ({ ...p, gap: 1, maxChain: 1, chainChance: 0, attacks: [{ id, weight: 1 }] })),
+    phases: QUILL_WARDEN.phases.map((p) => ({ ...p, gap: 1, maxChain: 1, chainChance: 0, combos: [], attacks: [{ id, weight: 1 }] })),
   };
 }
 
@@ -25,7 +25,7 @@ function facing(boss: BossDef, distance: number): GameState {
 }
 
 describe('the Quill Warden file', () => {
-  it('is loaded, has five attacks (three melee, an anti-air swipe and a backwards vault), no arena and exactly one counterable attack', () => {
+  it('is loaded, has six attacks (four melee, an anti-air swipe and a backwards vault), no arena and exactly one counterable attack', () => {
     expect(QUILL_WARDEN).toBeDefined();
     expect(QUILL_WARDEN.id).toBe('quill-warden');
     expect(QUILL_WARDEN.name).toBe('Quill Warden');
@@ -35,6 +35,7 @@ describe('the Quill Warden file', () => {
       'overextended-thrust',
       'backwards-vault',
       'rising-swipe',
+      'snap-piercer',
     ]);
     expect(QUILL_WARDEN.arena).toBeUndefined();
     expect(QUILL_WARDEN.attacks.filter((a) => a.class === 'counterable')).toHaveLength(1);

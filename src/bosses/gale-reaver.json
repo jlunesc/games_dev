@@ -17,6 +17,10 @@
     "staggerTicks": 90,
     "damageMultiplier": 2
   },
+  "reaction": {
+    "attack": "gale-recoil",
+    "cooldown": 240
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -116,6 +120,54 @@
           "both": true
         }
       ]
+    },
+    {
+      "id": "gale-carry",
+      "name": "Gale Carry",
+      "pose": "crouch",
+      "class": "mustDodge",
+      "windup": 22,
+      "active": 24,
+      "recovery": 24,
+      "range": {
+        "min": 0,
+        "max": 400
+      },
+      "move": {
+        "from": 22,
+        "to": 46,
+        "speed": 1500
+      },
+      "hits": [
+        {
+          "from": 22,
+          "to": 46,
+          "x0": 0,
+          "x1": 100,
+          "bottom": 0,
+          "top": 100
+        }
+      ]
+    },
+    {
+      "id": "gale-recoil",
+      "name": "Gale Recoil",
+      "pose": "raised",
+      "class": "mustDodge",
+      "windup": 6,
+      "active": 12,
+      "recovery": 8,
+      "range": {
+        "min": 0,
+        "max": 1000
+      },
+      "move": {
+        "from": 6,
+        "to": 18,
+        "speed": 1200,
+        "dir": "back"
+      },
+      "hits": []
     }
   ],
   "phases": [
@@ -142,9 +194,21 @@
       ],
       "gap": 35,
       "maxChain": 3,
-      "chainChance": 0.7,
+      "chainChance": 0.3,
       "walkSpeed": 420,
-      "retreatSpeed": 380
+      "retreatSpeed": 380,
+      "combos": [
+        [
+          "wind-slash",
+          "gale-jab",
+          "gale-carry"
+        ],
+        [
+          "gale-jab",
+          "gale-jab",
+          "gale-cyclone"
+        ]
+      ]
     }
   ]
 }

@@ -17,6 +17,10 @@
     "staggerTicks": 90,
     "damageMultiplier": 2
   },
+  "temper": 0.8,
+  "shield": {
+    "turnTicks": 90
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -170,7 +174,8 @@
         },
         {
           "id": "late-herald",
-          "weight": 2
+          "weight": 1,
+          "heavy": true
         },
         {
           "id": "brass-slam",
@@ -186,13 +191,14 @@
         },
         {
           "id": "brass-snap",
-          "weight": 2
+          "weight": 1,
+          "heavy": true
         }
       ],
       "gap": 50,
       "maxChain": 1,
       "chainChance": 0,
-      "walkSpeed": 240,
+      "walkSpeed": 150,
       "retreatSpeed": 80
     }
   ]

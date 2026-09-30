@@ -28,7 +28,7 @@ function seer(boss: BossDef, lookahead: number) {
       if (probe.player.health < prev.player.health) return withInput({ dashPressed: true, moveX: away });
     }
     const dx = prev.boss.x - prev.player.x;
-    return withInput({ moveX: Math.abs(dx) < 100 ? 0 : dx > 0 ? 1 : -1, attackPressed: prev.boss.mode !== 'attack' && n % 18 === 0 });
+    return withInput({ moveX: Math.abs(dx) < 100 ? 0 : dx > 0 ? 1 : -1, attackPressed: n % 18 === 0 });
   };
 }
 
@@ -45,7 +45,7 @@ function soloOf(base: BossDef, id: string): BossDef {
     ...base,
     spacing: { min: 0, max: 1e9 },
     attacks: base.attacks.map((a) => ({ ...a, range: { min: 0, max: 1e9 } })),
-    phases: base.phases.map((p) => ({ ...p, opening: undefined, gap: 1, maxChain: 1, chainChance: 0, attacks: [{ id, weight: 1 }] })),
+    phases: base.phases.map((p) => ({ ...p, opening: undefined, gap: 1, maxChain: 1, chainChance: 0, combos: [], attacks: [{ id, weight: 1 }] })),
   };
 }
 

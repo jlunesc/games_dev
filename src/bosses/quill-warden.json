@@ -17,6 +17,11 @@
     "staggerTicks": 90,
     "damageMultiplier": 2
   },
+  "temper": 0.7,
+  "reaction": {
+    "attack": "backwards-vault",
+    "cooldown": 300
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -132,6 +137,29 @@
           "top": 330
         }
       ]
+    },
+    {
+      "id": "snap-piercer",
+      "name": "Snap Piercer",
+      "pose": "down",
+      "class": "mustDodge",
+      "windup": 14,
+      "active": 6,
+      "recovery": 8,
+      "range": {
+        "min": 260,
+        "max": 390
+      },
+      "hits": [
+        {
+          "from": 14,
+          "to": 20,
+          "x0": 0,
+          "x1": 390,
+          "bottom": 0,
+          "top": 60
+        }
+      ]
     }
   ],
   "phases": [
@@ -158,13 +186,24 @@
         {
           "id": "backwards-vault",
           "weight": 2
+        },
+        {
+          "id": "snap-piercer",
+          "weight": 1,
+          "heavy": true
         }
       ],
       "gap": 55,
       "maxChain": 1,
       "chainChance": 0,
       "walkSpeed": 260,
-      "retreatSpeed": 320
+      "retreatSpeed": 320,
+      "combos": [
+        [
+          "snap-piercer",
+          "rising-swipe"
+        ]
+      ]
     }
   ]
 }

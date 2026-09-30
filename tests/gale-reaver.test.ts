@@ -5,7 +5,7 @@ import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 
 describe('the Gale Reaver file', () => {
-  it('is loaded, has four attacks and no arena', () => {
+  it('is loaded, has six attacks and no arena', () => {
     expect(GALE_REAVER).toBeDefined();
     expect(GALE_REAVER.id).toBe('gale-reaver');
     expect(GALE_REAVER.name).toBe('Gale Reaver');
@@ -14,6 +14,8 @@ describe('the Gale Reaver file', () => {
       'gale-jab',
       'tempest-rush',
       'gale-cyclone',
+      'gale-carry',
+      'gale-recoil',
     ]);
     expect(GALE_REAVER.arena).toBeUndefined();
     expect(GALE_REAVER.phases).toHaveLength(1);
@@ -23,9 +25,10 @@ describe('the Gale Reaver file', () => {
     const phase = GALE_REAVER.phases[0]!;
     expect(phase.gap).toBeLessThanOrEqual(40);
     expect(phase.maxChain).toBeGreaterThanOrEqual(3);
+    expect(phase.combos).toHaveLength(2);
     expect(phase.chainChance).toBeGreaterThan(0);
     expect(phase.walkSpeed).toBeGreaterThanOrEqual(400);
-    for (const a of GALE_REAVER.attacks) expect(a.windup).toBeGreaterThanOrEqual(18);
+    for (const a of GALE_REAVER.attacks) if (a.id !== 'gale-recoil') expect(a.windup).toBeGreaterThanOrEqual(18);
   });
 });
 

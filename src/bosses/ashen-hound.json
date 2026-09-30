@@ -17,6 +17,11 @@
     "staggerTicks": 90,
     "damageMultiplier": 2
   },
+  "temper": 0.6,
+  "reaction": {
+    "attack": "skitter",
+    "cooldown": 300
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -85,7 +90,7 @@
       "move": {
         "from": 18,
         "to": 28,
-        "speed": 1400
+        "speed": 1600
       },
       "hits": []
     },
@@ -136,6 +141,26 @@
         "speed": 300
       },
       "hits": []
+    },
+    {
+      "id": "skitter",
+      "name": "Skitter",
+      "pose": "crouch",
+      "class": "mustDodge",
+      "windup": 8,
+      "active": 12,
+      "recovery": 10,
+      "range": {
+        "min": 0,
+        "max": 1000
+      },
+      "move": {
+        "from": 8,
+        "to": 20,
+        "speed": 900,
+        "dir": "back"
+      },
+      "hits": []
     }
   ],
   "phases": [
@@ -157,7 +182,8 @@
         },
         {
           "id": "pounce",
-          "weight": 3
+          "weight": 3,
+          "heavy": true
         },
         {
           "id": "feint",
@@ -168,7 +194,13 @@
       "maxChain": 2,
       "chainChance": 0.35,
       "walkSpeed": 330,
-      "retreatSpeed": 260
+      "retreatSpeed": 260,
+      "combos": [
+        [
+          "slip",
+          "bite"
+        ]
+      ]
     }
   ]
 }

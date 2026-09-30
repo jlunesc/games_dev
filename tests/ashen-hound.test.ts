@@ -34,6 +34,7 @@ function solo(id: string, withArena = false): BossDef {
       gap: 1,
       maxChain: 1,
       chainChance: 0,
+      combos: [],
       attacks: [{ id, weight: 1 }],
     })),
   };
@@ -51,7 +52,7 @@ describe('the Ashen Hound file', () => {
   it('is loaded and found by id', () => {
     expect(ASHEN_HOUND).toBeDefined();
     expect(ASHEN_HOUND.id).toBe('ashen-hound');
-    expect(ASHEN_HOUND.attacks.map((a) => a.id)).toEqual(['bite', 'rush', 'slip', 'pounce', 'feint']);
+    expect(ASHEN_HOUND.attacks.map((a) => a.id)).toEqual(['bite', 'rush', 'slip', 'pounce', 'feint', 'skitter']);
     expect(ASHEN_HOUND.phases).toHaveLength(1);
     expect(bossById('ashen-hound')).toBe(ASHEN_HOUND);
   });
