@@ -202,8 +202,13 @@ describe('the Boss row with a pair', () => {
     expect(m.prefs.bossId).toBe('golem-and-kite');
     expect(valueOf(m)).toBe('Golem and Kite');
     m = press(m, 'right');
+    expect(m.prefs.bossId).toBe('brute-and-dancer');
+    m = press(m, 'right');
+    expect(m.prefs.bossId).toBe('warden-and-brute');
+    expect(valueOf(m)).toBe('Warden and Brute');
+    m = press(m, 'right');
     expect(m.prefs.bossId).toBe('generated');
-    m = press(m, 'left', 'left', 'left');
+    m = press(m, 'left', 'left', 'left', 'left', 'left');
     expect(m.prefs.bossId).toBe(lastNamed.id);
   });
 

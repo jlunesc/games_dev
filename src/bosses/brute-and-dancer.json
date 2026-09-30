@@ -1,0 +1,9 @@
+{
+  "id": "brute-and-dancer",
+  "name": "Brute and Dancer",
+  "bosses": [
+    { "boss": "tremor-brute", "healthScale": 0.6 },
+    { "boss": "veil-dancer", "healthScale": 0.6 }
+  ],
+  "enrage": { "gapScale": 0.6, "walkScale": 1.3 }
+}

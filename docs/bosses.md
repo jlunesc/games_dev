@@ -530,7 +530,7 @@ Changing the numbers in a pair file (health scales, enrage) changes how recorded
 
 To add a pair: create `src/bosses/<id>.json`, load it in `src/bosses/pairs.ts` (`parsePair(raw, knownBoss)`) and add it to `PAIRS`, then add a test like the ones for Hound and Sage and for Golem and Kite in `tests/pair-parse.test.ts` and a copy of `tests/golem-and-kite.test.ts` (shared scripted players in `tests/pair-helpers.ts`). The Boss row picks it up with no other change. The full recipe and the list of candidate pairs are in `docs/backlog.md`, "Two-boss fights, left out".
 
-Built pairs: `hound-and-sage` (above) and `golem-and-kite` (`cinder-golem` and `storm-kite`, health 0.6 each and the same enrage numbers).
+Built pairs: `hound-and-sage` (above), `golem-and-kite` (`cinder-golem` and `storm-kite`), `brute-and-dancer` (`tremor-brute` and `veil-dancer`) and `warden-and-brute` (`quill-warden` and `tremor-brute`); the last three have health 0.6 each and the same enrage numbers as the first.
 
 ## 6. Ideas not built yet
 

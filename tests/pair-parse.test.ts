@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, BOSSES, CINDER_GOLEM, STORM_KITE, VESPER_SAGE, bossById } from '../src/bosses';
+import {
+  ASHEN_HOUND,
+  BOSSES,
+  CINDER_GOLEM,
+  QUILL_WARDEN,
+  STORM_KITE,
+  TREMOR_BRUTE,
+  VEIL_DANCER,
+  VESPER_SAGE,
+  bossById,
+} from '../src/bosses';
 import { PairFormatError, parsePair } from '../src/bosses/pair';
 import rawPair from '../src/bosses/hound-and-sage.json';
-import { GOLEM_AND_KITE, HOUND_AND_SAGE, PAIRS, pairById } from '../src/bosses/pairs';
+import { BRUTE_AND_DANCER, GOLEM_AND_KITE, HOUND_AND_SAGE, PAIRS, WARDEN_AND_BRUTE, pairById } from '../src/bosses/pairs';
 import type { BossDef } from '../src/bosses/schema';
 
 const strict = (id: string): BossDef | undefined => BOSSES.find((b) => b.id === id);
@@ -130,8 +140,17 @@ describe('the pair registry', () => {
     expect(GOLEM_AND_KITE.bosses.map((m) => m.boss)).toEqual([CINDER_GOLEM.id, STORM_KITE.id]);
   });
 
+  it('lists Brute and Dancer, the Brute first, and Warden and Brute, the Warden first', () => {
+    expect(BRUTE_AND_DANCER.id).toBe('brute-and-dancer');
+    expect(BRUTE_AND_DANCER.name).toBe('Brute and Dancer');
+    expect(BRUTE_AND_DANCER.bosses.map((m) => m.boss)).toEqual([TREMOR_BRUTE.id, VEIL_DANCER.id]);
+    expect(WARDEN_AND_BRUTE.id).toBe('warden-and-brute');
+    expect(WARDEN_AND_BRUTE.name).toBe('Warden and Brute');
+    expect(WARDEN_AND_BRUTE.bosses.map((m) => m.boss)).toEqual([QUILL_WARDEN.id, TREMOR_BRUTE.id]);
+  });
+
   it('lists Hound and Sage, the Hound first (the Hound is the primary boss)', () => {
-    expect(PAIRS).toEqual([HOUND_AND_SAGE, GOLEM_AND_KITE]);
+    expect(PAIRS).toEqual([HOUND_AND_SAGE, GOLEM_AND_KITE, BRUTE_AND_DANCER, WARDEN_AND_BRUTE]);
     expect(HOUND_AND_SAGE.id).toBe('hound-and-sage');
     expect(HOUND_AND_SAGE.name).toBe('Hound and Sage');
     expect(HOUND_AND_SAGE.bosses.map((m) => m.boss)).toEqual([ASHEN_HOUND.id, VESPER_SAGE.id]);
@@ -140,6 +159,8 @@ describe('the pair registry', () => {
   it('finds a pair by id and returns undefined for anything else', () => {
     expect(pairById('hound-and-sage')).toBe(HOUND_AND_SAGE);
     expect(pairById('golem-and-kite')).toBe(GOLEM_AND_KITE);
+    expect(pairById('brute-and-dancer')).toBe(BRUTE_AND_DANCER);
+    expect(pairById('warden-and-brute')).toBe(WARDEN_AND_BRUTE);
     expect(pairById('ember-duelist')).toBeUndefined();
     expect(pairById('generated')).toBeUndefined();
     expect(pairById('nobody')).toBeUndefined();

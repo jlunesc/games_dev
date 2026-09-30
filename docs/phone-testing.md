@@ -548,6 +548,51 @@ The second pair, right after Hound and Sage on the **Boss** row: **Golem and Kit
 - Is it clear where to stand? Did the Kite's bolts and the Golem's slam ever feel unavoidable together?
 - Is the angry survivor a wall, or too easy?
 
+## Two bosses in one fight (Brute and Dancer)
+The fourth pair, after Golem and Kite: **Brute and Dancer**. The Tremor Brute (a heavy fighter whose fists and quakes send shockwaves along the floor, up to 700 units) and the Veil Dancer (a quick fighter that blinks around and fires fans of needles) fight you together, on the Brute's flat floor. What it is meant to train: jumping floor shockwaves while the other boss blinks around, so you cannot stand still after a jump. All the pair rules are the same as for Hound and Sage (read "What to expect" there): two health bars (the first-named boss on top), turns, the sword hits the nearest boss in reach, the survivor is enraged, no study ("Off (pairs)"). As in every pair fight, the bosses' anger buildup and their answer to a hit are switched off.
+
+### What to expect
+- In scripted tests a bot that only chases and swings, never dodging, wins 8 of 8 on Easy, 4 of 8 on Normal and 0 of 8 on Hard.
+- The health numbers (60% of each boss's usual health) and the angry-survivor numbers are first guesses, the same as for the other pairs.
+
+### Checklist
+- [ ] Brute and Dancer is on the Boss row (after the earlier pairs, before Generated), the menu remembers it, and Fight starts it. The Study row reads "Off (pairs)".
+- [ ] Both bosses and both health bars are readable and in view, and the two bosses do not stay stuck inside each other.
+- [ ] The turn marker follows the boss that holds the turn, and only one boss attacks at a time.
+- [ ] A Dancer blink never leaves it inside the Brute or off screen, and its blink mark is clear.
+- [ ] The Brute's floor waves and the Dancer's needles never appear together (turn rule), and a jump over a wave does not land you in the Dancer's next attack unfairly.
+- [ ] A swing hits only the nearest boss in reach. The fight ends in victory only when both bars are at zero.
+- [ ] Stats save and export; the exported `bossId` is the pair's id and the analysis has two entries in `bosses`.
+- [ ] The phone stays smooth with both bosses and their effects on screen.
+
+### Questions about the pair
+- Too hard, too easy or about right on Normal? Which boss makes it hard?
+- Is it clear where to stand, and who is about to attack?
+- Did the Dancer's blinks make it hard to know where to stand after a jump?
+- Is the angry survivor a wall, or too easy?
+
+## Two bosses in one fight (Warden and Brute)
+The fifth pair: **Warden and Brute**. The Quill Warden (a tall fighter that pokes and pierces from a long way off) and the Tremor Brute (a heavy fighter who has to be close) fight you together, on the Warden's flat floor. What it is meant to train: reach against close range, so where you stand decides which boss is dangerous. All the pair rules are the same as for Hound and Sage (read "What to expect" there): two health bars (the first-named boss on top), turns, the sword hits the nearest boss in reach, the survivor is enraged, no study ("Off (pairs)"). As in every pair fight, the bosses' anger buildup and their answer to a hit are switched off.
+
+### What to expect
+- In scripted tests a bot that only chases and swings, never dodging, wins 8 of 8 on Easy, 3 of 8 on Normal and 0 of 8 on Hard.
+- The health numbers (60% of each boss's usual health) and the angry-survivor numbers are first guesses, the same as for the other pairs.
+
+### Checklist
+- [ ] Warden and Brute is on the Boss row (after the earlier pairs, before Generated), the menu remembers it, and Fight starts it. The Study row reads "Off (pairs)".
+- [ ] Both bosses and both health bars are readable and in view, and the two bosses do not stay stuck inside each other.
+- [ ] The turn marker follows the boss that holds the turn, and only one boss attacks at a time.
+- [ ] The Warden's long pokes and the Brute's close attacks make you choose a spot: standing far from one is not the same as standing far from the other.
+- [ ] A swing hits only the nearest boss in reach. The fight ends in victory only when both bars are at zero.
+- [ ] Stats save and export; the exported `bossId` is the pair's id and the analysis has two entries in `bosses`.
+- [ ] The phone stays smooth with both bosses and their effects on screen.
+
+### Questions about the pair
+- Too hard, too easy or about right on Normal? Which boss makes it hard?
+- Is it clear where to stand, and who is about to attack?
+- Did you ever feel safe anywhere on the floor, or was there always something in reach?
+- Is the angry survivor a wall, or too easy?
+
 ## Sound (M7)
 The ten placeholder beeps are gone. Every sound is made in code, so nothing extra was downloaded. **Settings** now has a **Volume** row (Off, Low, Medium, High; it starts on **Medium**). An old saved "Sound off" becomes Volume Off. Sound still needs one tap on the screen after the app starts.
 

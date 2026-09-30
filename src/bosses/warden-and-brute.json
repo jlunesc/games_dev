@@ -1,0 +1,9 @@
+{
+  "id": "warden-and-brute",
+  "name": "Warden and Brute",
+  "bosses": [
+    { "boss": "quill-warden", "healthScale": 0.6 },
+    { "boss": "tremor-brute", "healthScale": 0.6 }
+  ],
+  "enrage": { "gapScale": 0.6, "walkScale": 1.3 }
+}
