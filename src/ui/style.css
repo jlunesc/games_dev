@@ -250,6 +250,13 @@ body {
   font-size: 1.1rem;
 }
 
+@media (max-height: 820px) {
+  .summary-line {
+    margin: 0.15rem 0;
+    font-size: 0.95rem;
+  }
+}
+
 /* The menus sit over the arena of the selected boss (drawn on .scene-canvas); --accent is set per boss on .panel. */
 .scene-canvas {
   position: fixed;
