@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, BRASS_SENTINEL, CINDER_GOLEM, GALE_REAVER, QUILL_WARDEN, STORM_KITE, TREMOR_BRUTE } from '../src/bosses';
+import {
+  ASHEN_HOUND,
+  BRASS_SENTINEL,
+  CINDER_GOLEM,
+  GALE_REAVER,
+  QUILL_WARDEN,
+  STORM_KITE,
+  TREMOR_BRUTE,
+  VEIL_DANCER,
+  VESPER_SAGE,
+} from '../src/bosses';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { attackLength } from '../src/game/boss';
 import { DIALS, NORMAL_DIALS, applyDials, type Dials } from '../src/game/difficulty';
+import { bossHidden } from '../src/game/geometry';
 import { PLAYER, TEMPER, WORLD } from '../src/game/params';
 import { createInitialState, type BoltState, type EruptionState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
@@ -22,6 +33,8 @@ const ROSTER: [string, BossDef][] = [
   ['Cinder Golem', CINDER_GOLEM],
   ['Tremor Brute', TREMOR_BRUTE],
   ['Storm Kite', STORM_KITE],
+  ['Veil Dancer', VEIL_DANCER],
+  ['Vesper Sage', VESPER_SAGE],
 ];
 
 /** The boss at 700 facing left. The player is in front of it (left, x 640) or behind it (right, x 760), about to land a swing. */
@@ -331,5 +344,92 @@ describe('Storm Kite: bolts from the sides, and a swoop that brings some', () =>
 
   it('turns to the crossfire when it has been left alone', () => {
     expect(pickShare(STORM_KITE, ['crossfire'], FULL)).toBeGreaterThanOrEqual(pickShare(STORM_KITE, ['crossfire'], 0) * 1.3);
+  });
+});
+
+describe('Veil Dancer: vanishes, comes back behind you, vanishes somewhere else', () => {
+  const cut = only(VEIL_DANCER, 'shadow-cut');
+  const away = only(VEIL_DANCER, 'blink-away');
+  const still = (count: number): InputFrame[] => Array.from({ length: count }, () => NO_INPUT);
+
+  it('a shadow-cut hides the boss, then it stands just behind the player, facing them', () => {
+    const start = standAt(cut, 150);
+    start.player.health = 1e9;
+    const states = run(start, 80, () => NO_INPUT, cut);
+    expect(states.filter((s) => bossHidden(s.boss, cut)).length).toBeGreaterThan(8);
+    const back = states.find((s, i) => i > 0 && !bossHidden(s.boss, cut) && bossHidden(states[i - 1]!.boss, cut))!;
+    expect(back).toBeDefined();
+    expect(back.boss.x).toBeLessThan(back.player.x);
+    expect(back.player.x - back.boss.x).toBeLessThan(120);
+    expect(back.boss.facing).toBe(1);
+  });
+
+  it('a player who stands still is cut, and a dash timed to the strike avoids it', () => {
+    expect(analyzeRun(cut, standAt(cut, 150), still(200)).attacks[0]!.outcome).toBe('hit');
+    const dasher: Bot = (_n, prev) =>
+      prev.boss.mode === 'attack' && prev.boss.attackId === 'shadow-cut' && prev.boss.attackTick === 32 ? withInput({ dashPressed: true }) : NO_INPUT;
+    const frames = framesFrom(cut, standAt(cut, 150), dasher, 200);
+    expect(analyzeRun(cut, standAt(cut, 150), frames).attacks[0]).toMatchObject({ outcome: 'dodged', damageTaken: 0 });
+  });
+
+  it('a blink-away reappears far from the player and hurts nobody', () => {
+    const start = standAt(away, 150);
+    start.player.health = 1e9;
+    const states = run(start, 60, () => NO_INPUT, away);
+    expect(updatesWith(states, 'playerHit')).toEqual([]);
+    const back = states.find((s, i) => i > 0 && !bossHidden(s.boss, away) && bossHidden(states[i - 1]!.boss, away))!;
+    expect(back).toBeDefined();
+    expect(Math.abs(back.boss.x - back.player.x)).toBeGreaterThan(350);
+  });
+
+  it('a blink-away is followed at once by a shadow-cut, every time', () => {
+    const start = standAt(away, 150);
+    start.player.health = 1e9;
+    const states = run(start, 600, () => NO_INPUT, away);
+    expect(attackIds(states).slice(0, 4)).toEqual(['blink-away', 'shadow-cut', 'blink-away', 'shadow-cut']);
+    const starts = windupUpdates(states);
+    expect(starts[1]! - starts[0]!).toBeLessThanOrEqual(attackLength(attack(away, 'blink-away')) + 2);
+  });
+
+  it('turns to the shadow cut when it has been left alone', () => {
+    expect(pickShare(VEIL_DANCER, ['shadow-cut'], FULL)).toBeGreaterThanOrEqual(pickShare(VEIL_DANCER, ['shadow-cut'], 0) * 1.3);
+  });
+});
+
+describe('Vesper Sage: fixed patterns of shots, floats away when hit', () => {
+  it('a single-bolt is always followed by a lob', () => {
+    const boss = only(VESPER_SAGE, 'single-bolt');
+    const start = standAt(boss, 500);
+    start.player.health = 1e9;
+    const states = run(start, 600, () => NO_INPUT, boss);
+    expect(attackIds(states).slice(0, 4)).toEqual(['single-bolt', 'lob', 'single-bolt', 'lob']);
+  });
+
+  it('a triple-volley is always followed by a single-bolt', () => {
+    const boss = only(VESPER_SAGE, 'triple-volley');
+    const start = standAt(boss, 500);
+    start.player.health = 1e9;
+    const states = run(start, 700, () => NO_INPUT, boss);
+    expect(attackIds(states).slice(0, 4)).toEqual(['triple-volley', 'single-bolt', 'triple-volley', 'single-bolt']);
+  });
+
+  it('phase 2 has its own patterns and keeps farther away', () => {
+    expect(VESPER_SAGE.phases[1]!.combos).toHaveLength(2);
+    expect(VESPER_SAGE.phases[1]!.spacing!.min).toBeGreaterThan(VESPER_SAGE.spacing.min);
+  });
+
+  it('a hit on the waiting Sage makes it blink away, and it does not hurt anyone', () => {
+    const states = run(aboutToHit(VESPER_SAGE), 60, () => NO_INPUT, VESPER_SAGE);
+    expect(states[0]!.events).toContain('bossHit');
+    expect(states[0]!.boss.attackId).toBe('float-away');
+    expect(states.some((s) => bossHidden(s.boss, VESPER_SAGE))).toBe(true);
+    expect(updatesWith(states, 'playerHit')).toEqual([]);
+    const last = states[59]!;
+    expect(Math.abs(last.boss.x - last.player.x)).toBeGreaterThan(350);
+  });
+
+  it('turns to its long patterns when it has been left alone', () => {
+    const long = ['triple-volley', 'lob-and-low'];
+    expect(pickShare(VESPER_SAGE, long, FULL)).toBeGreaterThanOrEqual(pickShare(VESPER_SAGE, long, 0) * 1.3);
   });
 });

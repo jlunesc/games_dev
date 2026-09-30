@@ -8,11 +8,11 @@ import { run } from './helpers';
 import { updatesWith, windupUpdates } from './boss-helpers';
 
 describe('the Veil Dancer file', () => {
-  it('is loaded, has four attacks and no arena', () => {
+  it('is loaded, has six attacks and no arena', () => {
     expect(VEIL_DANCER).toBeDefined();
     expect(VEIL_DANCER.id).toBe('veil-dancer');
     expect(VEIL_DANCER.name).toBe('Veil Dancer');
-    expect(VEIL_DANCER.attacks.map((a) => a.id)).toEqual(['piercing-veil', 'veil-slip', 'needle-fan', 'twin-cut']);
+    expect(VEIL_DANCER.attacks.map((a) => a.id)).toEqual(['piercing-veil', 'veil-slip', 'needle-fan', 'twin-cut', 'blink-away', 'shadow-cut']);
     expect(VEIL_DANCER.arena).toBeUndefined();
     expect(VEIL_DANCER.phases).toHaveLength(1);
   });
@@ -30,6 +30,8 @@ describe('the Veil Dancer file', () => {
 function solo(id: string): BossDef {
   return {
     ...VEIL_DANCER,
+    reaction: undefined,
+    temper: undefined,
     spacing: { min: 0, max: 1e9 },
     attacks: VEIL_DANCER.attacks.map((a) => ({ ...a, range: { min: 0, max: 1e9 } })),
     phases: VEIL_DANCER.phases.map((p) => ({
@@ -37,6 +39,7 @@ function solo(id: string): BossDef {
       gap: 1,
       maxChain: 1,
       chainChance: 0,
+      combos: [],
       attacks: [{ id, weight: 1 }],
     })),
   };

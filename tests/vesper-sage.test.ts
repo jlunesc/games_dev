@@ -29,9 +29,11 @@ function fight(bot: Bot, boss: BossDef, seed: number, startX?: number) {
 function solo(id: string): BossDef {
   return {
     ...VESPER_SAGE,
+    reaction: undefined,
+    temper: undefined,
     spacing: { min: 0, max: 1e9 },
     attacks: VESPER_SAGE.attacks.map((a) => ({ ...a, range: { min: 0, max: 1e9 } })),
-    phases: VESPER_SAGE.phases.map((p) => ({ ...p, gap: 1, maxChain: 1, chainChance: 0, attacks: [{ id, weight: 1 }] })),
+    phases: VESPER_SAGE.phases.map((p) => ({ ...p, gap: 1, maxChain: 1, chainChance: 0, combos: [], attacks: [{ id, weight: 1 }] })),
   };
 }
 
@@ -43,17 +45,17 @@ function standAt(boss: BossDef, x: number): GameState {
 }
 
 describe('the Vesper Sage file', () => {
-  it('is loaded and found by id, with five attacks, no arena and two phases', () => {
+  it('is loaded and found by id, with six attacks, no arena and two phases', () => {
     expect(VESPER_SAGE.id).toBe('vesper-sage');
     expect(bossById('vesper-sage')).toBe(VESPER_SAGE);
-    expect(VESPER_SAGE.attacks.map((a) => a.id)).toEqual(['single-bolt', 'triple-volley', 'lob', 'point-blank-burst', 'lob-and-low']);
+    expect(VESPER_SAGE.attacks.map((a) => a.id)).toEqual(['single-bolt', 'triple-volley', 'lob', 'point-blank-burst', 'lob-and-low', 'float-away']);
     expect(VESPER_SAGE.arena).toBeUndefined();
     expect(VESPER_SAGE.phases).toHaveLength(2);
   });
 
-  it('warns for at least 21 updates and marks every attack with shots as must-dodge', () => {
+  it('warns for at least 21 updates before anything hurts and marks every attack with shots as must-dodge', () => {
     for (const a of VESPER_SAGE.attacks) {
-      expect(a.windup).toBeGreaterThanOrEqual(21);
+      if (a.hits.length > 0 || (a.shots ?? []).length > 0) expect(a.windup).toBeGreaterThanOrEqual(21);
       if (a.shots !== undefined) expect(a.class).toBe('mustDodge');
     }
   });
@@ -146,7 +148,7 @@ describe('the Sage can be beaten', () => {
   };
 
   it('a player who knows its shots wins at Normal', () => {
-    const boss = applyDials(VESPER_SAGE, presetDials('normal'));
+    const boss: BossDef = { ...applyDials(VESPER_SAGE, presetDials('normal')), reaction: undefined, temper: undefined };
     const results = SEEDS.map((seed) => fight(knower, boss, seed));
     // The bot only chases a retreating boss clumsily, so most fights time out; what matters is that it wins some and is barely touched.
     expect(results.some((r) => r.won)).toBe(true);

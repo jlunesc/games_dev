@@ -43,6 +43,8 @@ function fight(bot: (n: number, s: GameState) => InputFrame, boss: BossDef, seed
 function soloOf(base: BossDef, id: string): BossDef {
   return {
     ...base,
+    reaction: undefined,
+    temper: undefined,
     spacing: { min: 0, max: 1e9 },
     attacks: base.attacks.map((a) => ({ ...a, range: { min: 0, max: 1e9 } })),
     phases: base.phases.map((p) => ({ ...p, opening: undefined, gap: 1, maxChain: 1, chainChance: 0, combos: [], attacks: [{ id, weight: 1 }] })),
@@ -67,6 +69,7 @@ const NEW_ATTACKS: [BossDef, string][] = [
   [CINDER_GOLEM, 'furnace-stomp'],
   [VEIL_DANCER, 'needle-fan'],
   [VEIL_DANCER, 'twin-cut'],
+  [VEIL_DANCER, 'shadow-cut'],
   [GALE_REAVER, 'gale-cyclone'],
   [BRASS_SENTINEL, 'spin-cycle'],
   [TREMOR_BRUTE, 'floor-wave'],

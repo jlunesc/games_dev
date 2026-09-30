@@ -17,6 +17,7 @@
     "staggerTicks": 90,
     "damageMultiplier": 2
   },
+  "temper": 0.5,
   "transitionTicks": 60,
   "attacks": [
     {
@@ -133,6 +134,55 @@
           "both": true
         }
       ]
+    },
+    {
+      "id": "blink-away",
+      "name": "Blink Away",
+      "pose": "down",
+      "class": "mustDodge",
+      "windup": 14,
+      "active": 6,
+      "recovery": 10,
+      "range": {
+        "min": 0,
+        "max": 320
+      },
+      "blink": {
+        "from": 3,
+        "to": 12,
+        "target": "back",
+        "distance": 380
+      },
+      "hits": []
+    },
+    {
+      "id": "shadow-cut",
+      "name": "Shadow Cut",
+      "pose": "raised",
+      "class": "mustDodge",
+      "windup": 34,
+      "active": 12,
+      "recovery": 30,
+      "range": {
+        "min": 80,
+        "max": 450
+      },
+      "blink": {
+        "from": 8,
+        "to": 24,
+        "target": "player",
+        "distance": 70
+      },
+      "hits": [
+        {
+          "from": 34,
+          "to": 40,
+          "x0": -20,
+          "x1": 170,
+          "bottom": 0,
+          "top": 130
+        }
+      ]
     }
   ],
   "phases": [
@@ -155,13 +205,28 @@
         {
           "id": "needle-fan",
           "weight": 2
+        },
+        {
+          "id": "blink-away",
+          "weight": 2
+        },
+        {
+          "id": "shadow-cut",
+          "weight": 2,
+          "heavy": true
         }
       ],
       "gap": 45,
       "maxChain": 1,
       "chainChance": 0,
       "walkSpeed": 300,
-      "retreatSpeed": 260
+      "retreatSpeed": 260,
+      "combos": [
+        [
+          "blink-away",
+          "shadow-cut"
+        ]
+      ]
     }
   ]
 }

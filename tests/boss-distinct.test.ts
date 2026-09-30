@@ -7,6 +7,7 @@ function kinds(a: AttackDef): string[] {
   const out: string[] = [];
   if (a.dive !== undefined) out.push('dive');
   if (a.leap !== undefined) out.push('leap');
+  if (a.blink !== undefined) out.push('blink');
   if (a.move !== undefined && a.leap === undefined && a.dive === undefined) out.push(a.hits.length > 0 ? 'dash' : 'slip');
   for (const s of a.shots ?? []) out.push(s.kind === 'bolt' && s.height === 0 ? 'lowBolt' : s.kind);
   return out.length > 0 ? out : ['melee'];

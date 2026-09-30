@@ -17,6 +17,11 @@
     "staggerTicks": 60,
     "damageMultiplier": 2
   },
+  "temper": 0.5,
+  "reaction": {
+    "attack": "float-away",
+    "cooldown": 300
+  },
   "transitionTicks": 60,
   "attacks": [
     {
@@ -158,6 +163,26 @@
           "speed": 620
         }
       ]
+    },
+    {
+      "id": "float-away",
+      "name": "Float Away",
+      "pose": "raised",
+      "class": "mustDodge",
+      "windup": 26,
+      "active": 6,
+      "recovery": 16,
+      "range": {
+        "min": 0,
+        "max": 350
+      },
+      "blink": {
+        "from": 4,
+        "to": 22,
+        "target": "back",
+        "distance": 420
+      },
+      "hits": []
     }
   ],
   "phases": [
@@ -171,7 +196,8 @@
         },
         {
           "id": "triple-volley",
-          "weight": 2
+          "weight": 2,
+          "heavy": true
         },
         {
           "id": "lob",
@@ -183,14 +209,25 @@
         },
         {
           "id": "lob-and-low",
-          "weight": 2
+          "weight": 2,
+          "heavy": true
         }
       ],
       "gap": 45,
       "maxChain": 1,
       "chainChance": 0,
       "walkSpeed": 260,
-      "retreatSpeed": 380
+      "retreatSpeed": 380,
+      "combos": [
+        [
+          "single-bolt",
+          "lob"
+        ],
+        [
+          "triple-volley",
+          "single-bolt"
+        ]
+      ]
     },
     {
       "name": "Overcharged",
@@ -203,7 +240,8 @@
         },
         {
           "id": "triple-volley",
-          "weight": 2
+          "weight": 2,
+          "heavy": true
         },
         {
           "id": "lob",
@@ -215,14 +253,30 @@
         },
         {
           "id": "lob-and-low",
-          "weight": 2
+          "weight": 2,
+          "heavy": true
         }
       ],
       "gap": 30,
       "maxChain": 2,
       "chainChance": 0.4,
       "walkSpeed": 300,
-      "retreatSpeed": 420
+      "retreatSpeed": 420,
+      "combos": [
+        [
+          "lob",
+          "single-bolt",
+          "triple-volley"
+        ],
+        [
+          "triple-volley",
+          "lob-and-low"
+        ]
+      ],
+      "spacing": {
+        "min": 500,
+        "max": 700
+      }
     }
   ]
 }
