@@ -223,9 +223,9 @@ export const FLOOR_TILE_XS: number[] = (() => {
   return xs;
 })();
 
-/** Where an eruption's mark sits and how far it has charged (0 to 1 up to the blast); null once the blast is over. */
+/** Where an eruption's mark sits and how far it has charged (0 to 1 up to the blast); null once the blast and any embers (`linger`) are over. */
 export function eruptionMark(shot: EruptionState): { left: number; right: number; charge: number } | null {
-  if (shot.age >= shot.delay + shot.burst) return null;
+  if (shot.age >= shot.delay + shot.burst + (shot.linger ?? 0)) return null;
   return { left: shot.x - shot.width / 2, right: shot.x + shot.width / 2, charge: Math.min(1, shot.age / shot.delay) };
 }
 

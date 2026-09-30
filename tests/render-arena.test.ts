@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ASHEN_HOUND, EMBER_DUELIST } from '../src/bosses';
-import { WORLD } from '../src/game/params';
+import { shotBox } from '../src/game/geometry';
+import { EMBER, WORLD } from '../src/game/params';
 import type { ArcState } from '../src/game/state';
 import { arcFloorMark, arenaRects, eruptionMark } from '../src/ui/render';
 
@@ -65,5 +66,17 @@ describe('eruptionMark', () => {
     expect(eruptionMark(at(30))?.charge).toBe(1);
     expect(eruptionMark(at(35))).not.toBeNull();
     expect(eruptionMark(at(36))).toBeNull();
+  });
+
+  it('with linger, the mark stays through the embers and is gone when they are over', () => {
+    const embers = (age: number) => ({ ...at(age), linger: 50 });
+    expect(eruptionMark(embers(36))).toEqual({ left: 430, right: 570, charge: 1 });
+    expect(eruptionMark(embers(30 + 6 + 50 - 1))).not.toBeNull();
+    expect(eruptionMark(embers(30 + 6 + 50))).toBeNull();
+  });
+
+  it('is drawn with the same box that hurts: the low embers once the blast is over', () => {
+    const shot = { ...at(40), linger: 50 };
+    expect(shotBox(shot)).toEqual({ x: 430, y: WORLD.floorY - EMBER.height, w: 140, h: EMBER.height });
   });
 });
