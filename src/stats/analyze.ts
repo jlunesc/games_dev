@@ -61,6 +61,8 @@ export interface AttackOccurrence {
   study: boolean;
   /** How many shots (bolts and arcs) the attack fires; 0 for an attack without shots. Such an attack is resolved only once its last shot is gone. */
   shotsFired: number;
+  /** A player swing (start-up, active or recovery) was in progress on the update the attack could first hurt, whether or not it hurt. */
+  swingAtDanger: boolean;
 }
 
 export interface PunishWindows {
@@ -137,6 +139,10 @@ export interface Analysis {
     punish: PunishWindows;
     /** Updates (the whole session, the study included) on which the player stood on a platform or a cover top. */
     updatesOnPlatform: number;
+    /** Attacks of the real fight (the study excluded) with `swingAtDanger`. */
+    greedySwings: number;
+    /** Of those, how many hit the player. */
+    greedyHits: number;
   };
 }
 
@@ -191,6 +197,9 @@ interface OpenAttack {
   windowTaken: boolean;
   /** Updates the attack spent frozen on the end of its wind-up (a hold); danger times are shifted by it. */
   held: number;
+  /** The update the attack could first hurt has been seen (the swing check is made once, on it). */
+  dangerSeen: boolean;
+  swingAtDanger: boolean;
 }
 
 function occurrence(open: OpenAttack): AttackOccurrence {
@@ -240,6 +249,7 @@ function occurrence(open: OpenAttack): AttackOccurrence {
     playerActionWhenHit: open.actionWhenHit,
     study: open.study,
     shotsFired: open.shotsFired,
+    swingAtDanger: open.swingAtDanger,
   };
 }
 
@@ -387,6 +397,10 @@ export function analyzeRun(
     }
     const t = tick - attack.startTick - attack.held;
     attack.lastT = t;
+    if (t === attack.dangerFrom && !attack.dangerSeen) {
+      attack.dangerSeen = true;
+      attack.swingAtDanger = after.player.attackTick >= 0;
+    }
     const dodgeStarted = dodgeBegan(before, after);
     if (dodgeStarted && attack.dodgeStart === null && t <= attack.dangerTo) attack.dodgeStart = tick;
 
@@ -538,6 +552,8 @@ export function analyzeRun(
         windowOpen: false,
         windowTaken: false,
         held: 0,
+        dangerSeen: false,
+        swingAtDanger: false,
       };
       // What happened on the update the attack began (a dodge, or a counter that cancels it at once) counts too.
       observe(open, before, after, frame);
@@ -601,6 +617,8 @@ export function analyzeRun(
       positions,
       punish,
       updatesOnPlatform: platformUpdates,
+      greedySwings: attacks.filter((x) => !x.study && x.swingAtDanger).length,
+      greedyHits: attacks.filter((x) => !x.study && x.swingAtDanger && x.outcome === 'hit').length,
     },
   };
 }
