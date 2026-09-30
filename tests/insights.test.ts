@@ -83,6 +83,11 @@ describe('classifyHit', () => {
     expect(classifyHit(dodgedHit(7))).toBe('early'); // 7 of 30 = 23%
     expect(classifyHit(dodgedHit(8))).toBe('other'); // 27%
   });
+  it('early: exactly 25% counts (a warning of 40 updates, dodge begun 10 after it started)', () => {
+    const long = { firstDangerTick: 140, windupTicks: 40 };
+    expect(classifyHit(hit({ ...long, reactionTicks: 10, marginTicks: 30 }))).toBe('early');
+    expect(classifyHit(hit({ ...long, reactionTicks: 11, marginTicks: 29 }))).toBe('other');
+  });
   it('no dodge: no dash or jump made; greedy when a swing was going at the danger', () => {
     expect(classifyHit(hit())).toBe('no-dodge');
     expect(classifyHit(hit({ swingAtDanger: true }))).toBe('greedy');
