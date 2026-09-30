@@ -82,6 +82,8 @@ export interface BossState {
   comboQueue: string[];
   /** Extra updates the running attack still spends frozen at the end of its wind-up (see `AttackDef.hold`). */
   holdLeft: number;
+  /** Updates left before the boss may react to a hit again (see `BossDef.reaction`). */
+  reactCooldown: number;
 }
 
 interface ShotBase {
@@ -245,6 +247,7 @@ function initialBoss(boss: BossDef): BossState {
     temper: 0,
     comboQueue: [],
     holdLeft: 0,
+    reactCooldown: 0,
   };
 }
 

@@ -250,6 +250,12 @@ export interface BossDef {
   flight?: FlightDef;
   /** 0 to 1: how strongly the boss gets angrier the longer it is not hit (heavy attacks likelier, shorter pauses). Absent means not at all. */
   temper?: number;
+  /**
+   * What the boss does when the player hits it while it is waiting or walking: it starts `attack` at once (one of its
+   * own attacks, normally one that is in no phase list so it is never chosen otherwise), then cannot react again for
+   * `cooldown` updates. Off in a fight with partners and in the study.
+   */
+  reaction?: { attack: string; cooldown: number };
   /** Platforms and cover in the arena. Absent means a bare arena. */
   arena?: ArenaDef;
 }

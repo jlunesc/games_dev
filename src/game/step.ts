@@ -1,7 +1,7 @@
 import type { ArenaDef, BossDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { DT } from '../engine/time';
-import { attackById, beginTransition, landBoss, updateBosses } from './boss';
+import { attackById, beginTransition, landBoss, reactToHit, updateBosses } from './boss';
 import { asFight, type FightDef } from './fight';
 import {
   activeHitBoxes,
@@ -255,7 +255,11 @@ function resolvePlayerAttack(s: GameState, fight: FightDef, studying: boolean): 
     return;
   }
   const next = boss.phases[b.phase + 1];
-  if (next !== undefined && b.hp <= boss.maxHp * next.startsAtHpFraction) beginTransition(s, boss, target);
+  if (next !== undefined && b.hp <= boss.maxHp * next.startsAtHpFraction) {
+    beginTransition(s, boss, target);
+    return;
+  }
+  reactToHit(s, boss, target);
 }
 
 /** The active hit boxes of a boss hurt a player who is not untouchable, for the damage of the attack that is landing. */

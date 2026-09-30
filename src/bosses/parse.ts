@@ -547,6 +547,14 @@ export function parseBoss(data: unknown): BossDef {
 
   const parsedTemper = o.temper === undefined ? undefined : num(o.temper, 'boss.temper', { min: 0, max: 1 });
 
+  let reaction: { attack: string; cooldown: number } | undefined;
+  if (o.reaction !== undefined) {
+    const r = object(o.reaction, 'boss.reaction');
+    const attackId = text(r.attack, 'boss.reaction.attack');
+    if (!ids.has(attackId)) fail('boss.reaction.attack', `"${attackId}" is not one of the boss's attacks`);
+    reaction = { attack: attackId, cooldown: num(r.cooldown, 'boss.reaction.cooldown', { min: 30, max: 1200, integer: true }) };
+  }
+
   return {
     id: text(o.id, 'boss.id'),
     name: text(o.name, 'boss.name'),
@@ -563,6 +571,7 @@ export function parseBoss(data: unknown): BossDef {
     phases,
     ...(parsedFlight === undefined ? {} : { flight: parsedFlight }),
     ...(parsedTemper === undefined ? {} : { temper: parsedTemper }),
+    ...(reaction === undefined ? {} : { reaction }),
     ...(parsedArena === undefined ? {} : { arena: parsedArena }),
   };
 }

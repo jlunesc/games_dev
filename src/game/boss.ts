@@ -142,7 +142,7 @@ function startCombo(b: BossState, phase: PhaseDef, id: string): void {
   b.comboQueue = combo === undefined ? [] : combo.slice(1);
 }
 
-function startAttack(s: GameState, boss: BossDef, id: string, index: number): void {
+export function startAttack(s: GameState, boss: BossDef, id: string, index: number): void {
   const b = bossAt(s, index);
   const attack = attackById(boss, id);
   b.mode = 'attack';
@@ -154,6 +154,21 @@ function startAttack(s: GameState, boss: BossDef, id: string, index: number): vo
   b.holdLeft = attack.hold !== undefined && !s.study.active ? Math.floor(draw(s) * (attack.hold + 1)) : 0;
   b.lastAttacks = [...b.lastAttacks, id].slice(-2);
   s.events.push(attack.class === 'counterable' ? 'bossWindupGold' : 'bossWindupRed');
+}
+
+/**
+ * Called when the player's hit has just landed and the boss is still standing: if the boss can react (see
+ * `BossDef.reaction`) it drops what it was about to do and starts its reaction attack.
+ */
+export function reactToHit(s: GameState, boss: BossDef, index: number): void {
+  const b = bossAt(s, index);
+  if (boss.reaction === undefined || s.study.active || s.partners.length > 0) return;
+  if (b.reactCooldown > 0 || b.hp <= 0) return;
+  if (b.mode !== 'gap' && b.mode !== 'approach') return;
+  b.reactCooldown = boss.reaction.cooldown;
+  b.comboQueue = [];
+  b.chainLeft = 0;
+  startAttack(s, boss, boss.reaction.attack, index);
 }
 
 function updateGap(s: GameState, boss: BossDef, phase: PhaseDef, index: number, mayCommit: boolean): void {
@@ -452,6 +467,7 @@ export function updateBoss(s: GameState, boss: BossDef, index = 0, mayCommit = t
   const phase = boss.phases[b.phase];
   if (phase === undefined) return;
   b.modeTick += 1;
+  if (b.reactCooldown > 0) b.reactCooldown -= 1;
   if (!s.study.active) b.temper = Math.min(b.temper + 1, TEMPER.start + TEMPER.ramp);
   if (boss.flight !== undefined && (b.mode === 'gap' || b.mode === 'approach' || b.mode === 'transition')) {
     settleLift(b, boss.flight);
