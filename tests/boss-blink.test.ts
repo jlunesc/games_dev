@@ -58,7 +58,9 @@ describe('blink: parsing', () => {
     expect(() => parseBoss(bad((a) => (a.hold = 5)))).toThrow(/blink/);
     expect(() => parseBoss(bad((a) => (a.leap = { from: 14, to: 18, height: 50, target: 'player' })))).toThrow(/blink/);
     expect(() => parseBoss(bad((a) => (a.shots = [{ kind: 'bolt', at: 14, height: 0, size: 30, speed: 600 }])))).toThrow(/blink/);
-    expect(() => parseBoss(bad((a) => ((a.blink.to = 15), (a.move = { from: 14, to: 16, speed: 200 }))))).toThrow(/blink/);
+    expect(() => parseBoss(bad((a) => ((a.hits = []), (a.blink.to = 15), (a.move = { from: 14, to: 16, speed: 200 }))))).toThrow(
+      /must not overlap the move/,
+    );
   });
 });
 
@@ -117,5 +119,14 @@ describe('blink: difficulty dials', () => {
     const attack = changed.attacks[0]!;
     expect(attack.windup).toBe(18);
     expect(attack.blink).toEqual({ from: 8, to: 16, target: 'player', distance: 96 });
+  });
+
+  it('keeps the start at update 1 or later when a shorter warning would push it earlier', () => {
+    const boss = blinker({ blink: { from: 2, to: 12, target: 'player', distance: 80 } });
+    const changed = applyDials(boss, { ...NORMAL_DIALS, readability: 0.7 });
+    const blink = changed.attacks[0]!.blink!;
+    expect(blink.from).toBeGreaterThanOrEqual(1);
+    expect(blink.to).toBeGreaterThan(blink.from);
+    expect(() => parseBoss(JSON.parse(JSON.stringify(changed)))).not.toThrow();
   });
 });

@@ -239,7 +239,9 @@ function adjustAttack(attack: AttackDef, boss: BossDef, d: Dials): AttackDef {
   }
   if (attack.blink !== undefined) {
     // Like a leap: only the timing shifts with the warning, and the range dial sets how far it lands. A blink onto the player keeps a distance of 0.
-    next.blink = { ...attack.blink, from: attack.blink.from + shift, to: attack.blink.to + shift };
+    // A shorter warning must not push the start before update 1 (the parser needs 1 or more), and the end stays after the start.
+    const from = Math.max(1, attack.blink.from + shift);
+    next.blink = { ...attack.blink, from, to: Math.max(from + 1, attack.blink.to + shift) };
     if (attack.blink.distance !== undefined) {
       next.blink.distance = Math.max(attack.blink.target === 'player' ? 0 : 1, attack.blink.distance * d.range);
     }
