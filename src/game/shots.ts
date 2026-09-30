@@ -43,6 +43,24 @@ export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef, index
       continue;
     }
     if (def.kind === 'bolt') {
+      if (def.edge !== undefined) {
+        const fromLeft = def.edge === 'left';
+        const x = fromLeft ? def.size / 2 : WORLD.width - def.size / 2;
+        s.shots.push({
+          kind: 'bolt',
+          attackId: attack.id,
+          originTick,
+          x,
+          lift: def.height,
+          dir: fromLeft ? 1 : -1,
+          originX: x,
+          size: def.size,
+          speed: def.speed,
+          climb: 0,
+          ...owner,
+        });
+        continue;
+      }
       // Fired from the boss's body: a hovering boss fires from up in the air.
       const lift = def.height + b.lift;
       let dir: 1 | -1 = def.dir === 'back' ? (b.facing === 1 ? -1 : 1) : b.facing;

@@ -98,6 +98,8 @@ export interface BoltDef {
   speed: number;
   dir?: 'forward' | 'back';
   aim?: boolean;
+  /** Comes in from that edge of the arena instead of from the boss, flying inward at `height`. Not together with `dir` or `aim`. */
+  edge?: 'left' | 'right';
 }
 
 /**

@@ -125,6 +125,11 @@ function shotList(value: unknown, path: string, windup: number, active: number):
         if (o.aim && o.dir !== undefined) fail(`${at}.dir`, 'an aimed bolt picks its own way');
         bolt.aim = o.aim;
       }
+      if (o.edge !== undefined) {
+        if (o.edge !== 'left' && o.edge !== 'right') fail(`${at}.edge`, 'must be "left" or "right"');
+        if (o.dir !== undefined || o.aim === true) fail(`${at}.edge`, 'a bolt from an edge cannot also have "dir" or "aim"');
+        bolt.edge = o.edge;
+      }
       return bolt;
     }
     if (kind === 'eruption') {
