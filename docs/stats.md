@@ -250,6 +250,41 @@ How to read a study fight:
 - **The random generator**: the study's random order uses the fight's seeded generator before the fight starts (a shuffle of n attacks draws n - 1 numbers, once per round). So a fight with a study and the same seed and input without one is a different fight from the first real attack on. That is expected, and is why `study` is part of the record.
 - **How long it is**: with a standing player (60 seeds, both bosses, Easy, Normal and Hard), Once took about 370 to 540 updates (6 to 9 seconds) and Twice about 710 to 1040 updates (12 to 17.5 seconds). A boss whose first phase has no attacks has no study at all (`study.ticks` 0, `study.attacks` 0).
 
+### 7.6 Insights (derived, not stored)
+
+After a fight the summary screen shows up to three "Work on:" lines. They are computed on the spot from that one fight's `analysis` by `insightsFor` in `src/stats/insights.ts` (cut-offs in `src/stats/insights-tuning.ts`, words in `src/ui/insight-text.ts`) and are **not** stored in the record or the export: they can be reworded or re-tuned without a schema change and without touching a recording.
+
+Everything is for the real fight only (the study is excluded). Each hit on the player (an attack of the real fight with outcome `"hit"`) is put in **one** class, by `classifyHit`. Let the *warning* be the time from `startTick` to `firstDangerTick` (the update the attack first becomes dangerous).
+- If the player began a dodge action (a dash or jump, `marginTicks` is set) and the warning is longer than 0: the hit is `late` when `marginTicks` divided by the warning is at most 0.20 (this includes a negative margin, a dodge that began after the danger did); otherwise `early` when `reactionTicks` divided by the warning is at most 0.25 (the dodge began in the first quarter of the warning and the hit came anyway); otherwise `other` (a dodge action in between). Both edges are inclusive, and `late` wins if a very short warning fits both.
+- Otherwise (no dodge action): `greedy` when a swing was in progress at the danger (`swingAtDanger`), else `no-dodge`.
+
+The skills, what they count, and when they are shown:
+
+| Skill | Shown when | Cost (a share of a whole fight) |
+|---|---|---|
+| `dodge-late`, `dodge-early`, `dodge-other`, `no-dodge` | at least 2 hits in that class | health lost to those hits / the player's maximum health (5) |
+| `greedy-swing` | at least 2 greedy swings in the real fight (`behavior.greedySwings`) and at least one hit in the `greedy` class | health lost to the `greedy`-class hits / 5 |
+| `openings` | at least 3 openings (`punish.opened`) and at least 2 missed windows where `reachable` is true | see below |
+| `approach` | at least 3 openings and at least 2 missed windows where `reachable` is false | see below |
+
+**Opening cost.** Missed windows (in `punish.windows`, `hit` false) of that kind, times what one landed hit is worth (`damageDealt / swingsThatHit`, or 1 when no swing landed), divided by the bosses' total health (`bossMaxHp`), never more than 1. No opening lines are made when `bossMaxHp` is 0.
+
+**Ranking.** Lines whose cost is 0 are dropped. The rest are sorted by cost, highest first, and the top three are kept. A tie in cost is broken by this order: `dodge-late`, `dodge-early`, `dodge-other`, `no-dodge`, `greedy-swing`, `openings`, `approach`. A fight with nothing to report shows "Nothing stands out this fight." A fight left during the study shows no block.
+
+**Old records.** An analysis stored before schema version 7 has no `dashUse`, swing, opening or distance numbers. For it `insightsFor` gives only `dodge-late`, `dodge-early` and `dodge-other` (without the swing data a hit with no dodge cannot be told apart as greedy or not, so `no-dodge` and `greedy-swing` are left out, and so are the opening lines) until it is re-analysed by replay (section 8).
+
+**What the numbers do and do not cover.**
+- `greedy-swing`: the "hurt" figure in the sentence is `behavior.greedyHits`, every hit that had a swing going at the danger, even where the player also dodged. The attack names shown as evidence are only those of the `greedy` class (hits with no dodge action). The two can therefore differ.
+- `openings`: "could have reached the boss but did not land a hit" counts every missed window with `reachable` true. That includes windows where the player swung and missed (`swung` true), not only windows where the player never swung.
+- `dodge-late` also covers a dodge that began after the danger began (negative margin).
+
+**What this cannot tell you.**
+- A travel dash and an early dodge dash are told apart only by whether an attack was live; a dash for movement that begins inside an attack's window counts as that attack's dash.
+- One fight is a small sample. A line is a hint to practise, not a verdict.
+- A hit can have several causes; the line names the most visible one (the dodge timing data).
+- Movement direction is never graded, so wandering is seen only through its results (missed openings, time out of reach), not directly.
+- Dash use (7.1b) is recorded but has no line of its own yet: a dash that was hit anyway is already inside a late, early or other dodge hit.
+
 ## 8. Replaying a fight
 
 To rebuild a fight exactly (this is what `replayFinalState` and `analyzeFight` do):
