@@ -114,6 +114,12 @@ To-do (later): have an agent test the game's security. Where possible, enforce t
 
 - **Pairs of bosses** (built 2026-09-29): two of the bosses above can fight together as one named pair; the first is the Ashen Hound and the Vesper Sage ("Hound and Sage"). A pair adds no attacks of its own. The rules, the status tags and the numbers are in section 11, "Two bosses in one fight".
 
+**Boss identity (design in `docs/superpowers/specs/2026-09-29-boss-identity-design.md`, plan in `docs/superpowers/plans/2026-09-29-boss-identity-round-2-plus.md`)**
+- **LOCKED** (owner, 2026-09-29): every hand-built boss asks the player one question, moves in its own way and has an attack family only it uses; a special kind of attack sits on at most three bosses (guard test `tests/boss-distinct.test.ts`). The Ember Duelist is the fixed reference and does not change.
+- **LOCKED** (owner, 2026-09-29): the directions taken from the owner's play: a boss should be less predictable by combining attacks with movement; the flying boss keeps its sky attacks and gains bolts from the sides; the drum boss's frontal guard is a shield that only lets a hit through from behind; some bosses cover a lot of ground; not hitting a boss makes its hard attacks more likely.
+- **DELEGATED**: the mechanics that carry it (temper, combos, hold, blink, embers, side bolts, reaction, shield) and all their numbers (documented in `docs/bosses.md`), and the looks and sounds. Reopen after play.
+- **OPEN**: whether the generator should offer the new mechanics; a spreading needle fan for the Dancer; arenas for hand-built bosses.
+
 ## 8. Feel (v1)
 
 - **LOCKED**: a **geometric visual style** (simple shapes, strong colors, glows, very readable telegraphs), with a possible upgrade to pixel art later. Art is kept **separate from fight logic**, so a boss can be restyled without changing how it fights.

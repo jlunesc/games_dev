@@ -576,6 +576,37 @@ Nine bosses changed which attacks they use (all but the Ember Duelist); details 
 - [ ] **Vesper Sage:** the lob followed by a low bolt: can you land and then jump again in time?
 - [ ] Which two bosses still feel the most alike?
 
+## Boss identity, Rounds 2 and 3
+Every hand-built boss now has one question it asks you, and the game has new mechanics to ask it with (`docs/bosses.md` section 3a-septies). Play each boss for a few fights. Fights are recorded, so the export will show the new attack ids; older exports of these bosses do not line up with them (`docs/stats.md`, game version 0.10.0).
+
+### What to expect
+- **Angry bosses.** If you do not hit a boss for about four seconds it starts to choose its heavy attacks more often and pauses less between attacks, more so the longer you leave it alone (the Hound's pounce, the Sentinel's late herald and brass snap, the Golem's furnace stomp and kiln crack, the Warden's quick poke, the Kite's crossfire and long passes, the Brute's row of quakes, the Dancer's shadow cut, the Sage's long shot patterns). A hit on it calms it down again. The Reaver and the Duelist never get angry, and the Kite only a little.
+- **Bosses that answer a hit.** The Hound, Reaver, Warden and Sage react when you land a hit while they are waiting or walking: a quick run, a back-off, a vault, a blink. They do not answer in a two-boss fight, on the last hit, on the hit that changes their phase, or again within a few seconds.
+- **The Sentinel's shield.** A hit from the front is blocked with a clang and does nothing. Hit it from behind (it is slow to turn round when you slip behind it), with a downward hit from above, or with a counter.
+- **Vanishing bosses.** The Dancer and the Sage disappear and come back; while hidden they cannot be hit. Look for the mark on the floor where they will land.
+- **Attacks that wait.** The Golem's crag slam and the Brute's hammer fist hold their pose for a different time each fight, so counting does not work.
+- **Fixed combinations.** The Hound (slip then bite), the Reaver (two, three attacks each), the Warden (snap then rising swipe), the Dancer (blink away then shadow cut) and the Sage sometimes run a set order. The Reaver's carry only comes at the end of a combination.
+- **Fire that stays.** The Golem's kiln crack leaves patches that keep burning for more than three seconds after the blast. They are low, so a jump clears them.
+- **Bolts from the sides.** The Kite's crossfire comes from the edges of the arena, with two quick pips (panned to the side it comes from) before it does.
+
+### Checklist
+- [ ] **Ashen Hound:** does hitting it and seeing it skitter away feel fair? Is the slip-then-bite combination readable?
+- [ ] **Gale Reaver:** are the two fixed combinations learnable after a few fights (wind slash, jab, carry; jab, jab, cyclone)? Can you tell the carry from a normal rush?
+- [ ] **Brass Sentinel:** is it clear when a hit is blocked (the clang, the sparks)? Do you find the behind or above hit without thinking about it? Does the long wait of the late herald make you greedy in a good way?
+- [ ] **Cinder Golem:** do the burning patches turn the floor into a puzzle without making it unfair? Is three seconds and more too long or too short?
+- [ ] **Quill Warden:** is the quick poke followed by the rising swipe a trap you can read?
+- [ ] **Storm Kite:** can you tell from the pips and the picture that bolts are coming from the sides, and jump them?
+- [ ] **Tremor Brute:** can you always find the way out of the row of quakes in time?
+- [ ] **Veil Dancer:** does the shadow cut leave enough time to dash after it appears behind you? Is the blink away then shadow cut combination a fair surprise?
+- [ ] **Vesper Sage:** are the shot patterns learnable? Does it feel right that a hit on it makes it blink away?
+- [ ] Does leaving a boss alone (and it getting angry) make the fight feel more dangerous, or just longer?
+- [ ] Does anything feel slow or choppy on the phone (the blink shimmer, the fire patches, the shield sparks)?
+
+### Questions
+- Which boss now feels most different from the others? Which two still feel alike?
+- Is any new attack unfair, or unreadable before it hits? Which one, and why?
+- Are the new sounds (clang, blink, side warning) too loud, too quiet, or annoying? Any buzzing?
+
 ## Redo after a fight
 - [ ] After a win or a loss, the summary shows three choices under the result: Redo, Fight again and Back to the menu. Tapping works, and so does the controller (up and down, bottom button to pick, the other button goes back to the menu).
 - [ ] The Redo row says which dial it will change and by how much, and whether it is a bit harder (after a win) or a bit easier (after a loss).
