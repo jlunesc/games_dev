@@ -39,7 +39,7 @@ export const STATS_SCHEMA_VERSION = 6;
  * attack lists and numbers of nine hand-built bosses (everyone except the Ember Duelist), so their records made by
  * 0.8.0 or earlier no longer replay exactly. The Ember Duelist and generated bosses are unchanged.
  */
-export const GAME_VERSION = '0.9.0';
+export const GAME_VERSION = '0.10.0';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {

@@ -1,6 +1,6 @@
 # Making every boss feel different: analysis and proposed plan
 
-Status: **proposal, nothing decided or built.** Written 2026-09-29 after the owner asked for an analysis of all boss attacks and movements and a plan to redistribute them and add new ones so each boss feels genuinely different. Every choice below is a **DEFAULT** until the owner says yes, one decision at a time.
+Status: **accepted by the owner on 2026-09-29 and built in rounds 1 to 3** (plan: `docs/superpowers/plans/2026-09-29-boss-identity-round-2-plus.md`). Written 2026-09-29 after the owner asked for an analysis of all boss attacks and movements and a plan to redistribute them and add new ones so each boss feels genuinely different. The text below is the original proposal, kept as written.
 
 ## 1. What the analysis found
 

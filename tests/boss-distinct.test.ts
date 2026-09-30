@@ -15,7 +15,7 @@ function kinds(a: AttackDef): string[] {
 
 const reach = (a: AttackDef): number => Math.max(0, ...a.hits.map((h) => h.x1));
 
-/** Near-copies (same kind, pose and class, wind-up within 6 updates, reach within 35%) between different bosses after Round 1. Lower it as later rounds remove more; never raise it. */
+/** Near-copies (same kind, pose and class, wind-up within 6 updates, reach within 35%) between different bosses after Rounds 2 and 3. Lower it as later rounds remove more; never raise it. */
 const CEILING = 12;
 
 const roster = BOSSES.map((b) => ({ id: b.id, attacks: b.attacks }));

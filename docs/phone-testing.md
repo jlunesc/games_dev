@@ -587,7 +587,7 @@ Every hand-built boss now has one question it asks you, and the game has new mec
 - **Attacks that wait.** The Golem's crag slam and the Brute's hammer fist hold their pose for a different time each fight, so counting does not work.
 - **Fixed combinations.** The Hound (slip then bite), the Reaver (two, three attacks each), the Warden (snap then rising swipe), the Dancer (blink away then shadow cut) and the Sage sometimes run a set order. The Reaver's carry only comes at the end of a combination.
 - **Fire that stays.** The Golem's kiln crack leaves patches that keep burning for more than three seconds after the blast. They are low, so a jump clears them.
-- **Bolts from the sides.** The Kite's crossfire comes from the edges of the arena, with two quick pips (panned to the side it comes from) before it does.
+- **Bolts from the sides.** The Kite's crossfire comes from the edges of the arena, with two quick pips (when a bolt comes from one edge only, the pip pans to that side; the Kite's crossfire and tempest-pass fire from both edges, so their pips are centred, and in a pair fight they pan to the partner who fires) before it does.
 
 ### Checklist
 - [ ] **Ashen Hound:** does hitting it and seeing it skitter away feel fair? Is the slip-then-bite combination readable?
