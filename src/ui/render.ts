@@ -241,7 +241,9 @@ function drawShots(ctx: CanvasRenderingContext2D, state: GameState, bossIds: rea
     if (shot.kind === 'eruption') {
       const ember = emberSpan(shot);
       if (ember !== null) {
-        drawPrimitives(ctx, emberTongues(ember, state.tick, { edge: look.edge, core: look.eruptionCore }), LOOK.ember.alpha);
+        const [band, ...flames] = emberTongues(ember, state.tick, { edge: look.edge, core: look.eruptionCore });
+        drawPrimitives(ctx, [band!], LOOK.ember.bandAlpha);
+        drawPrimitives(ctx, flames, LOOK.ember.alpha);
         continue;
       }
       const mark = eruptionMark(shot);
@@ -335,7 +337,7 @@ function drawBoss(
     const mark = blinkMark(b, boss);
     if (mark !== null) {
       const t = LOOK.blink;
-      const flicker = 0.6 + 0.4 * Math.sin(state.tick / 3);
+      const flicker = t.pulseBase + t.pulseDepth * Math.sin(state.tick / t.pulseTicks);
       ctx.save();
       ctx.fillStyle = t.color;
       ctx.globalAlpha = t.markAlpha * flicker;
@@ -412,12 +414,9 @@ function drawBoss(
     ctx.globalAlpha = anger * pulse;
     ctx.strokeStyle = LOOK.temper.color;
     ctx.lineWidth = LOOK.temper.lineWidth;
-    ctx.strokeRect(left - 3, top - 3, boss.width + 6, height + 6);
+    const pad = LOOK.temper.pad;
+    ctx.strokeRect(left - pad, top - pad, boss.width + 2 * pad, height + 2 * pad);
     ctx.restore();
-  }
-  for (const warning of edgeWarnings(b, boss)) {
-    const arrow = edgeArrow(warning, state.tick);
-    drawPrimitives(ctx, arrow.primitives, arrow.alpha);
   }
 
   if (own === null) {
@@ -631,6 +630,14 @@ export function drawFrame(
   }
   drawShots(ctx, state, fight.bosses.map((def) => def.id));
   drawPlayer(ctx, state, alpha, feedback, mood);
+  // The side-bolt arrows go over the player, so a player at the wall cannot hide the warning.
+  for (let index = 0; index < fight.bosses.length; index++) {
+    if (isDowned(state, index)) continue;
+    for (const warning of edgeWarnings(bossAt(state, index), fight.bosses[index]!)) {
+      const arrow = edgeArrow(warning, state.tick);
+      drawPrimitives(ctx, arrow.primitives, arrow.alpha);
+    }
+  }
   if (look !== undefined && look.scene !== true) {
     drawTurnMarker(ctx, state, fight);
     drawEffects(ctx, look.effects);

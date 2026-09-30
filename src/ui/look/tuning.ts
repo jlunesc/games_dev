@@ -263,15 +263,29 @@ export const LOOK = {
 
   // ---- Signs of the newer boss mechanics (see identityfx.ts) ----
   /** A vanished boss: a bar on the floor where it will reappear (as wide as the boss) and a faint ghost column over it. */
-  blink: { color: '#b58cff', markHeight: 6, markAlpha: 0.8, ghostAlpha: 0.16 },
-  /** Lingering fire on the floor: at most `maxTongues` flames per patch, each `flickerTicks` long, over a low base. The flames never rise above the real hit box (`EMBER.height`). */
-  ember: { maxTongues: 12, tongueWidth: 26, flickerTicks: 6, lowShare: 0.7, baseShare: 0.35, alpha: 0.9 },
-  /** The arrow that shows a bolt is coming from a side edge: `inset` from the edge, `length` and `half` (half its height) of the arrow, dimmest at first (`minAlpha`), red like every danger. */
-  edgeWarn: { inset: 6, length: 34, half: 20, minAlpha: 0.35, color: '#e0403a' },
+  blink: { color: '#b58cff', markHeight: 6, markAlpha: 0.8, ghostAlpha: 0.16, pulseBase: 0.6, pulseDepth: 0.4, pulseTicks: 3 },
+  /** Lingering fire on the floor: at most `maxTongues` flames per patch, each `flickerTicks` long, over a low base. The flames never rise above the real hit box (`EMBER.height`). A translucent band (`bandAlpha`) covers the whole hit box, so the gaps between flames are not drawn as safe. */
+  ember: { maxTongues: 12, tongueWidth: 26, flickerTicks: 6, lowShare: 0.7, bandAlpha: 0.35, alpha: 0.9 },
+  /**
+   * The arrow that shows a bolt is coming from a side edge: `inset` from the edge, `length` (longer than the player's body, so a player at the wall still sees the tip) and at least `half` tall (half its height; it grows with a big bolt, `pad` more than half the bolt's size),
+   * dimmest at first (`minAlpha`, of full opacity, then a pulse from `pulseBase` up to 1), red like every danger with a light `outline` (`outlinePad` wider) so it reads over a body. It is drawn over the player.
+   */
+  edgeWarn: {
+    inset: 6,
+    length: 78,
+    half: 20,
+    pad: 6,
+    minAlpha: 0.7,
+    pulseBase: 0.85,
+    pulseTicks: 3,
+    color: '#e0403a',
+    outline: '#fff1d6',
+    outlinePad: 4,
+  },
   /** The shield plate in front of a boss: `gap` off the body, `width` thick, `heightShare` of the body's height. */
-  shield: { gap: 6, width: 16, heightShare: 0.85, edge: '#6f7b93', color: '#c9d2e3' },
+  shield: { gap: 6, width: 16, heightShare: 0.85, inset: 3, edge: '#6f7b93', color: '#c9d2e3' },
   /** An angry boss (see `temperLevel`): an outline that starts at `from` (0 to 1) and reaches `alphaMax` at full temper. */
-  temper: { from: 0.35, alphaMax: 0.55, color: '#ff5a3a', lineWidth: 5 },
+  temper: { from: 0.35, alphaMax: 0.55, color: '#ff5a3a', lineWidth: 5, pad: 3 },
 
   // ---- Signs on a boss that show what its attack will do (see `attackMarks` in figures.ts) ----
   mark: {

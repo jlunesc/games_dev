@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AttackDef, BossDef } from '../src/bosses/schema';
-import { EMBER, WORLD } from '../src/game/params';
+import { EMBER, PLAYER, WORLD } from '../src/game/params';
 import { createInitialState, type EruptionState } from '../src/game/state';
 import { NO_FEEDBACK } from '../src/ui/feedback';
 import { NO_EFFECTS, spawnEffects } from '../src/ui/look/effects';
@@ -295,5 +295,53 @@ describe('the shield in a fight with a partner', () => {
     const g = recorder();
     drawFrame(g.ctx, 1280, 720, s, shielded, 0.5, NO_FEEDBACK);
     expect(g.calls.some((c) => c.name === 'fillRect' && c.fillStyle === LOOK.shield.edge)).toBe(false);
+  });
+});
+
+describe('fix round 1: the arrow reads next to the player and the embers match their hit box', () => {
+  it('reaches past a player standing at the wall, has a contrasting outline behind it, and is never faint', () => {
+    for (const side of ['left', 'right'] as const) {
+      const arrow = edgeArrow({ side, height: 0, size: 30, charge: 0 }, 0);
+      const all = arrow.primitives.flatMap(xs);
+      const reach = side === 'left' ? Math.max(...all) : WORLD.width - Math.min(...all);
+      expect(reach).toBeGreaterThan(PLAYER.width);
+      expect(arrow.primitives).toHaveLength(2);
+      expect(arrow.primitives[0]!.color).toBe(LOOK.edgeWarn.outline);
+      expect(arrow.primitives[1]!.color).toBe(LOOK.edgeWarn.color);
+    }
+    for (let tick = 0; tick < 40; tick++) {
+      expect(edgeArrow({ side: 'left', height: 0, size: 30, charge: 0 }, tick).alpha).toBeGreaterThanOrEqual(0.55);
+    }
+  });
+
+  it('is at least as tall as a big bolt', () => {
+    const arrow = edgeArrow({ side: 'left', height: 0, size: 120, charge: 0.5 }, 0);
+    const all = arrow.primitives[1]!.kind === 'poly' ? ys(arrow.primitives[1]!) : [];
+    expect(Math.max(...all) - Math.min(...all)).toBeGreaterThanOrEqual(120);
+  });
+
+  it('has a band over the whole ember hit box, so the gaps between flames are not drawn empty', () => {
+    const shapes = emberTongues({ left: 300, right: 500 }, 0, attackPalette(''));
+    const band = shapes[0]!;
+    expect(band.kind).toBe('rect');
+    if (band.kind === 'rect') {
+      expect(band.y).toBeCloseTo(WORLD.floorY - EMBER.height);
+      expect(band.h).toBeCloseTo(EMBER.height);
+      expect(band.w).toBe(200);
+    }
+  });
+
+  it('draws the arrow after the player body, so the player cannot cover it', () => {
+    const s = createInitialState(shooter, 1);
+    s.boss.mode = 'attack';
+    s.boss.attackId = 'volley';
+    s.boss.attackTick = 10;
+    const f = recorder();
+    drawFrame(f.ctx, 1280, 720, s, shooter, 0.5, NO_FEEDBACK);
+    const arrowAt = f.calls.findIndex((c) => c.name === 'fill' && c.fillStyle === LOOK.edgeWarn.color);
+    const bodyAt = f.calls.findIndex((c) => c.name === 'fillRect' && c.fillStyle === LOOK.playerBody);
+    expect(arrowAt).toBeGreaterThan(-1);
+    expect(bodyAt).toBeGreaterThan(-1);
+    expect(arrowAt).toBeGreaterThan(bodyAt);
   });
 });

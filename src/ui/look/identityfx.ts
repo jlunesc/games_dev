@@ -45,13 +45,20 @@ export function edgeArrow(w: EdgeWarning, tick: number): { primitives: Primitive
   const cy = WORLD.floorY - w.height - w.size / 2;
   const dir = w.side === 'left' ? 1 : -1;
   const x0 = w.side === 'left' ? e.inset : WORLD.width - e.inset;
-  const points: [number, number][] = [
-    [x0, cy - e.half],
-    [x0 + dir * e.length, cy],
-    [x0, cy + e.half],
+  const half = Math.max(e.half, w.size / 2 + e.pad);
+  const shape = (grow: number): [number, number][] => [
+    [x0, cy - half - grow],
+    [x0 + dir * (e.length + grow), cy],
+    [x0, cy + half + grow],
   ];
-  const pulse = 0.75 + 0.25 * Math.sin(tick / 3);
-  return { primitives: [{ kind: 'poly', points, color: e.color }], alpha: (e.minAlpha + (1 - e.minAlpha) * w.charge) * pulse };
+  const pulse = e.pulseBase + (1 - e.pulseBase) * (0.5 + 0.5 * Math.sin(tick / e.pulseTicks));
+  return {
+    primitives: [
+      { kind: 'poly', points: shape(e.outlinePad), color: e.outline },
+      { kind: 'poly', points: shape(0), color: e.color },
+    ],
+    alpha: (e.minAlpha + (1 - e.minAlpha) * w.charge) * pulse,
+  };
 }
 
 export interface EmberSpan {
@@ -67,14 +74,14 @@ export function emberSpan(shot: EruptionState): EmberSpan | null {
   return { left: shot.x - shot.width / 2, right: shot.x + shot.width / 2 };
 }
 
-/** A low base and a row of flames, each flickering between two heights. Nothing rises above `EMBER.height`, the real hit box. */
+/** A band over the whole hit box (the first shape, drawn fainter) and a row of flames, each flickering between two heights. Nothing rises above `EMBER.height`, the real hit box. */
 export function emberTongues(span: EmberSpan, tick: number, palette: { edge: string; core: string }): Primitive[] {
   const e = LOOK.ember;
   const width = span.right - span.left;
   const count = Math.max(1, Math.min(e.maxTongues, Math.round(width / e.tongueWidth)));
   const each = width / count;
   const out: Primitive[] = [
-    { kind: 'rect', x: span.left, y: WORLD.floorY - EMBER.height * e.baseShare, w: width, h: EMBER.height * e.baseShare, color: palette.edge },
+    { kind: 'rect', x: span.left, y: WORLD.floorY - EMBER.height, w: width, h: EMBER.height, color: palette.edge },
   ];
   for (let i = 0; i < count; i++) {
     const high = (tick + i * 3) % (e.flickerTicks * 2) < e.flickerTicks;
@@ -104,7 +111,7 @@ export function shieldPlate(b: BossState, boss: BossDef): Primitive[] {
   const x = b.facing === 1 ? near : near - s.width;
   return [
     { kind: 'rect', x, y, w: s.width, h, color: s.edge },
-    { kind: 'rect', x: x + 3, y: y + 3, w: s.width - 6, h: h - 6, color: s.color },
+    { kind: 'rect', x: x + s.inset, y: y + s.inset, w: s.width - 2 * s.inset, h: h - 2 * s.inset, color: s.color },
   ];
 }
 
