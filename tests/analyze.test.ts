@@ -196,7 +196,7 @@ describe('punish windows', () => {
     // Attack time 36 is the first update of the slam's recovery: the run ends there.
     const a = analyzeRun(slamBoss, standAt(slamBoss, 120), frames(slamFirst + 36));
     const p = a.behavior.punish;
-    expect(p).toEqual({ opened: 0, taken: 0, missed: 0 });
+    expect(p).toEqual({ opened: 0, taken: 0, missed: 0, windows: [] });
   });
 
   it('counts a window the player let pass', () => {
@@ -674,7 +674,7 @@ describe('the study', () => {
     expect(a.behavior.punish.opened).toBeLessThanOrEqual(real.length);
     // The same fight analysed without the study attacks' flag would count more windows: compare with study 0 of the same length of study.
     const studyOnly = analyzeRun(boss, initial, inputs.slice(0, a.study.ticks), 1);
-    expect(studyOnly.behavior.punish).toEqual({ opened: 0, taken: 0, missed: 0 });
+    expect(studyOnly.behavior.punish).toEqual({ opened: 0, taken: 0, missed: 0, windows: [] });
   });
 
   it('study 2 has two rounds of demonstrations', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { BossDef } from '../src/bosses/schema';
 import { NO_INPUT, type InputFrame } from '../src/engine/input-frame';
 import { createInitialState } from '../src/game/state';
-import { analyzeRun } from '../src/stats/analyze';
+import { analyzeRun, swingReach } from '../src/stats/analyze';
 import { customBoss, melee, solo, standAt, windupUpdates } from './boss-helpers';
 import { QUIET_BOSS, run, withInput } from './helpers';
 
@@ -150,5 +150,83 @@ describe('dash use', () => {
     );
     expect(a.dashes).toBe(3);
     expect(dashTotal(a.dashUse)).toBe(0);
+  });
+});
+
+// A harmless swing with a long recovery: the opening after it lasts 60 updates.
+const slowBoss = customBoss([melee('slow', { recovery: 60 })], { attacks: [{ id: 'slow', weight: 1 }] });
+
+describe('swing reach', () => {
+  it('is the two half-widths plus the swing reach', () => {
+    expect(swingReach(80)).toBe(24 + 90 + 40);
+  });
+});
+
+describe('opening detail', () => {
+  it('an opening nobody used: how far, how close, no swing', () => {
+    const first = firstWindup(slowBoss, 100);
+    const a = analyzeRun(slowBoss, standAt(slowBoss, 100), frames(first + 75));
+    const p = a.behavior.punish;
+    expect(p.windows.length).toBe(p.opened);
+    expect(p.windows[0]).toEqual({
+      attackId: 'slow',
+      boss: 0,
+      startTick: first + 10,
+      ticks: 60,
+      distanceAtOpen: 100,
+      closestDistance: 100,
+      swung: false,
+      hit: false,
+      reachable: true,
+    });
+  });
+
+  it('an opening used: a swing in the window that hit', () => {
+    const first = firstWindup(slowBoss, 100);
+    const a = analyzeRun(
+      slowBoss,
+      standAt(slowBoss, 100),
+      frames(first + 75, { [first + 20]: { attackPressed: true } }),
+    );
+    expect(a.behavior.punish.windows[0]).toMatchObject({ swung: true, hit: true, reachable: true });
+    expect(a.behavior.punish.taken).toBe(1);
+  });
+
+  it('an opening too short to get to: not reachable', () => {
+    const first = firstWindup(pokeBoss, 400);
+    const a = analyzeRun(pokeBoss, standAt(pokeBoss, 400), frames(first + 20));
+    // The poke's opening is 4 updates long: 400 units away cannot be closed at running speed.
+    expect(a.behavior.punish.windows[0]).toMatchObject({ distanceAtOpen: 400, swung: false, hit: false, reachable: false });
+    expect(a.behavior.punish.windows[0]!.ticks).toBe(4);
+  });
+
+  it('a player who runs in gets closer than they began', () => {
+    const first = firstWindup(slowBoss, 400);
+    const input = Array.from({ length: first + 75 }, (_, i) => withInput(i + 1 >= first + 10 ? { moveX: 1 } : {}));
+    const a = analyzeRun(slowBoss, standAt(slowBoss, 400), input);
+    const w = a.behavior.punish.windows[0]!;
+    expect(w.distanceAtOpen).toBeGreaterThanOrEqual(w.closestDistance);
+    expect(w.closestDistance).toBeLessThan(400);
+    expect(w.reachable).toBe(true);
+  });
+});
+
+describe('distance to the boss in the real fight', () => {
+  it('mean distance and updates within swing reach (quiet boss, idle player)', () => {
+    const near = analyzeRun(QUIET_BOSS, standAt(QUIET_BOSS, 100), frames(10));
+    expect(near.behavior.realMeanDistance).toBe(100);
+    expect(near.behavior.realUpdatesInReach).toBe(10);
+    const far = analyzeRun(QUIET_BOSS, standAt(QUIET_BOSS, 500), frames(10));
+    expect(far.behavior.realMeanDistance).toBe(500);
+    expect(far.behavior.realUpdatesInReach).toBe(0);
+  });
+
+  it('counts nothing for updates in the study', () => {
+    const initial = createInitialState(sweepBoss, 1, 1);
+    const states = run(initial, 1500, () => NO_INPUT, sweepBoss);
+    const endTick = states.find((s) => s.events.includes('studyEnd'))!.tick;
+    const a = analyzeRun(sweepBoss, initial, frames(endTick), 1);
+    expect(a.behavior.realMeanDistance).toBe(0);
+    expect(a.behavior.realUpdatesInReach).toBe(0);
   });
 });
