@@ -3,11 +3,13 @@ import type { MenuAction } from '../src/ui/menu-model';
 import {
   createStats,
   describeLastExport,
+  fightsToExport,
   statsRows,
   statsStep,
   withCount,
   withExported,
   withNotice,
+  type ExportAmount,
   type StatsModel,
 } from '../src/ui/stats-model';
 
@@ -16,36 +18,42 @@ const press = (model: StatsModel, ...actions: MenuAction[]): StatsModel =>
   actions.reduce((m, a) => statsStep(m, a).model, model);
 
 describe('the stats rows', () => {
-  it('are Export, Save to device, Copy to clipboard, Delete and Back', () => {
-    expect(statsRows(createStats(3, null)).map((r) => r.id)).toEqual(['export', 'save', 'copy', 'delete', 'back']);
+  it('are Export, Fights to export, Delete and Back', () => {
+    expect(statsRows(createStats(3, null)).map((r) => r.id)).toEqual(['export', 'amount', 'delete', 'back']);
   });
 
   it.each([
-    [0, '0 fights'],
-    [1, '1 fight'],
-    [7, '7 fights'],
-    [null, 'unavailable'],
-  ] as const)('show the count %s as "%s" on the Export row', (count, value) => {
-    const row = statsRows(createStats(count, null))[0]!;
+    [0, 5, '0 fights'],
+    [1, 5, '1 fight'],
+    [3, 5, '3 fights'],
+    [12, 5, '5 of 12 fights'],
+    [12, 1, '1 of 12 fights'],
+    [12, 'all', '12 fights'],
+    [null, 5, 'unavailable'],
+  ] as const)('show %s saved with amount %s as "%s" on the Export row', (count, amount, value) => {
+    const row = statsRows(createStats(count, null, amount))[0]!;
     expect(row.label).toBe('Export');
     expect(row.value).toBe(value);
-    expect(row.help).toBe(
-      'Send your saved fights as a file: the share sheet on the phone, a download on the PC.',
-    );
+  });
+
+  it('shows the amount on its own row', () => {
+    expect(statsRows(createStats(9, null, 10))[1]!.value).toBe('Last 10');
+    expect(statsRows(createStats(9, null, 'all'))[1]!.value).toBe('All');
+    expect(statsRows(createStats(9, null))[1]!.label).toBe('Fights to export');
   });
 
   it('label Delete, and ask again while confirming', () => {
     const model = createStats(2, null);
-    const plain = statsRows(model)[3]!;
+    const plain = statsRows(model)[2]!;
     expect(plain.label).toBe('Delete all fights');
     expect(plain.help).toBe('Removes every saved fight from this device. Export first.');
-    expect(statsRows({ ...model, confirmingDelete: true })[3]!.label).toBe(
+    expect(statsRows({ ...model, confirmingDelete: true })[2]!.label).toBe(
       'Really delete all fights? Press again.',
     );
   });
 
   it('give Back its help', () => {
-    const row = statsRows(createStats(2, null))[4]!;
+    const row = statsRows(createStats(2, null))[3]!;
     expect(row.label).toBe('Back');
     expect(row.help).toBe('Return to the menu.');
   });
@@ -55,6 +63,7 @@ describe('a new stats model', () => {
   it('starts on the first row with no notice and no pending delete', () => {
     expect(createStats(4, '2026-09-21T10:00:00.000Z')).toEqual({
       focus: 0,
+      amount: 5,
       count: 4,
       lastExportAt: '2026-09-21T10:00:00.000Z',
       confirmingDelete: false,
@@ -64,12 +73,12 @@ describe('a new stats model', () => {
 });
 
 describe('moving on the stats screen', () => {
-  it('wraps over the five rows', () => {
+  it('wraps over the four rows', () => {
     const start = createStats(1, null);
     expect(press(start, 'down').focus).toBe(1);
-    expect(press(start, 'up').focus).toBe(4);
-    expect(press(start, 'down', 'down', 'down', 'down', 'down').focus).toBe(0);
-    expect(press(start, 'up', 'up', 'up', 'up', 'up').focus).toBe(0);
+    expect(press(start, 'up').focus).toBe(3);
+    expect(press(start, 'down', 'down', 'down', 'down').focus).toBe(0);
+    expect(press(start, 'up', 'up', 'up', 'up').focus).toBe(0);
   });
 
   it('clears the confirm state and the notice', () => {
@@ -82,7 +91,7 @@ describe('moving on the stats screen', () => {
     }
   });
 
-  it('does nothing on left and right', () => {
+  it('does nothing on left and right outside the amount row', () => {
     const model = { ...createStats(1, null), confirmingDelete: true, notice: 'hello' };
     expect(statsStep(model, 'left')).toEqual({ model, outcome: 'stay' });
     expect(statsStep(model, 'right')).toEqual({ model, outcome: 'stay' });
@@ -107,26 +116,45 @@ describe('export', () => {
   });
 });
 
-describe('save to device and copy to clipboard', () => {
-  it.each([
-    [1, 'save'],
-    [2, 'copy'],
-  ] as const)('row %s starts a %s when there are fights', (focus, outcome) => {
-    expect(statsStep(at(focus, createStats(3, null)), 'confirm').outcome).toBe(outcome);
+describe('the amount row', () => {
+  const onAmount = (amount: ExportAmount): StatsModel => at(1, createStats(30, null, amount));
+
+  it('steps through the choices with right and left, and wraps', () => {
+    expect(press(onAmount(5), 'right').amount).toBe(10);
+    expect(press(onAmount(5), 'left').amount).toBe(3);
+    expect(press(onAmount('all'), 'right').amount).toBe(1);
+    expect(press(onAmount(1), 'left').amount).toBe('all');
   });
 
-  it.each([1, 2])('row %s says so and stays when there is nothing to export', (focus) => {
-    const none = statsStep(at(focus, createStats(0, null)), 'confirm');
-    expect(none.outcome).toBe('stay');
-    expect(none.model.notice).toBe('No fights saved yet.');
-    const unavailable = statsStep(at(focus, createStats(null, null)), 'confirm');
-    expect(unavailable.outcome).toBe('stay');
-    expect(unavailable.model.notice).toBe('This device cannot store stats.');
+  it('cycles forward on confirm, so a finger tap changes it', () => {
+    const result = statsStep(onAmount(50), 'confirm');
+    expect(result.model.amount).toBe('all');
+    expect(result.outcome).toBe('stay');
+  });
+
+  it('clears a pending delete and the notice', () => {
+    const model = { ...onAmount(5), confirmingDelete: true, notice: 'hello' };
+    const next = statsStep(model, 'right').model;
+    expect(next.confirmingDelete).toBe(false);
+    expect(next.notice).toBeNull();
+  });
+
+  it('works even when nothing is saved', () => {
+    expect(statsStep(at(1, createStats(0, null, 5)), 'right').model.amount).toBe(10);
+  });
+});
+
+describe('fightsToExport', () => {
+  it('is the amount, capped at the fights saved, or all of them', () => {
+    expect(fightsToExport(12, 5)).toBe(5);
+    expect(fightsToExport(3, 5)).toBe(3);
+    expect(fightsToExport(12, 'all')).toBe(12);
+    expect(fightsToExport(0, 5)).toBe(0);
   });
 });
 
 describe('delete', () => {
-  const onDelete = (count: number | null): StatsModel => at(3, createStats(count, null));
+  const onDelete = (count: number | null): StatsModel => at(2, createStats(count, null));
 
   it('needs two presses', () => {
     const first = statsStep(onDelete(5), 'confirm');
@@ -163,12 +191,12 @@ describe('going back', () => {
   });
 
   it('confirm on the Back row gives back', () => {
-    expect(statsStep(at(4, createStats(2, null)), 'confirm').outcome).toBe('back');
+    expect(statsStep(at(3, createStats(2, null)), 'confirm').outcome).toBe('back');
   });
 });
 
 describe('the setters', () => {
-  const busy: StatsModel = { focus: 1, count: 2, lastExportAt: null, confirmingDelete: true, notice: 'x' };
+  const busy: StatsModel = { focus: 1, amount: 5, count: 2, lastExportAt: null, confirmingDelete: true, notice: 'x' };
 
   it('withCount replaces the count, keeps the focus and clears the confirm state', () => {
     const next = withCount(busy, 9);

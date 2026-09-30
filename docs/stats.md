@@ -5,7 +5,7 @@ What the game records about every fight, how it is stored and exported, and what
 ## 1. Purpose and privacy
 
 - Every fight that ran is saved on the device, in the browser's IndexedDB (database `boss-trainer`, store `fights`, key `id`). A fight that is left before its first update ran is not saved.
-- Nothing is uploaded. There is no backend and no account. The Stats screen has an **Export** row that builds one file and hands it to the phone's share sheet (or saves it as a download on a PC). Two more rows give the same content without the share sheet: **Save to device** (a download to the Downloads folder) and **Copy to clipboard** (the file's text, to paste into a chat). The player then sends the file wherever they choose, for example to Claude for analysis.
+- Nothing is uploaded. There is no backend and no account. The Stats screen has an **Export** row that builds one file and hands it to the phone's share sheet (or saves it as a download on a PC). A **Fights to export** row sets how many of the newest fights the file holds (1, 2, 3, 5, 10, 20, 50 or all; it starts at 5), so the file can stay small enough to send. The player then sends the file wherever they choose, for example to Claude for analysis.
 - Android can clear browser data, so export now and then. Delete on the Stats screen removes every saved fight from the device (it asks twice).
 - Exports are never committed. `.gitignore` covers `*.stats.txt`, `*.stats.json`, `*.stats.csv`, `/stats/`, `/stats-export/` and `/exports/` (SPEC section 4, rule 6).
 - CSV is not built (SPEC section 9, still open).

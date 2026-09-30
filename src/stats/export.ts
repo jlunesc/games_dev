@@ -60,8 +60,8 @@ export async function shareOrDownload(file: ExportFile): Promise<ShareResult> {
   }
 }
 
-/** Saves the file to the device's downloads folder, without the share sheet. */
-export function downloadFile(file: ExportFile): 'downloaded' | 'failed' {
+/** Saves the file to the device's downloads folder. */
+function downloadFile(file: ExportFile): 'downloaded' | 'failed' {
   if (typeof document === 'undefined') return 'failed';
   try {
     const url = URL.createObjectURL(new Blob([file.json], { type: 'text/plain' }));
@@ -77,17 +77,6 @@ export function downloadFile(file: ExportFile): 'downloaded' | 'failed' {
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
     }
     return 'downloaded';
-  } catch {
-    return 'failed';
-  }
-}
-
-/** Puts the export text on the clipboard so it can be pasted into a chat. A browser may refuse without a finger tap. */
-export async function copyToClipboard(file: ExportFile): Promise<'copied' | 'failed'> {
-  try {
-    if (typeof navigator === 'undefined' || navigator.clipboard === undefined) return 'failed';
-    await navigator.clipboard.writeText(file.json);
-    return 'copied';
   } catch {
     return 'failed';
   }
