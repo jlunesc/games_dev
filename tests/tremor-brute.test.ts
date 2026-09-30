@@ -170,6 +170,8 @@ describe('the floor wave and the uppercut', () => {
 });
 
 describe('the Brute can be beaten', () => {
+  // Reacts only to what a player can see: it dashes as soon as the fist is fully raised (the last wind-up tick), never reading the hidden hold length.
+  const hammerFist = TREMOR_BRUTE.attacks.find((a) => a.id === 'hammer-fist')!;
   const knower: Bot = (n, prev) => {
     const p = prev.player;
     const b = prev.boss;
@@ -189,7 +191,7 @@ describe('the Brute can be beaten', () => {
     if ((wave !== undefined || waveComing) && p.onGround) return withInput({ jumpPressed: true, jumpHeld: true });
     if (!p.onGround) return withInput({ jumpHeld: true });
     const away = p.x > b.x ? 1 : -1;
-    if (b.mode === 'attack' && b.attackId === 'hammer-fist' && b.attackTick === 25 && b.holdLeft <= 4) return withInput({ dashPressed: true, moveX: away });
+    if (b.mode === 'attack' && b.attackId === 'hammer-fist' && b.attackTick === hammerFist.windup - 1) return withInput({ dashPressed: true, moveX: away });
     if (b.mode === 'attack' && b.attackId === 'backhand' && b.attackTick + 1 === 16) return withInput({ attackPressed: true });
     const dx = b.x - p.x;
     return withInput({ moveX: Math.abs(dx) < 90 ? 0 : dx > 0 ? 1 : -1, attackPressed: b.mode !== 'attack' && n % 20 === 0 });

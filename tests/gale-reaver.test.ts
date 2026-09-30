@@ -28,7 +28,8 @@ describe('the Gale Reaver file', () => {
     expect(phase.combos).toHaveLength(2);
     expect(phase.chainChance).toBeGreaterThan(0);
     expect(phase.walkSpeed).toBeGreaterThanOrEqual(400);
-    for (const a of GALE_REAVER.attacks) if (a.id !== 'gale-recoil') expect(a.windup).toBeGreaterThanOrEqual(18);
+    // Only attacks that can hurt need a readable wind-up; a harmless one (the recoil) may be quick.
+    for (const a of GALE_REAVER.attacks) if (a.hits.length > 0 || (a.shots ?? []).length > 0) expect(a.windup).toBeGreaterThanOrEqual(18);
   });
 });
 

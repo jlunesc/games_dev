@@ -125,6 +125,29 @@ describe('shield: blocking', () => {
     expect(s.boss.hp).toBe(boss.maxHp - boss.counter.damageMultiplier);
   });
 
+  it('a front swing inside the counter window counters instead of being blocked (the counter is tried before the block)', () => {
+    // With the real 3-update start-up a swing cannot connect on the update it starts, so the order of the two checks would not show.
+    // A swing with no start-up connects on that very update: only "counter first" gives a counter and a hit, otherwise it is blocked.
+    const attack = PLAYER.attack as { startup: number };
+    const realStartup = attack.startup;
+    attack.startup = 0;
+    try {
+      const boss = shielded();
+      const start = aboutToHit(boss, 'front');
+      start.player.attackTick = -1;
+      start.boss.mode = 'attack';
+      start.boss.attackId = 'swing';
+      start.boss.attackTick = 27;
+      expect(shieldUp(start.boss, boss)).toBe(true);
+      const s = step(start, withInput({ attackPressed: true }), boss);
+      expect(s.events).toContain('counter');
+      expect(s.events).toContain('bossHit');
+      expect(s.events).not.toContain('bossBlocked');
+    } finally {
+      attack.startup = realStartup;
+    }
+  });
+
   it('does nothing to a boss without a shield', () => {
     const plain = shielded();
     delete plain.shield;

@@ -148,7 +148,7 @@ describe('the Sage can be beaten', () => {
   };
 
   it('a player who knows its shots wins at Normal', () => {
-    const boss: BossDef = { ...applyDials(VESPER_SAGE, presetDials('normal')), reaction: undefined, temper: undefined };
+    const boss: BossDef = applyDials(VESPER_SAGE, presetDials('normal'));
     const results = SEEDS.map((seed) => fight(knower, boss, seed));
     // The bot only chases a retreating boss clumsily, so most fights time out; what matters is that it wins some and is barely touched.
     expect(results.some((r) => r.won)).toBe(true);

@@ -43,6 +43,7 @@ function fight(bot: (n: number, s: GameState) => InputFrame, boss: BossDef, seed
 function soloOf(base: BossDef, id: string): BossDef {
   return {
     ...base,
+    // Deliberately stripped of reaction, temper and combos so only the one attack under test is in play.
     reaction: undefined,
     temper: undefined,
     spacing: { min: 0, max: 1e9 },

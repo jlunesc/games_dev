@@ -30,6 +30,7 @@ describe('the Veil Dancer file', () => {
 function solo(id: string): BossDef {
   return {
     ...VEIL_DANCER,
+    // Deliberately stripped of reaction, temper and combos so only the one attack under test is in play.
     reaction: undefined,
     temper: undefined,
     spacing: { min: 0, max: 1e9 },
