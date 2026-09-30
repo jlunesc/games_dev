@@ -1,4 +1,4 @@
-import type { AttackDef, BossDef, DiveDef, FlightDef, LeapDef, LeapTarget, PhaseAttack, PhaseDef } from '../bosses/schema';
+import type { AttackDef, BlinkDef, BossDef, DiveDef, FlightDef, LeapDef, LeapTarget, PhaseAttack, PhaseDef } from '../bosses/schema';
 import { DT } from '../engine/time';
 import { TEMPER, WORLD } from './params';
 import { nextRandom } from './rng';
@@ -39,6 +39,7 @@ export function landBoss(b: BossState): void {
   b.leapFromX = null;
   b.leapToX = null;
   b.diveFromLift = null;
+  b.blinkToX = null;
 }
 
 /**
@@ -273,6 +274,7 @@ function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef, index: numbe
   }
   if (attack.leap !== undefined) updateLeap(s, boss, attack.leap, index);
   if (attack.dive !== undefined) updateDive(s, boss, attack.dive, index);
+  if (attack.blink !== undefined) updateBlink(s, boss, attack.blink, index);
   spawnShots(s, boss, attack, index);
   if (b.attackTick >= attackLength(attack)) finishAttack(s, boss, phase, index);
 }
@@ -384,6 +386,31 @@ function updateDive(s: GameState, boss: BossDef, dive: DiveDef, index: number): 
     b.leapFromX = null;
     b.leapToX = null;
     b.diveFromLift = null;
+  }
+}
+
+/** The x a blink will land on, fixed on its first hidden update and kept inside the arena. */
+function blinkLanding(s: GameState, boss: BossDef, blink: BlinkDef, index: number): number {
+  const b = bossAt(s, index);
+  const half = boss.width / 2;
+  let x = s.player.x;
+  // The parser guarantees `distance` for 'forward' and 'back' (the 0 only satisfies the type).
+  if (blink.target === 'player') x = s.player.x + (s.player.x >= b.x ? 1 : -1) * (blink.distance ?? 0);
+  if (blink.target === 'forward') x = b.x + b.facing * (blink.distance ?? 0);
+  if (blink.target === 'back') x = b.x - b.facing * (blink.distance ?? 0);
+  return Math.min(Math.max(x, half), WORLD.width - half);
+}
+
+/** The boss is gone from update `from` to `to` (see `bossHidden`); on update `to` it stands on the spot chosen when it vanished. */
+function updateBlink(s: GameState, boss: BossDef, blink: BlinkDef, index: number): void {
+  const b = bossAt(s, index);
+  const t = b.attackTick;
+  if (t >= blink.from && t < blink.to) {
+    if (b.blinkToX === null) b.blinkToX = blinkLanding(s, boss, blink, index);
+  } else if (t >= blink.to && b.blinkToX !== null) {
+    b.x = b.blinkToX;
+    b.blinkToX = null;
+    faceTarget(b, s.player.x);
   }
 }
 

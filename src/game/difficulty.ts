@@ -237,6 +237,13 @@ function adjustAttack(attack: AttackDef, boss: BossDef, d: Dials): AttackDef {
     next.dive = { ...attack.dive, from: attack.dive.from + shift, to: attack.dive.to + shift };
     if (attack.dive.distance !== undefined) next.dive.distance = Math.max(1, attack.dive.distance * d.range);
   }
+  if (attack.blink !== undefined) {
+    // Like a leap: only the timing shifts with the warning, and the range dial sets how far it lands. A blink onto the player keeps a distance of 0.
+    next.blink = { ...attack.blink, from: attack.blink.from + shift, to: attack.blink.to + shift };
+    if (attack.blink.distance !== undefined) {
+      next.blink.distance = Math.max(attack.blink.target === 'player' ? 0 : 1, attack.blink.distance * d.range);
+    }
+  }
   if (attack.shots !== undefined) {
     // A bolt's height and size and an arc's flight and peak are not scaled by any dial: a bolt that can be jumped
     // stays one that can be jumped. Timing shifts with the warning; speed scales a bolt; range scales an arc's reach

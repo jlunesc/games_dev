@@ -90,6 +90,13 @@ export function activeHitBoxes(b: BossState, boss: BossDef, options: { ignoreCov
   return boxes;
 }
 
+/** Whether the boss is gone right now (the vanished stretch of a blink): it cannot be hit, and the renderer does not draw it. */
+export function bossHidden(b: BossState, boss: BossDef): boolean {
+  if (b.mode !== 'attack' || b.attackId === null) return false;
+  const blink = boss.attacks.find((a) => a.id === b.attackId)?.blink;
+  return blink !== undefined && b.attackTick >= blink.from && b.attackTick < blink.to;
+}
+
 /** The box of a shot that can hurt right now: a bolt's square, an arc's landing burst or an eruption's blast; null before those. */
 export function shotBox(shot: ShotState): Box | null {
   if (shot.kind === 'bolt') {

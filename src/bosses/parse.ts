@@ -1,5 +1,6 @@
 import { PLAYER, WORLD } from '../game/params';
 import type {
+  BlinkDef,
   ArenaDef,
   ArcDef,
   ArenaPiece,
@@ -273,7 +274,33 @@ function attack(value: unknown, path: string): AttackDef {
     if (windup < 2) fail(`${path}.hold`, 'needs a wind-up of at least 2');
   }
 
-  if (hits.length === 0 && move === undefined && leap === undefined && dive === undefined && shots === undefined) {
+  let blink: BlinkDef | undefined;
+  if (o.blink !== undefined) {
+    const k = object(o.blink, `${path}.blink`);
+    const from = num(k.from, `${path}.blink.from`, { min: 1, integer: true });
+    const to = num(k.to, `${path}.blink.to`, { min: 2, integer: true });
+    const target = text(k.target, `${path}.blink.target`);
+    if (!LEAP_TARGETS.includes(target as LeapTarget)) {
+      fail(`${path}.blink.target`, `must be one of ${LEAP_TARGETS.join(', ')}`);
+    }
+    blink = { from, to, target: target as LeapTarget };
+    if (target === 'player') {
+      if (k.distance !== undefined) blink.distance = num(k.distance, `${path}.blink.distance`, { min: 0 });
+    } else {
+      blink.distance = num(k.distance, `${path}.blink.distance`, { min: 1 });
+    }
+    if (to <= from || to > windup + active) fail(`${path}.blink`, 'must end inside the attack');
+    if (cls !== 'mustDodge') fail(`${path}.blink`, 'only a "mustDodge" attack can blink');
+    if (leap !== undefined || dive !== undefined || shots !== undefined || hold !== undefined) {
+      fail(`${path}.blink`, 'an attack with a blink cannot also leap, dive, shoot or hold');
+    }
+    if (move !== undefined && from < move.to && move.from < to) fail(`${path}.blink`, 'must not overlap the move');
+    hits.forEach((hit, i) => {
+      if (hit.from < to) fail(`${path}.hits[${i}]`, 'a hit window cannot start while the boss is gone (it must start at "blink.to" or later)');
+    });
+  }
+
+  if (hits.length === 0 && move === undefined && leap === undefined && dive === undefined && shots === undefined && blink === undefined) {
     fail(`${path}.hits`, 'needs at least one hit window, a move, a leap, a dive or shots');
   }
 
@@ -295,6 +322,7 @@ function attack(value: unknown, path: string): AttackDef {
     ...(move === undefined ? {} : { move }),
     ...(leap === undefined ? {} : { leap }),
     ...(dive === undefined ? {} : { dive }),
+    ...(blink === undefined ? {} : { blink }),
     ...(shots === undefined ? {} : { shots }),
     ...(hold === undefined ? {} : { hold }),
   };

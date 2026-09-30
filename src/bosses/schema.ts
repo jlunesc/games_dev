@@ -72,6 +72,19 @@ export interface DiveDef {
 }
 
 /**
+ * A blink: at update `from` the boss vanishes (a mark shows where it will be), and at update `to` it stands there, turned
+ * toward the player. For `'player'` it lands on the player's x as it was at `from`, plus `distance` (default 0) on the side
+ * of the player away from the boss; for `'forward'` and `'back'` it lands `distance` units from itself (required).
+ * While it is gone it cannot hurt or be hurt.
+ */
+export interface BlinkDef {
+  from: number;
+  to: number;
+  target: LeapTarget;
+  distance?: number;
+}
+
+/**
  * A bolt: appears at the boss's edge at update `at` (counted like hit windows) and flies the way the boss faces (or
  * the opposite way for `dir: 'back'`). `height` is its bottom edge above the boss's feet (the floor for a boss on the
  * floor), `size` the side of its square, `speed` in units per second. With `aim` it flies in a straight line at the
@@ -135,6 +148,8 @@ export interface AttackDef {
   leap?: LeapDef;
   /** A dive. Only for a boss with `flight`; an attack may not have both a `leap` and a `dive`. */
   dive?: DiveDef;
+  /** A blink. Only for a `mustDodge` attack without a leap, dive, shots or hold; every hit window starts at `blink.to` or later. */
+  blink?: BlinkDef;
   /**
    * Up to this many extra updates the boss stays frozen on the last update of the wind-up, a random number each time, so the
    * strike cannot be timed by counting. Only for a `mustDodge` attack without shots, with a wind-up of at least 2.

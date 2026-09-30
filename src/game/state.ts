@@ -56,6 +56,8 @@ export interface BossState {
   leapToX: number | null;
   /** The height the running dive took off from (null when no dive is running). */
   diveFromLift: number | null;
+  /** Where the running blink will land (x); null when no blink is running. */
+  blinkToX: number | null;
   facing: 1 | -1;
   hp: number;
   /** Index into the boss definition's phases. */
@@ -226,6 +228,7 @@ function initialBoss(boss: BossDef): BossState {
     leapFromX: null,
     leapToX: null,
     diveFromLift: null,
+    blinkToX: null,
     facing: -1,
     hp: boss.maxHp,
     phase: 0,

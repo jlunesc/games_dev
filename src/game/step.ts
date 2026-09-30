@@ -9,6 +9,7 @@ import {
   attackActive,
   attackBox,
   bossBox,
+  bossHidden,
   isInvulnerable,
   overlaps,
   playerBox,
@@ -221,7 +222,7 @@ function resolvePlayerAttack(s: GameState, fight: FightDef, studying: boolean): 
   let nearest = Infinity;
   for (let i = 0; i < bossCount(s); i++) {
     const candidate = bossAt(s, i);
-    if (isDowned(s, i) || candidate.mode === 'transition') continue;
+    if (isDowned(s, i) || candidate.mode === 'transition' || bossHidden(candidate, bossDefFor(s, fight, i))) continue;
     if (!overlaps(swing, bossBox(candidate, bossDefFor(s, fight, i)))) continue;
     const distance = Math.abs(p.x - candidate.x);
     if (distance < nearest) {
