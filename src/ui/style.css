@@ -257,6 +257,12 @@ body {
   }
 }
 
+.summary-line.compact {
+  margin: 0.1rem 0;
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+
 /* The menus sit over the arena of the selected boss (drawn on .scene-canvas); --accent is set per boss on .panel. */
 .scene-canvas {
   position: fixed;

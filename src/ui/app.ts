@@ -502,6 +502,7 @@ export function mountApp(root: HTMLElement): void {
         summaryMenu = { ...summaryMenu, focus: index };
         handleSummary('confirm');
       },
+      { from: text.lines.length, count: insightLines.length },
     );
   }
 
@@ -541,7 +542,13 @@ export function mountApp(root: HTMLElement): void {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       const analysis = analyzeRecording(recording);
       // A fight left during the study has no fight time: no block at all.
-      if (analysis.fightSeconds > 0) lines = workOnLines(insightsFor(analysis), nameOf);
+      if (analysis.fightSeconds > 0) {
+        try {
+          lines = workOnLines(insightsFor(analysis), nameOf);
+        } catch {
+          lines = []; // a fault in the insights must never stop the fight being saved
+        }
+      }
       if (target === null) {
         line = 'This fight was not saved: this device cannot store stats.';
       } else {
