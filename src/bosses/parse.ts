@@ -136,6 +136,7 @@ function shotList(value: unknown, path: string, windup: number, active: number):
         delay: num(o.delay, `${at}.delay`, { min: 8, max: 200, integer: true }),
         burst: num(o.burst, `${at}.burst`, { min: 3, max: 30, integer: true }),
       };
+      if (o.linger !== undefined) eruption.linger = num(o.linger, `${at}.linger`, { min: 1, max: 600, integer: true });
       return eruption;
     }
     if (kind === 'arc') {

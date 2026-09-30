@@ -37,6 +37,7 @@ export function spawnShots(s: GameState, boss: BossDef, attack: AttackDef, index
         width: def.width,
         delay: def.delay,
         burst: def.burst,
+        ...(def.linger === undefined ? {} : { linger: def.linger }),
         ...owner,
       });
       continue;
@@ -120,7 +121,7 @@ export function moveShots(s: GameState, boss: BossDef): void {
       if (outside || landed || shot.lift > WORLD.height || stoppedByCover(shot, boss)) continue;
     } else if (shot.kind === 'eruption') {
       shot.age += 1;
-      if (shot.age >= shot.delay + shot.burst) continue;
+      if (shot.age >= shot.delay + shot.burst + (shot.linger ?? 0)) continue;
     } else {
       shot.age += 1;
       if (shot.age >= shot.flight + shot.burst) continue;

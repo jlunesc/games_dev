@@ -1,5 +1,5 @@
 import type { ArenaDef, BossDef } from '../bosses/schema';
-import { ERUPTION, PLAYER, SHOT, WORLD } from './params';
+import { EMBER, ERUPTION, PLAYER, SHOT, WORLD } from './params';
 import type { BossState, PlayerState, ShotState } from './state';
 
 /** Top-left corner plus size, in world units (y grows downward). */
@@ -104,7 +104,9 @@ export function shotBox(shot: ShotState): Box | null {
   }
   if (shot.kind === 'eruption') {
     if (shot.age < shot.delay) return null;
-    return { x: shot.x - shot.width / 2, y: WORLD.floorY - ERUPTION.height, w: shot.width, h: ERUPTION.height };
+    // After the blast, only an eruption with `linger` is still around, as low embers.
+    const height = shot.age < shot.delay + shot.burst ? ERUPTION.height : EMBER.height;
+    return { x: shot.x - shot.width / 2, y: WORLD.floorY - height, w: shot.width, h: height };
   }
   if (shot.age < shot.flight) return null;
   return {

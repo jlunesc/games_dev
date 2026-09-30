@@ -128,6 +128,8 @@ export interface EruptionDef {
   width: number;
   delay: number;
   burst: number;
+  /** Updates the blast stays on as a low fire (`EMBER.height`, jumpable) after the tall blast is over. Absent means it just ends. */
+  linger?: number;
 }
 
 export type ShotDef = BoltDef | ArcDef | EruptionDef;

@@ -293,7 +293,8 @@ function resolveShotHits(s: GameState, fight: FightDef, studying: boolean): void
     return area !== null && overlaps(area, box);
   });
   if (hit.length === 0) return;
-  s.shots = s.shots.filter((shot) => !hit.includes(shot));
+  // A hit shot is used up, except an eruption with embers: it keeps burning, and the player's short untouchability spaces the hits out.
+  s.shots = s.shots.filter((shot) => !hit.includes(shot) || (shot.kind === 'eruption' && shot.linger !== undefined));
   s.shotHits = hit.map((shot) => ({ attackId: shot.attackId, originTick: shot.originTick }));
   if (studying) {
     p.invulnerableTicks = PLAYER.hitInvulnerability;

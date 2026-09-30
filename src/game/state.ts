@@ -129,6 +129,8 @@ export interface EruptionState extends ShotBase {
   width: number;
   delay: number;
   burst: number;
+  /** Updates the eruption stays on as low embers after its blast; absent for an eruption without embers. */
+  linger?: number;
 }
 
 export type ShotState = BoltState | ArcState | EruptionState;

@@ -506,7 +506,7 @@ export function analyzeRun(
       const dangerStart = (x: ShotDef): number =>
         x.kind === 'arc' ? x.at + x.flight : x.kind === 'eruption' ? x.at + x.delay : x.at;
       const dangerEnd = (x: ShotDef): number =>
-        x.kind === 'arc' ? x.at + x.flight + x.burst : x.kind === 'eruption' ? x.at + x.delay + x.burst : x.at + 1;
+        x.kind === 'arc' ? x.at + x.flight + x.burst : x.kind === 'eruption' ? x.at + x.delay + x.burst + (x.linger ?? 0) : x.at + 1;
       const froms = [...def.hits.map((h) => h.from), ...shots.map(dangerStart)];
       const tos = [...def.hits.map((h) => h.to), ...shots.map(dangerEnd)];
       open = {
