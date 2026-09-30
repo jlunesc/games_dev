@@ -1,8 +1,9 @@
 import type { AttackDef } from '../../bosses/schema';
 import type { FightDef } from '../../game/fight';
 import { bossAt, bossCount, type BossState, type GameEvent, type GameState, type ShotState } from '../../game/state';
+import { bossHidden } from '../../game/geometry';
 import { fellBosses, phasedBoss, struckBoss } from '../look/who';
-import { HIT_VARIATION, PAIR_PAN, POSE_PITCH, PRIORITY, SHOT_PASS, type VoiceName } from './tuning';
+import { EDGE_PAN, HIT_VARIATION, PAIR_PAN, POSE_PITCH, PRIORITY, SHOT_PASS, type VoiceName } from './tuning';
 
 /** One sound to play: which recipe, a pitch multiplier (1 = as written), a pan from -1 to 1, and its priority. */
 export interface Cue {
@@ -58,6 +59,13 @@ const panOf = (fight: FightDef, index: number): number | undefined =>
 const attackOf = (fight: FightDef, index: number, id: string | null): AttackDef | undefined =>
   id === null ? undefined : fight.bosses[index]?.attacks.find((a) => a.id === id);
 
+/** The side edges an attack fires bolts from (none, one or both). */
+const edgeSides = (attack: AttackDef): ('left' | 'right')[] => {
+  const sides = new Set<'left' | 'right'>();
+  for (const shot of attack.shots ?? []) if (shot.kind === 'bolt' && shot.edge !== undefined) sides.add(shot.edge);
+  return [...sides];
+};
+
 /** Whether the boss began an attack in this update: a new one, a different one, or the same one from the top again. */
 export function attackStarted(was: BossState, now: BossState): boolean {
   return (
@@ -87,6 +95,10 @@ function bossCues(before: GameState, after: GameState, fight: FightDef, index: n
       push(attack.class === 'counterable' ? 'warningGold' : 'warningRed');
       if (attack.shots !== undefined && attack.shots.length > 0) push('charge');
       else push('swell', POSE_PITCH[attack.pose]);
+      const sides = edgeSides(attack);
+      if (sides.length > 0) {
+        out.push(cue('edgeWarn', extra(undefined, sides.length === 1 ? (sides[0] === 'left' ? -EDGE_PAN : EDGE_PAN) : pan)));
+      }
     }
     if (attack.hits.length > 0 && crossed(was, now, attack.windup)) push('strike');
     if (attack.move !== undefined && crossed(was, now, attack.move.from)) push('whoosh');
@@ -94,6 +106,13 @@ function bossCues(before: GameState, after: GameState, fight: FightDef, index: n
   // A dive shares the leap's take-off point but also records a height, so `diveFromLift` tells them apart.
   if (was.leapFromX === null && now.leapFromX !== null && now.diveFromLift === null) push('leapUp');
   if (was.diveFromLift === null && now.diveFromLift !== null) push('diveDown');
+  const def = fight.bosses[index];
+  if (def !== undefined) {
+    const wasHidden = bossHidden(was, def);
+    const nowHidden = bossHidden(now, def);
+    if (!wasHidden && nowHidden) push('blinkOut');
+    if (wasHidden && !nowHidden) push('blinkIn');
+  }
   // A leap or plunge that ends by a counter (stagger), a phase change (transition) or a defeat also drops the boss to the
   // floor, so only a landing while the boss is still up and not staggered counts as a slam.
   if (
@@ -161,6 +180,7 @@ export function cuesFor(before: GameState, after: GameState, fight: FightDef): C
   if (after.events.includes('phaseChange')) {
     cues.push(cue('phaseChange', extra(undefined, panOf(fight, phasedBoss(before, after)))));
   }
+  if (after.events.includes('bossBlocked')) cues.push(cue('blockClang'));
   if (after.events.includes('bossDefeated') || after.events.includes('bossDown')) {
     const fell = fellBosses(before, after);
     if (fell.length === 0) cues.push(cue('fall'));

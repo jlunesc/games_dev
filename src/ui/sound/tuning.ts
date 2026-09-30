@@ -44,7 +44,11 @@ export type VoiceName =
   | 'arcLand'
   | 'eruptionMark'
   | 'eruptionBlast'
-  | 'boltPass';
+  | 'boltPass'
+  | 'blockClang'
+  | 'blinkOut'
+  | 'blinkIn'
+  | 'edgeWarn';
 
 /**
  * One layer of a sound: a tone (an oscillator gliding from `from` to `to` Hz) or a burst of the shared noise through a
@@ -157,6 +161,28 @@ export const RECIPES: Record<VoiceName, readonly Part[]> = {
     { tone: 'sawtooth', from: 90, to: 40, seconds: 0.35, volume: 0.2 },
   ],
   boltPass: [{ noise: 'bandpass', freq: 900, to: 600, seconds: 0.12, volume: 0.05 }],
+  // A shield turning a hit aside: a bright metallic ring over a dull thud.
+  blockClang: [
+    { tone: 'triangle', from: 1400, to: 900, seconds: 0.08, volume: 0.08 },
+    { tone: 'sine', from: 2100, seconds: 0.16, volume: 0.06, delay: 0.01 },
+    { noise: 'bandpass', freq: 3000, q: 2, seconds: 0.05, volume: 0.08 },
+    { tone: 'sine', from: 120, to: 80, seconds: 0.08, volume: 0.12 },
+  ],
+  // A boss vanishes: a falling shimmer.
+  blinkOut: [
+    { tone: 'sine', from: 1600, to: 300, seconds: 0.14, volume: 0.09 },
+    { noise: 'highpass', freq: 3000, seconds: 0.08, volume: 0.05 },
+  ],
+  // A boss appears: a rising shimmer.
+  blinkIn: [
+    { tone: 'sine', from: 300, to: 1600, seconds: 0.12, volume: 0.09 },
+    { noise: 'bandpass', freq: 2500, q: 1, seconds: 0.06, volume: 0.06 },
+  ],
+  // A bolt is about to come in from a side: two quick rising pips.
+  edgeWarn: [
+    { tone: 'triangle', from: 700, seconds: 0.07, volume: 0.08 },
+    { tone: 'triangle', from: 990, seconds: 0.09, volume: 0.08, delay: 0.09 },
+  ],
 };
 
 /** When more sounds arrive than the voice cap allows, the higher number wins. */
@@ -184,6 +210,10 @@ export const PRIORITY: Record<VoiceName, number> = {
   eruptionMark: 4,
   eruptionBlast: 7,
   boltPass: 2,
+  blockClang: 7,
+  blinkOut: 5,
+  blinkIn: 5,
+  edgeWarn: 6,
 };
 
 /** The wind-up swell is pitched by the pose, so the ear can tell a raised arm from a crouch. */
@@ -194,6 +224,9 @@ export const PAIR_PAN = 0.35;
 
 /** A bolt within `range` world units of the player counts as passing by; the sound pans `pan` toward its side. */
 export const SHOT_PASS = { range: 90, pan: 0.5 } as const;
+
+/** A warning for bolts from one side edge is panned this far toward that side (-1 is full left, 1 full right). */
+export const EDGE_PAN = 0.6;
 
 export type Mode = 'minor' | 'major';
 
