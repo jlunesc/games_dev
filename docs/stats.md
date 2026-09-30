@@ -30,7 +30,7 @@ A single JSON document (written without indentation) saved as a plain text file,
 | Field | Type | Meaning |
 |---|---|---|
 | `format` | string | Always `"boss-trainer-stats"`. |
-| `schemaVersion` | number | Version of this format (see section 9). Currently 6. |
+| `schemaVersion` | number | Version of this format (see section 9). Currently 7. |
 | `exportedAt` | string | ISO 8601 date-time (UTC) when the file was built. |
 | `gameVersion` | string | `GAME_VERSION` of the game that built the file (see section 9). Each fight also carries its own. |
 | `fights` | array | Every saved fight, oldest first (by `playedAt`, then `id`). Each is a fight record (section 5). |
@@ -41,7 +41,7 @@ One entry of `fights`. Every field is always present in a record written by the 
 
 | Field | Type | Meaning |
 |---|---|---|
-| `schemaVersion` | number | The format version this record was written with (6 for records written by the current game; 1 to 5 for older ones, see section 9). |
+| `schemaVersion` | number | The format version this record was written with (7 for records written by the current game; 1 to 6 for older ones, see section 9). |
 | `gameVersion` | string | The game version it was played on. A replay is only valid with the same version (section 8). |
 | `id` | string | `<playedAt>#<seed in hexadecimal>`. Unique key of the record. |
 | `playedAt` | string | ISO 8601 date-time (UTC) when the fight began. |
@@ -100,6 +100,7 @@ Computed by `analyzeFight` by replaying the record. Nothing here is guessed: a v
 | `accuracy` | number or null | `swingsThatHit / swings`; `null` when the player never swung. |
 | `counters` | number | Counters landed. |
 | `dashes` | number | Dashes started. |
+| `dashUse` | object | What the dashes of the **real fight** (the study excluded) achieved (7.1b). Added in schema version 7. |
 | `jumps` | number | Jumps started (the player leaving the ground upward; a hop and a full jump both count once). |
 | `attacks` | array | One entry per boss attack occurrence (7.2), the study's demonstrations included (flagged by `study`). |
 | `study` | object | The study phase (7.5). |
@@ -118,6 +119,20 @@ Computed by `analyzeFight` by replaying the record. Nothing here is guessed: a v
 | `damageDealt` | number | `maxHp - hpLeft`. |
 
 In a fight of two bosses the `behavior` distance bands (7.3) are measured to the nearest boss that still stands, and an attack's `distance` (7.2) to the boss that made it.
+
+### 7.1b Dash use (`dashUse`)
+
+Every dash begun in the real fight is counted once. A dash is **during an attack** when an attack of the real fight was live: from the update after its warning began to the update after the last dangerous one (for an attack with shots, until its last shot is gone); a dash on the very first update of a warning counts as travel. When several attacks are live (a pair), the dash belongs to the one whose warning began first. Dashes begun in the study are not counted.
+
+| Field | Meaning |
+|---|---|
+| `escaped` | Dashes during an attack that was dodged with evasion `"dash"`. |
+| `hitAnyway` | Dashes during an attack that hit the player. |
+| `notNeeded` | Dashes during an attack that was dodged another way (`"distance"`, `"jump"`, `"platform"` or `"cover"`): the player was already safe, or something else saved them. |
+| `other` | Dashes during an attack that was countered or cut short. |
+| `travel` | Dashes with no attack live, by what they did to the distance to the nearest standing boss from just before the dash starts to 11 updates later (the last update of the run, if that comes first): `closer` or `farther` when it changed by more than 40 world units (`TRAVEL_DASH_CHANGE` in `src/stats/analyze.ts`), otherwise `even`. |
+
+If one attack has two dashes during it, each counts. The seven counters (`escaped`, `hitAnyway`, `notNeeded`, `other`, `travel.closer`, `travel.farther`, `travel.even`) add up to the dashes of the real fight. Direction is never judged: a dash into an attack can be the right dodge, so `travel` only says where the player ended up, not whether it made sense.
 
 ### 7.2 An attack occurrence (each entry of `attacks`)
 
@@ -140,6 +155,7 @@ One boss attack, from the moment its warning began. Entries are in the order the
 | `damageTaken` | number | Health this attack actually took from the player; 0 when it did not hit. Always 0 for a demonstration in the study. |
 | `playerActionWhenHit` | string or null | What the player was doing when hit; `null` when not hit. Also set for a demonstration that reached the player. |
 | `shotsFired` | number | How many shots (bolts, arcs and floor eruptions) the attack fires; 0 for an attack without shots. See 7.4. |
+| `swingAtDanger` | boolean | `true` when a player swing (start-up, active or recovery) was in progress on the update `firstDangerTick` (the attack could first hurt), whether or not the attack then hurt the player. `false` for an attack that never reached its danger (countered, or cut short). A demonstration in the study can also carry `true`; only `behavior.greedySwings` and `behavior.greedyHits` leave the study out. Added in schema version 7; an analysis stored in an older record does not have it. |
 | `study` | boolean | `true` for a demonstration in the study, `false` for an attack of the real fight. Decided on the update the attack's warning began: an attack that began in the study is a demonstration for its whole length, even if it ends on the update the study ends. |
 
 **Player action** (`playerActionAtStart`, `playerActionWhenHit`) is one of, checked in this order: `"dashing"` (in a dash), `"attacking"` (in a swing), `"airborne"` (off the ground), `"running"` (on the ground with a direction held), `"idle"`. It is read from the state after that update and the input given to it.
@@ -181,16 +197,21 @@ For a boss with no arena (the Ember Duelist) the cut and bare lists are the same
 | `positions` | number[] | The player's x, rounded, on ticks 6, 12, 18 and so on (`positions[i]` is the tick `6 * (i + 1)`), over the **whole session**. |
 | `punish` | object | Punish windows (below). |
 | `updatesOnPlatform` | number | Updates, over the **whole session** (study included), on which the player stood on a raised surface: on the ground (`onGround`) with the feet more than 1 unit above the floor. It counts platforms and the tops of covers, the same test as the `"platform"` evasion. 0 for a boss with no arena. Added in schema version 3; an analysis stored in an older record does not have it. |
+| `greedySwings` | number | Attacks of the real fight (the study excluded) with `swingAtDanger` true. Added in schema version 7. |
+| `greedyHits` | number | Of those, how many hit the player. Added in schema version 7. |
+| `realUpdatesInReach` | number | Updates of the real fight on which the player was within swing reach of a boss still standing: centre-to-centre distance at most `PLAYER.width / 2 + PLAYER.attack.reach + boss width / 2` (154 for the Ember Duelist). Added in schema version 7. |
+| `realMeanDistance` | number | Mean distance to the nearest boss still standing over the real fight, rounded to 0.1; 0 when there were no real updates. Added in schema version 7. |
 
 **Punish windows.** When an attack was not countered, its recovery is a chance to hit the boss. Attacks of the study (`study` true) never open a window: the boss cannot be hurt in the study. The window opens when the attack reaches its recovery (windup plus active updates).
 - `opened`: windows that opened. Always `taken + missed`.
 - `taken`: windows in which the player hit the boss.
 - `missed`: windows that closed without a hit.
+- `windows` (schema version 7): one entry per counted window, in the order they closed, so `windows.length` is `opened`. Each is `{ attackId, boss, startTick, ticks, distanceAtOpen, closestDistance, swung, hit, reachable }`: the attack and boss it followed; the update the window opened and how many updates the boss stayed in its recovery; the distance to that boss when it opened and the smallest while it was open (rounded to 0.1); whether the player began a swing inside it (`swung`) and hit the boss in it (`hit`); and `reachable`, whether the player could have run from `distanceAtOpen` into swing reach before it closed (`distanceAtOpen` minus the swing reach is at most running speed times the window length).
 A window is counted only when it closed (the attack ended and the boss moved on) or was hit. If the fight ended or was left while a window was still open and unhit, it is not counted: the player did not get the chance to use it.
 
 Known limitation: a window is also not counted when the player's punishing hit lands on the very first update of the recovery and that hit triggers a phase change (the phase change cancels the attack on that same update, so the window never registers as open). This is rare and the analyzer does not correct for it.
 
-**Not measured yet: "greedy" attacks** (SPEC section 9: the player attacks when they should not). They are still not measured, and this is "not measured yet", not "impossible". At the preset difficulties (a custom "Warning length" of about 0.7 makes the Hound's bite warn for only 15 updates, so this can change), no boss exists yet where a swing started in a punish window can overlap the next danger window: the player's swing lasts 16 updates (3 startup, 4 active, 9 recovery), and the earliest a following attack can hurt is 22 updates after its warning starts (the Ashen Hound's bite; its slip warns for 18 but never hurts, and the Ember Duelist's attacks all warn for 24 or more). Even a swing started on the last update of a recovery has therefore ended by then. This was checked by hand against the two boss files, not proven for every possible boss. They will be added, with a `schemaVersion` bump, when a boss can make them happen.
+**Greedy swings** (schema version 7; SPEC section 9: the player attacks when they should not). An attack occurrence has `swingAtDanger` when a player swing was in progress on the update the attack could first hurt (a swing lasts 16 updates: 3 start-up, 4 active, 9 recovery), hit or not. `behavior.greedySwings` counts them in the real fight and `behavior.greedyHits` counts those that also hit the player. With the normal warning lengths the usual case is a swing begun during the last 16 updates of the attack's own warning; a short warning (the Warning length dial) makes it more likely.
 
 ### 7.4 Attacks that move the boss
 
@@ -229,6 +250,41 @@ How to read a study fight:
 - **The random generator**: the study's random order uses the fight's seeded generator before the fight starts (a shuffle of n attacks draws n - 1 numbers, once per round). So a fight with a study and the same seed and input without one is a different fight from the first real attack on. That is expected, and is why `study` is part of the record.
 - **How long it is**: with a standing player (60 seeds, both bosses, Easy, Normal and Hard), Once took about 370 to 540 updates (6 to 9 seconds) and Twice about 710 to 1040 updates (12 to 17.5 seconds). A boss whose first phase has no attacks has no study at all (`study.ticks` 0, `study.attacks` 0).
 
+### 7.6 Insights (derived, not stored)
+
+After a fight the summary screen shows up to three "Work on:" lines. They are computed on the spot from that one fight's `analysis` by `insightsFor` in `src/stats/insights.ts` (cut-offs in `src/stats/insights-tuning.ts`, words in `src/ui/insight-text.ts`) and are **not** stored in the record or the export: they can be reworded or re-tuned without a schema change and without touching a recording.
+
+Everything is for the real fight only (the study is excluded). Each hit on the player (an attack of the real fight with outcome `"hit"`) is put in **one** class, by `classifyHit`. Let the *warning* be the time from `startTick` to `firstDangerTick` (the update the attack first becomes dangerous).
+- If the player began a dodge action (a dash or jump, `marginTicks` is set) and the warning is longer than 0: the hit is `late` when `marginTicks` divided by the warning is at most 0.20 (this includes a negative margin, a dodge that began after the danger did); otherwise `early` when `reactionTicks` divided by the warning is at most 0.25 (the dodge began in the first quarter of the warning and the hit came anyway); otherwise `other` (a dodge action in between). Both edges are inclusive, and `late` wins if a very short warning fits both.
+- Otherwise (no dodge action): `greedy` when a swing was in progress at the danger (`swingAtDanger`), else `no-dodge`.
+
+The skills, what they count, and when they are shown:
+
+| Skill | Shown when | Cost (a share of a whole fight) |
+|---|---|---|
+| `dodge-late`, `dodge-early`, `dodge-other`, `no-dodge` | at least 2 hits in that class | health lost to those hits / the player's maximum health (5) |
+| `greedy-swing` | at least 2 greedy swings in the real fight (`behavior.greedySwings`) and at least one hit in the `greedy` class | health lost to the `greedy`-class hits / 5 |
+| `openings` | at least 3 openings (`punish.opened`) and at least 2 missed windows where `reachable` is true | see below |
+| `approach` | at least 3 openings and at least 2 missed windows where `reachable` is false | see below |
+
+**Opening cost.** Missed windows (in `punish.windows`, `hit` false) of that kind, times what one landed hit is worth (`damageDealt / swingsThatHit`, or 1 when no swing landed), divided by the bosses' total health (`bossMaxHp`), never more than 1. No opening lines are made when `bossMaxHp` is 0.
+
+**Ranking.** Lines whose cost is 0 are dropped. The rest are sorted by cost, highest first, and the top three are kept. A tie in cost is broken by this order: `dodge-late`, `dodge-early`, `dodge-other`, `no-dodge`, `greedy-swing`, `openings`, `approach`. A fight with nothing to report shows "Nothing stands out this fight." A fight left during the study shows no block.
+
+**Old records.** An analysis stored before schema version 7 has no `dashUse`, swing, opening or distance numbers. For it `insightsFor` gives only `dodge-late`, `dodge-early` and `dodge-other` (without the swing data a hit with no dodge cannot be told apart as greedy or not, so `no-dodge` and `greedy-swing` are left out, and so are the opening lines) until it is re-analysed by replay (section 8).
+
+**What the numbers do and do not cover.**
+- `greedy-swing`: the "hurt" figure in the sentence is `behavior.greedyHits`, every hit that had a swing going at the danger, even where the player also dodged. The attack names shown as evidence are only those of the `greedy` class (hits with no dodge action). The two can therefore differ.
+- `openings`: "could have reached the boss but did not land a hit" counts every missed window with `reachable` true. That includes windows where the player swung and missed (`swung` true), not only windows where the player never swung.
+- `dodge-late` also covers a dodge that began after the danger began (negative margin).
+
+**What this cannot tell you.**
+- A travel dash and an early dodge dash are told apart only by whether an attack was live; a dash for movement that begins inside an attack's window counts as that attack's dash.
+- One fight is a small sample. A line is a hint to practise, not a verdict.
+- A hit can have several causes; the line names the most visible one (the dodge timing data).
+- Movement direction is never graded, so wandering is seen only through its results (missed openings, time out of reach), not directly.
+- Dash use (7.1b) is recorded but has no line of its own yet: a dash that was hit anyway is already inside a late, early or other dodge hit.
+
 ## 8. Replaying a fight
 
 To rebuild a fight exactly (this is what `replayFinalState` and `analyzeFight` do):
@@ -247,6 +303,7 @@ After `ticks` steps the state is the one the fight ended in (or the state the st
 - Adding a new measurement to the analyzer changes the shape, so it also bumps `schemaVersion`.
 - **Version 1** was the format of M3b and M5a. **Version 2** (M5b, the study phase) added the record's `study`, the analysis's `study` object, `fightSeconds` and `behavior.studyUpdatesClose/Mid/Far`, and the `study` flag on each attack occurrence. Version-1 records and files remain valid: `study` missing means 0, and replaying or re-analysing one with `record.study ?? 0` gives the same fight as before (with the new fields filled in as for a fight without a study: `study.rounds` 0, `study.ticks` 0, `fightSeconds` equal to `seconds`, every `study` flag false, the study distance bands all 0). An analysis stored inside an old record was computed then and is not rewritten, so it has no `study` block and no `fightSeconds`. **Version 3** (M5c, the arena) added the evasion values `"platform"` and `"cover"` (a change of meaning: an attack that used to be `"distance"` or `"jump"` can now be one of them, see 7.2) and `behavior.updatesOnPlatform`. Version-1 and version-2 records and files remain valid and readable: the record itself has the same fields as in version 2, and an analysis stored inside an old record was computed then and is not rewritten (it has no `updatesOnPlatform`). **Version 4** (projectiles) added `shotsFired` to each attack occurrence and changed the meaning of `outcome` for attacks with shots (resolved when the last shot is gone, see 7.4). No boss before the Vesper Sage has shots, so an older record or analysis reads exactly as before (an older analysis has no `shotsFired`, which means 0). The schema version is 4 in the export document and in every record written before game version 0.7.0. **Version 5** (game version 0.7.0, up and down swings) added bits 6-7 to the packed input (the vertical aim, section 6); nothing else changed. Records of versions 1 to 4 stay valid and replay exactly as before (they have no aim). The schema version was 5 in the export document and in every record written before version 6.
 - **Version 6** (two bosses in one fight, game version stays 0.8.0) makes a fight with several bosses recordable. `bossId` may now be a pair id, and the fight is rebuilt with `resolveFight` (section 8). The record has the same fields as in version 5. A fight with partners has no study, so its record stores `study: 0`. The analysis gains `bosses` (one entry per boss: `id`, `name`, `maxHp`, `hpLeft`, `phaseReached`, `phaseCount`, `damageDealt`) and each attack occurrence gains `boss` (0 for the primary boss, 1 for the partner); the existing top-level boss fields stay, with `bossMaxHp`, `bossHpLeft` and `damageDealt` summed over all bosses and `phaseReached` and `phaseCount` those of the primary boss (section 7). Records and files of versions 1 to 5 remain valid and readable: they read as a fight of one boss (an analysis stored in an old record has no `bosses` and no `boss`, which means one boss and boss 0), and replaying them gives exactly the same fight as before. The schema version is 6 in the export document and in every record the current game writes.
+- **Version 7** (fight insights, game version stays 0.10.0) adds measurements only; nothing in the game or the input encoding changes. The analysis gains `dashUse` (7.1b), `behavior.greedySwings`, `behavior.greedyHits`, `behavior.realUpdatesInReach`, `behavior.realMeanDistance` and `behavior.punish.windows` (7.3); each attack occurrence gains `swingAtDanger` (7.2). Records and files of versions 1 to 6 remain valid and replay exactly as before; an analysis stored inside an old record was computed then and is not rewritten, so it has none of the new fields (re-analysing the record by replay, section 8, fills them in and leaves every old number unchanged). The schema version is 7 in the export document and in every record the current game writes.
 - **Game version 0.4.0** goes with schema 3. Giving the Ashen Hound an arena (ledges to stand on, cover that cuts its hit windows) changes how Hound fights play out, so **Hound records made by 0.3.0 (or earlier) no longer replay exactly** with the current game. Their stored `analysis` was computed at the time and stays valid as data, but replaying or re-analysing them now gives a different fight. **Ember Duelist records still replay exactly** (it has no arena, and `tests/duelist-golden.test.ts` is unchanged). So for an old Hound file, trust its stored `analysis`, not a fresh replay (section 8 says a replay is only valid with the same game version).
 - **The boss generator (M5e, still game version 0.4.0, no bump for it).** `bossId: "generated"` has no file, so its replay stability is a different promise from a named boss's: a `"generated"` record's replay is only guaranteed to match while the generator's algorithm and its tuning (`src/bosses/generate/`) are unchanged, in addition to `GAME_VERSION` itself. A future change to the generator (a tuning number, or the algorithm) will need a `GAME_VERSION` bump exactly like a change to a named boss file would, so old `"generated"` records stay identifiable as no-longer-exact. A version-1, version-2 or version-3 record with a real boss id (`"ember-duelist"` or `"ashen-hound"`) is unaffected by anything about the generator.
 - **Game version 0.5.0: generated arenas (M6a).** Drawing an arena is one more random choice the generator makes, so it reorders the whole random stream: a `"generated"` record made by game version 0.4.0 no longer reproduces the same boss (arena included) from its seed. As with the 0.4.0 bump, only `"generated"` records are affected; the Ember Duelist and Ashen Hound are unchanged.
@@ -289,6 +346,7 @@ A sweep at Normal, in the real fight (so `study` is `false`). The warning began 
   "damageTaken": 0,
   "playerActionWhenHit": null,
   "shotsFired": 0,
+  "swingAtDanger": false,
   "study": false
 }
 ```
@@ -315,6 +373,7 @@ A sweep in the study of a fight played with Study set to Once. It began on tick 
   "damageTaken": 0,
   "playerActionWhenHit": "idle",
   "shotsFired": 0,
+  "swingAtDanger": false,
   "study": true
 }
 ```

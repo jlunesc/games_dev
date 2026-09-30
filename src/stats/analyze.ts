@@ -18,6 +18,9 @@ export const MID_UP_TO = 400;
 /** The player's x is sampled once every this many updates (10 per second). */
 export const POSITION_EVERY = 6;
 
+/** A travel dash that ended more than this many world units closer to (or farther from) the nearest boss than it began counts as closer (or farther); otherwise even. */
+export const TRAVEL_DASH_CHANGE = 40;
+
 export type PlayerAction = 'idle' | 'running' | 'airborne' | 'dashing' | 'attacking';
 /**
  * `interrupted`: the attack was cut short before its dangerous window finished (the fight ended or was left,
@@ -61,6 +64,26 @@ export interface AttackOccurrence {
   study: boolean;
   /** How many shots (bolts and arcs) the attack fires; 0 for an attack without shots. Such an attack is resolved only once its last shot is gone. */
   shotsFired: number;
+  /** A player swing (start-up, active or recovery) was in progress on the update the attack could first hurt, whether or not it hurt. */
+  swingAtDanger: boolean;
+}
+
+/** One opening (the recovery after an attack that was not countered) that closed or was hit. */
+export interface PunishWindow {
+  attackId: string;
+  /** Which boss made the attack. */
+  boss: number;
+  /** The update the window opened, and how many updates the boss stayed in its recovery. */
+  startTick: number;
+  ticks: number;
+  /** Distance to that boss when the window opened, and the smallest while it was open (rounded to 0.1). */
+  distanceAtOpen: number;
+  closestDistance: number;
+  /** The player began a swing inside the window, and hit the boss in it. */
+  swung: boolean;
+  hit: boolean;
+  /** Could the player have run from `distanceAtOpen` into swing reach before the window closed? */
+  reachable: boolean;
 }
 
 export interface PunishWindows {
@@ -69,6 +92,8 @@ export interface PunishWindows {
   /** Windows in which the player hit the boss. */
   taken: number;
   missed: number;
+  /** One entry per counted window, in the order they closed: `windows.length` is always `opened`. */
+  windows: PunishWindow[];
 }
 
 /** The study before the fight: how long it lasted and what the boss showed. All zero when there was none. */
@@ -93,6 +118,20 @@ export interface BossAnalysis {
   phaseReached: number;
   phaseCount: number;
   damageDealt: number;
+}
+
+/** What the dashes of the real fight achieved. Every dash of the real fight is in exactly one counter. */
+export interface DashUse {
+  /** Dashes during an attack that was dodged with evasion `dash`. */
+  escaped: number;
+  /** Dashes during an attack that hit the player. */
+  hitAnyway: number;
+  /** Dashes during an attack that was dodged another way (distance, jump, platform or cover). */
+  notNeeded: number;
+  /** Dashes during an attack that was countered or cut short. */
+  other: number;
+  /** Dashes with no attack live, by what they did to the distance to the nearest boss. */
+  travel: { closer: number; farther: number; even: number };
 }
 
 export interface Analysis {
@@ -121,6 +160,8 @@ export interface Analysis {
   counters: number;
   dashes: number;
   jumps: number;
+  /** What the dashes of the real fight (the study excluded) achieved. */
+  dashUse: DashUse;
   attacks: AttackOccurrence[];
   study: StudyAnalysis;
   behavior: {
@@ -137,6 +178,14 @@ export interface Analysis {
     punish: PunishWindows;
     /** Updates (the whole session, the study included) on which the player stood on a platform or a cover top. */
     updatesOnPlatform: number;
+    /** Attacks of the real fight (the study excluded) with `swingAtDanger`. */
+    greedySwings: number;
+    /** Of those, how many hit the player. */
+    greedyHits: number;
+    /** Updates of the real fight (the study excluded) with the player within swing reach of a standing boss. */
+    realUpdatesInReach: number;
+    /** Mean distance to the nearest standing boss over the real fight, rounded to 0.1 (0 with no real updates). */
+    realMeanDistance: number;
   };
 }
 
@@ -144,6 +193,22 @@ export interface Analysis {
 const onRaisedSurface = (p: PlayerState): boolean => p.onGround && p.y < WORLD.floorY - 1;
 
 const toMs = (ticks: number): number => Math.round(((ticks * 1000) / TICK_RATE) * 10) / 10;
+
+const round1 = (n: number): number => Math.round(n * 10) / 10;
+
+/** The centre-to-centre distance at which the player's forward swing can touch a boss of this width. */
+export function swingReach(bossWidth: number): number {
+  return PLAYER.width / 2 + PLAYER.attack.reach + bossWidth / 2;
+}
+
+/** Whether the player is within swing reach of any boss still standing. */
+function inSwingReach(s: GameState, fight: FightDef): boolean {
+  for (let i = 0; i < bossCount(s); i++) {
+    if (isDowned(s, i)) continue;
+    if (Math.abs(s.player.x - bossAt(s, i).x) <= swingReach(bossDefFor(s, fight, i).width)) return true;
+  }
+  return false;
+}
 
 /** What the player was doing, from the state and the input of that update. */
 export function actionOf(p: PlayerState, frame: InputFrame): PlayerAction {
@@ -189,8 +254,21 @@ interface OpenAttack {
   shotsCleared: boolean;
   windowOpen: boolean;
   windowTaken: boolean;
+  /** When the window opened, the distance then and the smallest since, the updates it was open, and whether the player swung in it. */
+  windowStart: number;
+  windowDistance: number;
+  windowClosest: number;
+  windowTicks: number;
+  windowSwung: boolean;
+  /** Centre-to-centre distance at which a swing reaches the attacking boss. */
+  windowReach: number;
   /** Updates the attack spent frozen on the end of its wind-up (a hold); danger times are shifted by it. */
   held: number;
+  /** The update the attack could first hurt has been seen (the swing check is made once, on it). */
+  dangerSeen: boolean;
+  swingAtDanger: boolean;
+  /** Dashes of the real fight begun while this attack was the live one. */
+  dashes: number;
 }
 
 function occurrence(open: OpenAttack): AttackOccurrence {
@@ -240,6 +318,22 @@ function occurrence(open: OpenAttack): AttackOccurrence {
     playerActionWhenHit: open.actionWhenHit,
     study: open.study,
     shotsFired: open.shotsFired,
+    swingAtDanger: open.swingAtDanger,
+  };
+}
+
+function windowOf(open: OpenAttack): PunishWindow {
+  const seconds = open.windowTicks / TICK_RATE;
+  return {
+    attackId: open.attackId,
+    boss: open.boss,
+    startTick: open.windowStart,
+    ticks: open.windowTicks,
+    distanceAtOpen: round1(open.windowDistance),
+    closestDistance: round1(open.windowClosest),
+    swung: open.windowSwung,
+    hit: open.windowTaken,
+    reachable: open.windowDistance - open.windowReach <= PLAYER.runSpeed * seconds,
   };
 }
 
@@ -284,7 +378,10 @@ export function analyzeRun(
   const bossHitTicks: number[] = [];
   const playerHitTicks: number[] = [];
   const positions: number[] = [];
-  const punish: PunishWindows = { opened: 0, taken: 0, missed: 0 };
+  const punish: PunishWindows = { opened: 0, taken: 0, missed: 0, windows: [] };
+  const dashUse: DashUse = { escaped: 0, hitAnyway: 0, notNeeded: 0, other: 0, travel: { closer: 0, farther: 0, even: 0 } };
+  /** Travel dashes begun but not yet judged: the update they end on, and the distance when they began. */
+  let travelling: { endTick: number; from: number }[] = [];
   let swings = 0;
   let swingsThatHit = 0;
   let counters = 0;
@@ -300,22 +397,51 @@ export function analyzeRun(
   let studyMid = 0;
   let studyFar = 0;
   let platformUpdates = 0;
+  let realUpdates = 0;
+  let realDistanceSum = 0;
+  let realInReach = 0;
   const maxPhases = Array.from({ length: bossCount(state) }, (_, i) => bossAt(state, i).phase);
   let open: OpenAttack | null = null;
   /** Attacks that are over but whose shots are still flying; each is emitted once its last shot is gone. */
   let lingering: OpenAttack[] = [];
+
+  /** Emits an attack's occurrence and credits the dashes made during it by how it ended. */
+  const emit = (attack: OpenAttack): void => {
+    const made = occurrence(attack);
+    attacks.push(made);
+    if (attack.dashes === 0) return;
+    if (made.outcome === 'hit') dashUse.hitAnyway += attack.dashes;
+    else if (made.outcome === 'dodged') {
+      if (made.evasion === 'dash') dashUse.escaped += attack.dashes;
+      else dashUse.notNeeded += attack.dashes;
+    } else dashUse.other += attack.dashes;
+  };
+
+  /** The attack a dash begun on `tick` belongs to: of the live attacks (warning up to the end of the danger, or shots still flying) the one whose warning began first; null when none is live. */
+  const liveAttack = (tick: number): OpenAttack | null => {
+    const live = lingering.filter((x) => !x.study && !x.shotsDone && !x.shotsCleared);
+    if (open !== null && !open.study && tick - open.startTick - open.held <= open.dangerTo) live.push(open);
+    return live.reduce<OpenAttack | null>((first, x) => (first === null || x.startTick < first.startTick ? x : first), null);
+  };
+
+  const judgeTravel = (from: number, to: number): void => {
+    if (to < from - TRAVEL_DASH_CHANGE) dashUse.travel.closer += 1;
+    else if (to > from + TRAVEL_DASH_CHANGE) dashUse.travel.farther += 1;
+    else dashUse.travel.even += 1;
+  };
 
   // `cutShort`: the run ended while the attack was still going. A punish window that was cut short and never
   // saw a hit is not counted: the player did not get the chance to use it.
   const finish = (attack: OpenAttack, cutShort: boolean): void => {
     // The boss cannot be hurt in the study, so a demonstration has no punish window.
     if (!attack.study && attack.windowOpen && !(cutShort && !attack.windowTaken)) {
+      punish.windows.push(windowOf(attack));
       punish.opened += 1;
       if (attack.windowTaken) punish.taken += 1;
       else punish.missed += 1;
     }
     if (attack.shotsFired > 0 && !attack.shotsDone && !attack.shotsCleared && !cutShort) lingering.push(attack);
-    else attacks.push(occurrence(attack));
+    else emit(attack);
   };
 
   const dodgeBegan = (before: GameState, after: GameState): boolean =>
@@ -387,6 +513,10 @@ export function analyzeRun(
     }
     const t = tick - attack.startTick - attack.held;
     attack.lastT = t;
+    if (t === attack.dangerFrom && !attack.dangerSeen) {
+      attack.dangerSeen = true;
+      attack.swingAtDanger = after.player.attackTick >= 0;
+    }
     const dodgeStarted = dodgeBegan(before, after);
     if (dodgeStarted && attack.dodgeStart === null && t <= attack.dangerTo) attack.dodgeStart = tick;
 
@@ -433,6 +563,15 @@ export function analyzeRun(
       !attack.windowOpen
     ) {
       attack.windowOpen = true;
+      attack.windowStart = tick;
+      attack.windowDistance = Math.abs(after.player.x - owner.x);
+      attack.windowClosest = attack.windowDistance;
+      attack.windowReach = swingReach(def.width);
+    }
+    if (attack.windowOpen && owner.mode === 'attack') {
+      attack.windowTicks += 1;
+      attack.windowClosest = Math.min(attack.windowClosest, Math.abs(after.player.x - owner.x));
+      if (after.player.attackTick === 0) attack.windowSwung = true;
     }
     if (attack.windowOpen && events.includes('bossHit')) attack.windowTaken = true;
     observeShots(attack, before, after, frame);
@@ -450,6 +589,11 @@ export function analyzeRun(
     const jumpStarted = before.player.onGround && !after.player.onGround && after.player.vy < 0;
     const playerHit = events.includes('playerHit');
     if (dashStarted) dashes += 1;
+    if (dashStarted && !before.study.active) {
+      const live = liveAttack(tick);
+      if (live !== null) live.dashes += 1;
+      else travelling.push({ endTick: tick + PLAYER.dash.duration, from: nearestDistance(before) });
+    }
     if (jumpStarted) jumps += 1;
     if (after.player.attackTick === 0) swings += 1;
     if (events.includes('bossHit')) {
@@ -467,6 +611,11 @@ export function analyzeRun(
       maxPhases[i] = Math.max(reached, bossAt(after, i).phase);
     });
     const distance = nearestDistance(after);
+    travelling = travelling.filter((d) => {
+      if (tick < d.endTick) return true;
+      judgeTravel(d.from, distance);
+      return false;
+    });
     // An update belongs to the study when it ran while the study was on (the study's last update included).
     const inStudy = before.study.active;
     if (distance < CLOSE_BELOW) {
@@ -479,13 +628,18 @@ export function analyzeRun(
       far += 1;
       if (inStudy) studyFar += 1;
     }
+    if (!inStudy) {
+      realUpdates += 1;
+      realDistanceSum += distance;
+      if (inSwingReach(after, fight)) realInReach += 1;
+    }
     if (onRaisedSurface(after.player)) platformUpdates += 1;
     if (tick % POSITION_EVERY === 0) positions.push(Math.round(after.player.x));
 
     for (const waiting of lingering) observeShots(waiting, before, after, frame);
     const settled = lingering.filter((x) => x.shotsDone || x.shotsCleared);
     if (settled.length > 0) {
-      for (const x of settled) attacks.push(occurrence(x));
+      for (const x of settled) emit(x);
       lingering = lingering.filter((x) => !settled.includes(x));
     }
     if (open !== null) observe(open, before, after, frame);
@@ -537,7 +691,16 @@ export function analyzeRun(
         shotsCleared: false,
         windowOpen: false,
         windowTaken: false,
+        windowStart: 0,
+        windowDistance: 0,
+        windowClosest: 0,
+        windowTicks: 0,
+        windowSwung: false,
+        windowReach: 0,
         held: 0,
+        dangerSeen: false,
+        swingAtDanger: false,
+        dashes: 0,
       };
       // What happened on the update the attack began (a dodge, or a counter that cancels it at once) counts too.
       observe(open, before, after, frame);
@@ -547,9 +710,10 @@ export function analyzeRun(
       }
     }
   }
+  for (const d of travelling) judgeTravel(d.from, nearestDistance(state));
   if (open !== null) finish(open, true);
   // Shots still flying when the run ended: their attacks are not resolved.
-  for (const waiting of lingering) attacks.push(occurrence(waiting));
+  for (const waiting of lingering) emit(waiting);
   attacks.sort((a, b) => a.startTick - b.startTick);
 
   const studyTicks = state.study.active ? studyUpdates : state.study.endTick;
@@ -583,6 +747,7 @@ export function analyzeRun(
     counters,
     dashes,
     jumps,
+    dashUse,
     attacks,
     study: {
       rounds: studyRounds,
@@ -601,6 +766,10 @@ export function analyzeRun(
       positions,
       punish,
       updatesOnPlatform: platformUpdates,
+      greedySwings: attacks.filter((x) => !x.study && x.swingAtDanger).length,
+      greedyHits: attacks.filter((x) => !x.study && x.swingAtDanger && x.outcome === 'hit').length,
+      realUpdatesInReach: realInReach,
+      realMeanDistance: realUpdates === 0 ? 0 : round1(realDistanceSum / realUpdates),
     },
   };
 }

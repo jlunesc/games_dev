@@ -705,6 +705,17 @@ Every hand-built boss now has one question it asks you, and the game has new mec
 - [ ] Leaving a fight with the hold shows only Fight again and Back to the menu, with no Redo.
 - [ ] The redone fights are saved, and the Stats show them as Custom.
 
+## Fight insights
+After a fight (win, loss or leaving with the hold), the summary shows a "Work on:" block with up to three lines, or "Nothing stands out this fight." Nothing shows if you leave during the study. The lines come from that one fight only.
+- [ ] The block appears a moment after the summary opens (it is worked out after the fight), below the usual lines and above the choices.
+- [ ] The layout fits: with three lines, the usual lines, Redo, Fight again and Back to the menu are all on screen, or the screen scrolls without anything cut off. In the other orientation too. (This was not checked in a browser: it is the one thing to look at first.)
+- [ ] When the block arrives late, the screen does not jump so that the new lines are scrolled out of sight. With the controller, the highlighted choice stays on screen.
+- [ ] The sentences are understandable without knowing the game's numbers. "units" in the "Closing in" line is a world distance: is it useful, or would "about N sword lengths" be better?
+- [ ] Compare with what you felt went wrong in the fight: do the lines point at the same problems? Late dodges, early dodges, dodging at the wrong moment, not dodging, swinging while an attack becomes dangerous, openings and getting close.
+- [ ] A short fight with little to say shows "Nothing stands out this fight." and not a wrong claim.
+- [ ] A fight after another fight never shows the earlier fight's lines.
+- [ ] Two-boss fights name attacks of both bosses correctly.
+
 ## Things I would like to know
 After playing, answer these in plain words:
 - Does the counter feel too easy or too hard? Note that it can also be triggered by mashing attack, and by a swing that faces away from the boss (the game only checks that you are close and press attack in the window).

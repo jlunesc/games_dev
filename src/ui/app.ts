@@ -25,9 +25,11 @@ import { createInitialState, type GameState } from '../game/state';
 import type { FightResult, FightSummary } from '../game/summary';
 import { analyzeRecording } from '../stats/analyze';
 import { buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
+import { insightsFor } from '../stats/insights';
 import { buildRecord, type Recording } from '../stats/record';
 import { openIndexedDbStore, type FightStore } from '../stats/store';
 import { createSound } from './sound';
+import { attackNamer, workOnLines } from './insight-text';
 import { mountControllerScreen } from './controller-screen';
 import { el } from './dom';
 import { NO_FEEDBACK, advanceFeedback, applyEvents, flashBossFor, freezeFor, type FeedbackState } from './feedback';
@@ -145,6 +147,8 @@ export function mountApp(root: HTMLElement): void {
   let statsBusy = false;
   // The extra last line on the summary: whether the fight just played was saved. Null while unknown.
   let saveLine: string | null = null;
+  // The "Work on:" lines of the fight just played: empty until its analysis is done, and for a fight left during the study.
+  let insightLines: string[] = [];
   // Bumped when a new fight starts, so a save still running from an earlier fight does not write its line into the new one.
   let saveEpoch = 0;
   // What the summary screen currently shows, kept so the save line can be added when the save finishes.
@@ -491,13 +495,14 @@ export function mountApp(root: HTMLElement): void {
     renderSummary(
       panel,
       text.title,
-      saveLine === null ? text.lines : [...text.lines, saveLine],
+      [...text.lines, ...insightLines, ...(saveLine === null ? [] : [saveLine])],
       rows,
       summaryMenu.focus,
       (index) => {
         summaryMenu = { ...summaryMenu, focus: index };
         handleSummary('confirm');
       },
+      { from: text.lines.length, count: insightLines.length },
     );
   }
 
@@ -526,17 +531,28 @@ export function mountApp(root: HTMLElement): void {
    */
   async function saveFight(recording: Recording, result: FightResult): Promise<void> {
     const epoch = saveEpoch;
+    // Taken now: a new fight may start while the save below is waiting.
+    const nameOf = attackNamer(fight);
     let line: string;
+    let lines: string[] = [];
     try {
       const target = await storeReady;
+      // Let the browser paint the summary or the end pause before the replay below runs (it can take a moment
+      // on a long fight and would otherwise freeze the screen on the last fight frame).
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      const analysis = analyzeRecording(recording);
+      // A fight left during the study has no fight time: no block at all.
+      if (analysis.fightSeconds > 0) {
+        try {
+          lines = workOnLines(insightsFor(analysis), nameOf);
+        } catch {
+          lines = []; // a fault in the insights must never stop the fight being saved
+        }
+      }
       if (target === null) {
         line = 'This fight was not saved: this device cannot store stats.';
       } else {
         const saved = await target.count();
-        // Let the browser paint the summary or the end pause before the replay below runs (it can take a moment
-        // on a long fight and would otherwise freeze the screen on the last fight frame).
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
-        const analysis = analyzeRecording(recording);
         await target.add(buildRecord(recording, result, saved + 1, analysis));
         line = `Fight saved (${saved + 1} on this device).`;
       }
@@ -546,6 +562,7 @@ export function mountApp(root: HTMLElement): void {
     // A new fight has started since: its summary must not show this line.
     if (epoch !== saveEpoch) return;
     saveLine = line;
+    insightLines = lines;
     if (screen === 'summary') renderSummaryScreen();
   }
 
@@ -560,6 +577,7 @@ export function mountApp(root: HTMLElement): void {
     const leaving = leaveRecording(flow);
     if (leaving !== null) {
       saveLine = null;
+      insightLines = [];
       void saveFight(leaving.recording, 'left');
     }
     showSummary(leaveSummary(flow, state, fight));
@@ -570,6 +588,7 @@ export function mountApp(root: HTMLElement): void {
     fightDials = dials;
     saveEpoch += 1;
     saveLine = null;
+    insightLines = [];
     shownSummary = null;
     const seed = newSeed();
     const setup = setUpFight(prefs.bossId, seed, dials, prefs.study);
@@ -688,6 +707,7 @@ export function mountApp(root: HTMLElement): void {
       flow = advanced.flow;
       if (advanced.finished !== null) {
         saveLine = null;
+        insightLines = [];
         void saveFight(advanced.finished.recording, advanced.finished.result);
       }
       if (advanced.show !== null) {
