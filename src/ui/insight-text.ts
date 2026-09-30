@@ -34,7 +34,7 @@ export function insightText(insight: Insight, nameOf: (id: string) => string): s
     case 'openings':
       return `Openings: you hit the boss in ${insight.taken} of ${count(insight.opened, 'opening', 'openings')} after its attacks, and ${count(insight.closeButMissed, 'time', 'times')} you could have reached the boss but did not land a hit${seen}.`;
     case 'approach':
-      return `Closing in: ${count(insight.tooFar, 'opening closed', 'openings closed')} before you could reach the boss. You were in swing range ${insight.inReachPercent}% of the time and ${Math.round(insight.meanDistance)} units away on average${seen}.`;
+      return `Closing in: ${count(insight.tooFar, 'opening closed', 'openings closed')} before you could reach the boss${seen}. You were in swing range ${insight.inReachPercent}% of the time and ${Math.round(insight.meanDistance)} units away on average.`;
   }
 }
 

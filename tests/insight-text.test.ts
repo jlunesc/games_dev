@@ -34,7 +34,7 @@ describe('insightText', () => {
       'Not dodging: 2 hits came with no dash or jump (Ember slam).',
       'Swinging at the wrong time: 4 swings were still going when an attack became dangerous, and 2 of those attacks hurt you (Low sweep).',
       'Openings: you hit the boss in 1 of 10 openings after its attacks, and 5 times you could have reached the boss but did not land a hit (Ember slam).',
-      'Closing in: 4 openings closed before you could reach the boss. You were in swing range 12% of the time and 312 units away on average (Ember slam).',
+      'Closing in: 4 openings closed before you could reach the boss (Ember slam). You were in swing range 12% of the time and 312 units away on average.',
     ]);
   });
 
