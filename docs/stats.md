@@ -122,7 +122,7 @@ In a fight of two bosses the `behavior` distance bands (7.3) are measured to the
 
 ### 7.1b Dash use (`dashUse`)
 
-Every dash begun in the real fight is counted once. A dash is **during an attack** when an attack of the real fight was live: from the update its warning began to the last update of its dangerous window (for an attack with shots, until its last shot is gone). When several attacks are live (a pair), the dash belongs to the one whose warning began first. Dashes begun in the study are not counted.
+Every dash begun in the real fight is counted once. A dash is **during an attack** when an attack of the real fight was live: from the update after its warning began to the update after the last dangerous one (for an attack with shots, until its last shot is gone); a dash on the very first update of a warning counts as travel. When several attacks are live (a pair), the dash belongs to the one whose warning began first. Dashes begun in the study are not counted.
 
 | Field | Meaning |
 |---|---|
@@ -130,7 +130,7 @@ Every dash begun in the real fight is counted once. A dash is **during an attack
 | `hitAnyway` | Dashes during an attack that hit the player. |
 | `notNeeded` | Dashes during an attack that was dodged another way (`"distance"`, `"jump"`, `"platform"` or `"cover"`): the player was already safe, or something else saved them. |
 | `other` | Dashes during an attack that was countered or cut short. |
-| `travel` | Dashes with no attack live, by what they did to the distance to the nearest standing boss between the dash starting and ending 11 updates later (the last update of the run, if that comes first): `closer` or `farther` when it changed by more than 40 world units (`TRAVEL_DASH_CHANGE` in `src/stats/analyze.ts`), otherwise `even`. |
+| `travel` | Dashes with no attack live, by what they did to the distance to the nearest standing boss from just before the dash starts to 11 updates later (the last update of the run, if that comes first): `closer` or `farther` when it changed by more than 40 world units (`TRAVEL_DASH_CHANGE` in `src/stats/analyze.ts`), otherwise `even`. |
 
 If one attack has two dashes during it, each counts. The seven counters (`escaped`, `hitAnyway`, `notNeeded`, `other`, `travel.closer`, `travel.farther`, `travel.even`) add up to the dashes of the real fight. Direction is never judged: a dash into an attack can be the right dodge, so `travel` only says where the player ended up, not whether it made sense.
 
@@ -155,7 +155,7 @@ One boss attack, from the moment its warning began. Entries are in the order the
 | `damageTaken` | number | Health this attack actually took from the player; 0 when it did not hit. Always 0 for a demonstration in the study. |
 | `playerActionWhenHit` | string or null | What the player was doing when hit; `null` when not hit. Also set for a demonstration that reached the player. |
 | `shotsFired` | number | How many shots (bolts, arcs and floor eruptions) the attack fires; 0 for an attack without shots. See 7.4. |
-| `swingAtDanger` | boolean | `true` when a player swing (start-up, active or recovery) was in progress on the update `firstDangerTick` (the attack could first hurt), whether or not the attack then hurt the player. `false` for an attack that never reached its danger (countered, or cut short). Added in schema version 7; an analysis stored in an older record does not have it. |
+| `swingAtDanger` | boolean | `true` when a player swing (start-up, active or recovery) was in progress on the update `firstDangerTick` (the attack could first hurt), whether or not the attack then hurt the player. `false` for an attack that never reached its danger (countered, or cut short). A demonstration in the study can also carry `true`; only `behavior.greedySwings` and `behavior.greedyHits` leave the study out. Added in schema version 7; an analysis stored in an older record does not have it. |
 | `study` | boolean | `true` for a demonstration in the study, `false` for an attack of the real fight. Decided on the update the attack's warning began: an attack that began in the study is a demonstration for its whole length, even if it ends on the update the study ends. |
 
 **Player action** (`playerActionAtStart`, `playerActionWhenHit`) is one of, checked in this order: `"dashing"` (in a dash), `"attacking"` (in a swing), `"airborne"` (off the ground), `"running"` (on the ground with a direction held), `"idle"`. It is read from the state after that update and the input given to it.
@@ -211,7 +211,7 @@ A window is counted only when it closed (the attack ended and the boss moved on)
 
 Known limitation: a window is also not counted when the player's punishing hit lands on the very first update of the recovery and that hit triggers a phase change (the phase change cancels the attack on that same update, so the window never registers as open). This is rare and the analyzer does not correct for it.
 
-**Greedy swings** (schema version 7; SPEC section 9: the player attacks when they should not). An attack occurrence has `swingAtDanger` when a player swing was in progress on the update the attack could first hurt (a swing lasts 16 updates: 3 start-up, 4 active, 9 recovery), hit or not. `behavior.greedySwings` counts them in the real fight and `behavior.greedyHits` counts those that also hit the player. A swing that began in a punish window and is still going when the next attack becomes dangerous is the typical case.
+**Greedy swings** (schema version 7; SPEC section 9: the player attacks when they should not). An attack occurrence has `swingAtDanger` when a player swing was in progress on the update the attack could first hurt (a swing lasts 16 updates: 3 start-up, 4 active, 9 recovery), hit or not. `behavior.greedySwings` counts them in the real fight and `behavior.greedyHits` counts those that also hit the player. With the normal warning lengths the usual case is a swing begun during the last 16 updates of the attack's own warning; a short warning (the Warning length dial) makes it more likely.
 
 ### 7.4 Attacks that move the boss
 
