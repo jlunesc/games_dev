@@ -1,11 +1,23 @@
 import { el } from './dom';
+import { tickerSeconds } from './ticker';
 
 export interface ListRow {
   label: string;
   value?: string;
   help?: string;
+  /** A line that scrolls from right to left under the row (the boss description). */
+  note?: string;
   /** When set, the row is open: these options are listed right under it and `onPick` gets the tapped one. */
   dropdown?: { options: readonly string[]; focus: number; onPick: (index: number) => void };
+}
+
+/** A line of text that slides from right to left, looping; the speed is set through a custom property (the CSP forbids style attributes). */
+function ticker(text: string): HTMLElement {
+  const strip = el('div', 'ticker');
+  const run = el('span', 'ticker-text', text);
+  run.style.setProperty('--ticker-seconds', `${tickerSeconds(text)}s`);
+  strip.append(run);
+  return strip;
 }
 
 /**
@@ -49,6 +61,7 @@ export function renderList(
       });
       list.append(menu);
     }
+    if (row.note !== undefined) list.append(ticker(row.note));
   });
   const help = rows[focus]?.help;
   panel.replaceChildren(

@@ -1,6 +1,7 @@
 {
   "id": "ember-duelist",
   "name": "Ember Duelist",
+  "description": "The standard test opponent. A balanced swordsman with clear warnings: learn to dodge, counter and punish.",
   "width": 80,
   "height": 150,
   "startX": 960,

@@ -1,6 +1,7 @@
 {
   "id": "cinder-golem",
   "name": "Cinder Golem",
+  "description": "Slow and heavy. Long warnings, slams that cost two hits, and lobbed embers. Wait, dodge, then punish.",
   "width": 110,
   "height": 170,
   "startX": 960,

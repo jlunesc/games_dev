@@ -1,6 +1,7 @@
 {
   "id": "storm-kite",
   "name": "Storm Kite",
+  "description": "A bird that hangs above, dives at you and fires bolts. You can only hit it while it is low.",
   "width": 120,
   "height": 70,
   "startX": 900,

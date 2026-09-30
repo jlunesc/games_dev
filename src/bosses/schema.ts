@@ -231,6 +231,8 @@ export interface FlightDef {
 export interface BossDef {
   id: string;
   name: string;
+  /** One short line about the boss, scrolled under the Boss row in the menu. Text only; never read by the game. */
+  description?: string;
   width: number;
   height: number;
   startX: number;

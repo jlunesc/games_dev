@@ -1,6 +1,7 @@
 {
   "id": "veil-dancer",
   "name": "Veil Dancer",
+  "description": "Quick and slippery. It blinks around and fires fans of needles, so never stand still.",
   "width": 70,
   "height": 145,
   "startX": 960,

@@ -1,6 +1,7 @@
 {
   "id": "brass-sentinel",
   "name": "Brass Sentinel",
+  "description": "A guard behind a shield that blocks hits from the front. It turns slowly: get behind it.",
   "width": 85,
   "height": 150,
   "startX": 960,

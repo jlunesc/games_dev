@@ -1,6 +1,7 @@
 {
   "id": "vesper-sage",
   "name": "Vesper Sage",
+  "description": "A caster that keeps its distance and fires bolts and lobbed arcs. Read the volleys, then close in.",
   "width": 60,
   "height": 170,
   "startX": 1000,

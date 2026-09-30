@@ -1,6 +1,7 @@
 {
   "id": "quill-warden",
   "name": "Quill Warden",
+  "description": "Tall, with a long reach. It pokes and pierces from far away; close in when it overextends.",
   "width": 70,
   "height": 150,
   "startX": 960,

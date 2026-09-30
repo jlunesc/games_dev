@@ -612,3 +612,25 @@ describe('parseBoss and shots', () => {
     rejects(withShots(undefined), 'boss.attacks[0].hits');
   });
 });
+
+describe('the boss description shown under the Boss row', () => {
+  it('is optional, and kept when present', () => {
+    const b = copy() as unknown as Record<string, unknown>;
+    delete b.description;
+    expect(parseBoss(b).description).toBeUndefined();
+    b.description = 'A short line about the boss.';
+    expect(parseBoss(b).description).toBe('A short line about the boss.');
+  });
+
+  it('must be a non-empty text of at most 140 characters', () => {
+    const b = copy() as unknown as Record<string, unknown>;
+    b.description = '';
+    rejects(b, 'boss.description');
+    b.description = 42;
+    rejects(b, 'boss.description');
+    b.description = 'x'.repeat(141);
+    rejects(b, 'boss.description');
+    b.description = 'x'.repeat(140);
+    expect(parseBoss(b).description).toHaveLength(140);
+  });
+});

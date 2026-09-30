@@ -545,6 +545,12 @@ export function parseBoss(data: unknown): BossDef {
     }
   });
 
+  let description: string | undefined;
+  if (o.description !== undefined) {
+    description = text(o.description, 'boss.description');
+    if (description.length > 140) fail('boss.description', 'expected at most 140 characters');
+  }
+
   const parsedTemper = o.temper === undefined ? undefined : num(o.temper, 'boss.temper', { min: 0, max: 1 });
 
   let shield: { turnTicks: number } | undefined;
@@ -563,6 +569,7 @@ export function parseBoss(data: unknown): BossDef {
   return {
     id: text(o.id, 'boss.id'),
     name: text(o.name, 'boss.name'),
+    ...(description === undefined ? {} : { description }),
     width: num(o.width, 'boss.width', { min: 1 }),
     height: bossHeight,
     startX: num(o.startX, 'boss.startX', { min: 0 }),

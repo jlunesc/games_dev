@@ -281,6 +281,7 @@ body {
 
 .panel .hint,
 .panel .help,
+.panel .ticker,
 .panel .status {
   color: #b4b4c8;
 }
@@ -332,10 +333,49 @@ body {
   font-weight: 700;
 }
 
+/* The boss description: one line sliding from right to left under the Boss row. */
+.ticker {
+  overflow: hidden;
+  max-width: 28rem;
+  padding: 0.3rem 0.9rem;
+  color: var(--dim);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.ticker-text {
+  display: inline-block;
+  padding-left: 100%;
+  animation: ticker-slide var(--ticker-seconds, 12s) linear infinite;
+}
+
+@keyframes ticker-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* With "reduce motion" on, the line stands still and wraps instead of sliding. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker {
+    white-space: normal;
+  }
+
+  .ticker-text {
+    display: block;
+    padding-left: 0;
+    animation: none;
+  }
+}
+
 /* A phone held sideways is wide and short: let the menu use the whole width instead of a narrow column. */
 @media (orientation: landscape) and (max-height: 32rem) {
   .panel,
   .panel .rows,
+  .panel .ticker,
   .panel .help {
     max-width: none;
   }

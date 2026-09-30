@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, BOSS_CHOICES, EMBER_DUELIST } from '../src/bosses';
+import { ASHEN_HOUND, BOSS_CHOICES, EMBER_DUELIST, bossChoiceDescription } from '../src/bosses';
 import { PRESETS } from '../src/game/difficulty';
 import {
   MENU_ITEMS,
@@ -241,5 +241,29 @@ describe('the Study row with a pair', () => {
     const solo = at('study', createMenu({ ...DEFAULT_PREFS, study: 1 }));
     expect(press(solo, 'right').prefs.study).toBe(2);
     expect(press(solo, 'left').prefs.study).toBe(0);
+  });
+});
+
+describe('the description note on the Boss row', () => {
+  const noteOf = (m: MenuModel) => menuRows(m).find((r) => r.id === 'boss')!.note;
+  const withBoss = (bossId: string): MenuModel => at('boss', createMenu({ ...DEFAULT_PREFS, bossId }));
+
+  it('is the description of the chosen single boss, and only the Boss row has one', () => {
+    const m = withBoss('ashen-hound');
+    expect(noteOf(m)).toBe(ASHEN_HOUND.description);
+    expect(menuRows(m).filter((r) => r.note !== undefined).map((r) => r.id)).toEqual(['boss']);
+  });
+
+  it('is empty for a pair and for Generated', () => {
+    expect(noteOf(withBoss('hound-and-sage'))).toBeUndefined();
+    expect(noteOf(withBoss('generated'))).toBeUndefined();
+  });
+
+  it('follows the highlighted option while the dropdown is open, not the saved choice', () => {
+    const open = press(withBoss('ashen-hound'), 'confirm');
+    expect(open.bossDropdown).not.toBeNull();
+    const next = press(open, 'down');
+    expect(noteOf(next)).toBe(BOSS_CHOICES.map((c) => bossChoiceDescription(c.id))[next.bossDropdown!]);
+    expect(next.prefs.bossId).toBe('ashen-hound');
   });
 });

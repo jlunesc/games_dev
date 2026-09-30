@@ -619,6 +619,20 @@ The ten placeholder beeps are gone. Every sound is made in code, so nothing extr
 - Would you like a separate Music on/off switch, or is one Volume enough? Should the music keep playing on the summary screen?
 - In the pair fight, does the left and right split help you know who is acting?
 
+## Boss descriptions in the menu
+Under the **Boss** row, a single boss now has a short description that slides from right to left and loops. It follows the boss you are looking at: the chosen boss when the list is closed, the highlighted one while the dropdown is open. Pairs and Generated show nothing there. If the phone's "reduce motion" setting is on, the line stays still and wraps instead of sliding.
+
+### Checklist
+- [ ] With a single boss chosen, a line of text slides in from the right under the Boss row and loops.
+- [ ] Pressing left or right on the Boss row changes the line to the new boss's description; the pairs and Generated show no line.
+- [ ] With the dropdown open, moving up and down changes the line to the highlighted boss's description.
+- [ ] The line is readable while it moves (speed, size, contrast against the arena picture) and does not cover or push around the rows in a way that annoys you. In landscape it uses the full width.
+- [ ] The menu stays smooth on the S21 with the line moving.
+
+### Questions
+- Is the speed right, too fast or too slow?
+- Are the descriptions useful? Which ones say too little or say the wrong thing?
+
 ## Menu look
 Every menu and summary screen now has the arena behind it: the sky, the far shapes, the floor, the boss and you standing still. It follows the boss on the Boss row, and the panel and the highlighted row change colour with it. Fights look exactly as before.
 

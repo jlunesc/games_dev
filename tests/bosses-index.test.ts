@@ -13,6 +13,7 @@ import {
   VESPER_SAGE,
   BOSS_CHOICES,
   bossById,
+  bossChoiceDescription,
   bossChoiceName,
 } from '../src/bosses';
 import { PAIRS } from '../src/bosses/pairs';
@@ -63,5 +64,21 @@ describe('the Boss row choices', () => {
     expect(bossChoiceName('hound-and-sage')).toBe('Hound and Sage');
     expect(bossChoiceName('generated')).toBe('Generated');
     expect(bossChoiceName('a-pair-that-was-removed')).toBe(EMBER_DUELIST.name);
+  });
+});
+
+describe('boss descriptions', () => {
+  it('every named boss has one, so the menu never shows an empty line for a single boss', () => {
+    for (const boss of BOSSES) {
+      expect(boss.description, boss.id).toBeTruthy();
+      expect(boss.description!.length, boss.id).toBeLessThanOrEqual(140);
+    }
+  });
+
+  it('are found by choice id for a named boss, and are absent for a pair, Generated or an unknown id', () => {
+    expect(bossChoiceDescription('ashen-hound')).toBe(bossById('ashen-hound').description);
+    expect(bossChoiceDescription('hound-and-sage')).toBeUndefined();
+    expect(bossChoiceDescription('generated')).toBeUndefined();
+    expect(bossChoiceDescription('nobody')).toBeUndefined();
   });
 });

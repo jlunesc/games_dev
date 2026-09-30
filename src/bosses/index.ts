@@ -26,3 +26,8 @@ export const BOSS_CHOICES: readonly BossChoice[] = [
 export function bossChoiceName(id: string): string {
   return BOSS_CHOICES.find((c) => c.id === id)?.name ?? EMBER_DUELIST.name;
 }
+
+/** The menu's description line for a boss choice: a named boss has one; a pair, Generated and an unknown id have none. */
+export function bossChoiceDescription(id: string): string | undefined {
+  return BOSSES.find((boss) => boss.id === id)?.description;
+}

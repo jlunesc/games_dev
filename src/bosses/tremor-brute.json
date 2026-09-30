@@ -1,6 +1,7 @@
 {
   "id": "tremor-brute",
   "name": "Tremor Brute",
+  "description": "A heavy fighter whose fists and quakes send shockwaves along the floor. Jump the waves, hit after the slam.",
   "width": 110,
   "height": 130,
   "startX": 1000,

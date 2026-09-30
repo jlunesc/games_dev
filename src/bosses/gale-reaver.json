@@ -1,6 +1,7 @@
 {
   "id": "gale-reaver",
   "name": "Gale Reaver",
+  "description": "Fast slashes and jabs with almost no rest. Dodge the rush and swing in the short gaps.",
   "width": 75,
   "height": 140,
   "startX": 960,

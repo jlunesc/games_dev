@@ -1,4 +1,4 @@
-import { BOSS_CHOICES, bossChoiceName } from '../bosses';
+import { BOSS_CHOICES, bossChoiceDescription, bossChoiceName } from '../bosses';
 import { pairById } from '../bosses/pairs';
 import { PRESETS } from '../game/difficulty';
 import { wrap, type NavAction } from './nav';
@@ -35,6 +35,8 @@ export interface MenuRow {
   id: MenuItemId;
   label: string;
   value?: string;
+  /** A line of text shown under the row (the boss description under the Boss row). */
+  note?: string;
 }
 
 /** The menu opens with Fight focused, so one press of the bottom button starts the same fight again. */
@@ -46,10 +48,17 @@ export function difficultyLabel(prefs: Prefs): string {
   return isCustom(prefs) ? `Custom (from ${name})` : name;
 }
 
+/** The description of the boss being looked at: the highlighted option while the dropdown is open, otherwise the chosen one. */
+function bossNote(model: MenuModel): { note: string } | Record<string, never> {
+  const id = model.bossDropdown === null ? model.prefs.bossId : (BOSS_CHOICES[model.bossDropdown]?.id ?? model.prefs.bossId);
+  const note = bossChoiceDescription(id);
+  return note === undefined ? {} : { note };
+}
+
 export function menuRows(model: MenuModel): MenuRow[] {
   return [
     { id: 'fight', label: 'Fight' },
-    { id: 'boss', label: 'Boss', value: bossChoiceName(model.prefs.bossId) },
+    { id: 'boss', label: 'Boss', value: bossChoiceName(model.prefs.bossId), ...bossNote(model) },
     { id: 'difficulty', label: 'Difficulty', value: difficultyLabel(model.prefs) },
     { id: 'study', label: 'Study', value: studyLabelFor(model.prefs.bossId, model.prefs.study) },
     { id: 'tweak', label: 'Tweak difficulty' },

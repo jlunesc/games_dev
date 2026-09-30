@@ -253,6 +253,7 @@ export function mountApp(root: HTMLElement): void {
       menuRows(menu).map((row) => ({
         label: row.label,
         value: row.value,
+        note: row.note,
         dropdown:
           row.id === 'boss' && menu.bossDropdown !== null
             ? {

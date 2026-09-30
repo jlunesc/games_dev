@@ -1,6 +1,7 @@
 {
   "id": "ashen-hound",
   "name": "Ashen Hound",
+  "description": "A low, fast beast that bites, rushes and pounces. Short warnings, so keep moving and hit it as it lands.",
   "width": 90,
   "height": 90,
   "startX": 960,

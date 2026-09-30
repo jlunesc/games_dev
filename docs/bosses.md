@@ -33,6 +33,7 @@ Units: times are in **updates** (the game runs 60 per second, so 60 = 1 second),
 |---|---|---|
 | `id` | Short name used in code and file names. | non-empty text |
 | `name` | Name shown to the player. | non-empty text |
+| `description` | Optional. One short line about the boss, scrolled from right to left under the Boss row in the menu while this boss is chosen (or highlighted in the dropdown). Text only: the game never reads it, so it changes no fight and needs no `GAME_VERSION` bump. Pairs, Generated bosses and the Trainee have none. | text, 1 to 140 characters |
 | `width`, `height` | Size of the boss's body (the box the player's swing has to touch). It stands on the floor. | number, at least 1 |
 | `startX` | Horizontal centre where it starts. | number, at least 0 |
 | `maxHp` | Health at the start. Each of the player's hits does 1 damage (double while staggered, see `counter`). | whole number, at least 1 |
