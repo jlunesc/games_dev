@@ -265,6 +265,14 @@ function attack(value: unknown, path: string): AttackDef {
     fail(`${path}.class`, 'an attack with shots must be "mustDodge"');
   }
 
+  let hold: number | undefined;
+  if (o.hold !== undefined) {
+    hold = num(o.hold, `${path}.hold`, { min: 1, max: 60, integer: true });
+    if (cls !== 'mustDodge') fail(`${path}.hold`, 'only a "mustDodge" attack can hold');
+    if (shots !== undefined) fail(`${path}.hold`, 'an attack with shots cannot hold');
+    if (windup < 2) fail(`${path}.hold`, 'needs a wind-up of at least 2');
+  }
+
   if (hits.length === 0 && move === undefined && leap === undefined && dive === undefined && shots === undefined) {
     fail(`${path}.hits`, 'needs at least one hit window, a move, a leap, a dive or shots');
   }
@@ -288,6 +296,7 @@ function attack(value: unknown, path: string): AttackDef {
     ...(leap === undefined ? {} : { leap }),
     ...(dive === undefined ? {} : { dive }),
     ...(shots === undefined ? {} : { shots }),
+    ...(hold === undefined ? {} : { hold }),
   };
 }
 

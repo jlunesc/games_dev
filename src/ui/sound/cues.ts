@@ -63,7 +63,7 @@ export function attackStarted(was: BossState, now: BossState): boolean {
   return (
     now.mode === 'attack' &&
     now.attackId !== null &&
-    (was.mode !== 'attack' || was.attackId !== now.attackId || now.attackTick <= was.attackTick)
+    (was.mode !== 'attack' || was.attackId !== now.attackId || now.attackTick < was.attackTick)
   );
 }
 

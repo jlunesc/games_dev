@@ -78,6 +78,8 @@ export interface BossState {
   temper: number;
   /** The attacks still to come in the running combo (see `PhaseDef.combos`); empty when no combo is running. */
   comboQueue: string[];
+  /** Extra updates the running attack still spends frozen at the end of its wind-up (see `AttackDef.hold`). */
+  holdLeft: number;
 }
 
 interface ShotBase {
@@ -237,6 +239,7 @@ function initialBoss(boss: BossDef): BossState {
     cycleIndex: 0,
     temper: 0,
     comboQueue: [],
+    holdLeft: 0,
   };
 }
 

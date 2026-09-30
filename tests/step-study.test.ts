@@ -110,6 +110,7 @@ describe('creating a fight without a study', () => {
         cycleIndex: 0,
         temper: 0,
         comboQueue: [],
+        holdLeft: 0,
       },
       partners: [],
       events: [],

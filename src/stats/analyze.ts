@@ -189,6 +189,8 @@ interface OpenAttack {
   shotsCleared: boolean;
   windowOpen: boolean;
   windowTaken: boolean;
+  /** Updates the attack spent frozen on the end of its wind-up (a hold); danger times are shifted by it. */
+  held: number;
 }
 
 function occurrence(open: OpenAttack): AttackOccurrence {
@@ -214,7 +216,7 @@ function occurrence(open: OpenAttack): AttackOccurrence {
             : open.coveredInDanger
               ? 'cover'
               : 'distance';
-  const firstDanger = open.startTick + open.dangerFrom;
+  const firstDanger = open.startTick + open.held + open.dangerFrom;
   const dodge = open.dodgeStart;
   const reactionTicks = dodge !== null && dodge <= firstDanger ? dodge - open.startTick : null;
   const hasMargin = dodge !== null && (outcome === 'hit' || evasion === 'dash' || evasion === 'jump');
@@ -224,7 +226,7 @@ function occurrence(open: OpenAttack): AttackOccurrence {
     boss: open.boss,
     phase: open.phase,
     startTick: open.startTick,
-    windupTicks: open.windup,
+    windupTicks: open.windup + open.held,
     firstDangerTick: firstDanger,
     distance: Math.round(open.distance * 10) / 10,
     playerActionAtStart: open.actionAtStart,
@@ -372,7 +374,18 @@ export function analyzeRun(
     frame: InputFrame,
   ): void => {
     const { events, tick } = after;
-    const t = tick - attack.startTick;
+    const owner = bossAt(after, attack.boss);
+    const was = bossAt(before, attack.boss);
+    if (
+      was.mode === 'attack' &&
+      owner.mode === 'attack' &&
+      was.attackId === owner.attackId &&
+      owner.attackTick > 0 &&
+      owner.attackTick === was.attackTick
+    ) {
+      attack.held += 1;
+    }
+    const t = tick - attack.startTick - attack.held;
     attack.lastT = t;
     const dodgeStarted = dodgeBegan(before, after);
     if (dodgeStarted && attack.dodgeStart === null && t <= attack.dangerTo) attack.dodgeStart = tick;
@@ -381,7 +394,6 @@ export function analyzeRun(
     // by cover) and against what the attack would have covered in a bare arena (`bare`, the same list when the
     // boss has no arena). Each is asked about the player where they are (`real`) and where they would stand on the
     // floor at the same x (`grounded`).
-    const owner = bossAt(after, attack.boss);
     const def = bossDefFor(after, fight, attack.boss);
     const boxes = activeHitBoxes(owner, def);
     const real = playerBox(after.player);
@@ -525,6 +537,7 @@ export function analyzeRun(
         shotsCleared: false,
         windowOpen: false,
         windowTaken: false,
+        held: 0,
       };
       // What happened on the update the attack began (a dodge, or a counter that cancels it at once) counts too.
       observe(open, before, after, frame);

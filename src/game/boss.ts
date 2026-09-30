@@ -149,6 +149,8 @@ function startAttack(s: GameState, boss: BossDef, id: string, index: number): vo
   b.attackId = id;
   b.attackTick = 0;
   b.pendingAttackId = null;
+  // Only an attack with a hold draws, and never during the study, so every other fight keeps its random sequence.
+  b.holdLeft = attack.hold !== undefined && !s.study.active ? Math.floor(draw(s) * (attack.hold + 1)) : 0;
   b.lastAttacks = [...b.lastAttacks, id].slice(-2);
   s.events.push(attack.class === 'counterable' ? 'bossWindupGold' : 'bossWindupRed');
 }
@@ -258,6 +260,10 @@ function updateAttack(s: GameState, boss: BossDef, phase: PhaseDef, index: numbe
     return;
   }
   const attack = attackById(boss, b.attackId);
+  if (attack.hold !== undefined && b.attackTick === attack.windup - 1 && b.holdLeft > 0) {
+    b.holdLeft -= 1;
+    return;
+  }
   b.attackTick += 1;
   const move = attack.move;
   if (move !== undefined && b.attackTick >= move.from && b.attackTick < move.to) {

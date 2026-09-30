@@ -135,6 +135,11 @@ export interface AttackDef {
   leap?: LeapDef;
   /** A dive. Only for a boss with `flight`; an attack may not have both a `leap` and a `dive`. */
   dive?: DiveDef;
+  /**
+   * Up to this many extra updates the boss stays frozen on the last update of the wind-up, a random number each time, so the
+   * strike cannot be timed by counting. Only for a `mustDodge` attack without shots, with a wind-up of at least 2.
+   */
+  hold?: number;
   /** Shots fired during the active updates; they outlive the attack. Only a `mustDodge` attack may have them. */
   shots?: ShotDef[];
   /** May be empty only when the attack has a `move`, a `leap` or `shots` (a reposition-only or shooting attack). */

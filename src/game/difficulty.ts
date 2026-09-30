@@ -197,7 +197,8 @@ const atLeastOne = (n: number): number => Math.max(1, Math.round(n));
 
 function adjustAttack(attack: AttackDef, boss: BossDef, d: Dials): AttackDef {
   // A counterable attack keeps at least the counter window, or it could never be countered.
-  const floor = attack.class === 'counterable' ? boss.counter.window : 1;
+  // A held attack keeps 2 so it can hold.
+  const floor = attack.class === 'counterable' ? boss.counter.window : attack.hold !== undefined ? 2 : 1;
   const windup = Math.max(floor, Math.round(attack.windup * d.readability));
   // Hit windows and moves are timed from the start of the attack, so they move with the warning.
   const shift = windup - attack.windup;
