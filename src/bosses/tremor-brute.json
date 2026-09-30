@@ -17,6 +17,7 @@
     "staggerTicks": 60,
     "damageMultiplier": 2
   },
+  "temper": 0.6,
   "transitionTicks": 60,
   "attacks": [
     {
@@ -40,7 +41,8 @@
           "bottom": 0,
           "top": 140
         }
-      ]
+      ],
+      "hold": 10
     },
     {
       "id": "backhand",
@@ -182,6 +184,86 @@
           "top": 320
         }
       ]
+    },
+    {
+      "id": "row-quake",
+      "name": "Row Quake",
+      "pose": "down",
+      "class": "mustDodge",
+      "windup": 38,
+      "active": 8,
+      "recovery": 50,
+      "range": {
+        "min": 0,
+        "max": 700
+      },
+      "hits": [],
+      "shots": [
+        {
+          "kind": "eruption",
+          "at": 38,
+          "offset": -98,
+          "width": 196,
+          "delay": 42,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 38,
+          "offset": 98,
+          "width": 196,
+          "delay": 42,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 38,
+          "offset": -436,
+          "width": 220,
+          "delay": 42,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 38,
+          "offset": -656,
+          "width": 220,
+          "delay": 42,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 38,
+          "offset": -546,
+          "width": 220,
+          "delay": 42,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 38,
+          "offset": 436,
+          "width": 220,
+          "delay": 42,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 38,
+          "offset": 656,
+          "width": 220,
+          "delay": 42,
+          "burst": 8
+        },
+        {
+          "kind": "eruption",
+          "at": 38,
+          "offset": 546,
+          "width": 220,
+          "delay": 42,
+          "burst": 8
+        }
+      ]
     }
   ],
   "phases": [
@@ -212,6 +294,11 @@
         {
           "id": "uppercut",
           "weight": 1
+        },
+        {
+          "id": "row-quake",
+          "weight": 2,
+          "heavy": true
         }
       ],
       "gap": 50,
@@ -248,6 +335,11 @@
         {
           "id": "uppercut",
           "weight": 2
+        },
+        {
+          "id": "row-quake",
+          "weight": 3,
+          "heavy": true
         }
       ],
       "gap": 32,

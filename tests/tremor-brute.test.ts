@@ -43,10 +43,10 @@ function standAt(boss: BossDef, x: number): GameState {
 }
 
 describe('the Tremor Brute file', () => {
-  it('is loaded and found by id, with six attacks, no arena and two phases', () => {
+  it('is loaded and found by id, with seven attacks, no arena and two phases', () => {
     expect(TREMOR_BRUTE.id).toBe('tremor-brute');
     expect(bossById('tremor-brute')).toBe(TREMOR_BRUTE);
-    expect(TREMOR_BRUTE.attacks.map((a) => a.id)).toEqual(['hammer-fist', 'backhand', 'fissure', 'twin-quake', 'floor-wave', 'uppercut']);
+    expect(TREMOR_BRUTE.attacks.map((a) => a.id)).toEqual(['hammer-fist', 'backhand', 'fissure', 'twin-quake', 'floor-wave', 'uppercut', 'row-quake']);
     expect(TREMOR_BRUTE.arena).toBeUndefined();
     expect(TREMOR_BRUTE.phases).toHaveLength(2);
   });
@@ -115,8 +115,8 @@ describe('each eruption attack has an answer', () => {
     return withInput({ moveX: goal > p.x ? 1 : -1 });
   };
 
-  it('stepping out of the marks avoids the fissure and both quakes of the twin quake', () => {
-    for (const id of ['fissure', 'twin-quake']) {
+  it('stepping out of the marks avoids the fissure, both quakes of the twin quake and the row quake', () => {
+    for (const id of ['fissure', 'twin-quake', 'row-quake']) {
       const boss = solo(id);
       const idle = analyzeRun(boss, standAt(boss, 640), Array.from({ length: 200 }, () => NO_INPUT));
       expect(idle.attacks[0]!.outcome, `${id} idle`).toBe('hit');
@@ -189,7 +189,7 @@ describe('the Brute can be beaten', () => {
     if ((wave !== undefined || waveComing) && p.onGround) return withInput({ jumpPressed: true, jumpHeld: true });
     if (!p.onGround) return withInput({ jumpHeld: true });
     const away = p.x > b.x ? 1 : -1;
-    if (b.mode === 'attack' && b.attackId === 'hammer-fist' && b.attackTick + 1 === 22) return withInput({ dashPressed: true, moveX: away });
+    if (b.mode === 'attack' && b.attackId === 'hammer-fist' && b.attackTick === 25 && b.holdLeft <= 4) return withInput({ dashPressed: true, moveX: away });
     if (b.mode === 'attack' && b.attackId === 'backhand' && b.attackTick + 1 === 16) return withInput({ attackPressed: true });
     const dx = b.x - p.x;
     return withInput({ moveX: Math.abs(dx) < 90 ? 0 : dx > 0 ? 1 : -1, attackPressed: b.mode !== 'attack' && n % 20 === 0 });

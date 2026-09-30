@@ -17,6 +17,7 @@
     "staggerTicks": 90,
     "damageMultiplier": 2
   },
+  "temper": 0.7,
   "transitionTicks": 60,
   "attacks": [
     {
@@ -41,7 +42,8 @@
           "bottom": 0,
           "top": 190
         }
-      ]
+      ],
+      "hold": 12
     },
     {
       "id": "fault-slam",
@@ -124,6 +126,49 @@
           "both": true
         }
       ]
+    },
+    {
+      "id": "kiln-crack",
+      "name": "Kiln Crack",
+      "pose": "crouch",
+      "class": "mustDodge",
+      "windup": 44,
+      "active": 12,
+      "recovery": 44,
+      "range": {
+        "min": 0,
+        "max": 700
+      },
+      "hits": [],
+      "shots": [
+        {
+          "kind": "eruption",
+          "at": 44,
+          "offset": 0,
+          "width": 96,
+          "delay": 30,
+          "burst": 8,
+          "linger": 200
+        },
+        {
+          "kind": "eruption",
+          "at": 44,
+          "offset": -300,
+          "width": 96,
+          "delay": 30,
+          "burst": 8,
+          "linger": 200
+        },
+        {
+          "kind": "eruption",
+          "at": 44,
+          "offset": 300,
+          "width": 96,
+          "delay": 30,
+          "burst": 8,
+          "linger": 200
+        }
+      ]
     }
   ],
   "phases": [
@@ -145,7 +190,13 @@
         },
         {
           "id": "furnace-stomp",
-          "weight": 2
+          "weight": 2,
+          "heavy": true
+        },
+        {
+          "id": "kiln-crack",
+          "weight": 2,
+          "heavy": true
         }
       ],
       "gap": 60,

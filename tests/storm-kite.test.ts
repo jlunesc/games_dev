@@ -70,10 +70,10 @@ const indexAt = (states: GameState[], n: number) => states.indexOf(at(states, n)
 const attack = (id: string) => STORM_KITE.attacks.find((a) => a.id === id)!;
 
 describe('the Storm Kite file', () => {
-  it('is loaded and found by id, with four attacks, flight, no arena and two phases', () => {
+  it('is loaded and found by id, with six attacks, flight, no arena and two phases', () => {
     expect(STORM_KITE.id).toBe('storm-kite');
     expect(bossById('storm-kite')).toBe(STORM_KITE);
-    expect(STORM_KITE.attacks.map((a) => a.id)).toEqual(['plunge', 'swoop', 'bolt-volley', 'long-strafe']);
+    expect(STORM_KITE.attacks.map((a) => a.id)).toEqual(['plunge', 'swoop', 'bolt-volley', 'long-strafe', 'crossfire', 'tempest-pass']);
     expect(STORM_KITE.flight).toBeDefined();
     expect(STORM_KITE.arena).toBeUndefined();
     expect(STORM_KITE.phases).toHaveLength(2);
@@ -358,11 +358,39 @@ describe('the Kite never makes a degenerate fight', () => {
 });
 
 describe('the Kite can be beaten', () => {
-  const knower: Bot = (n, prev) => {
+  const NORMAL_KITE = applyDials(STORM_KITE, presetDials('normal'));
+  // Would the first input, then holding jump while in the air, get through the next 30 updates without losing health?
+  const safeFor = (prev: GameState) => (first: InputFrame): boolean => {
+    let s = prev;
+    for (let k = 0; k < 30; k++) {
+      s = step(s, k === 0 ? first : withInput({ jumpHeld: !s.player.onGround }), NORMAL_KITE);
+      if (s.player.health < prev.player.health) return false;
+    }
+    return true;
+  };
+  let looking = true;
+  const base: Bot = (n, prev) => {
     const p = prev.player;
     const b = prev.boss;
-    const near = prev.shots.find((sh) => sh.kind === 'bolt' && Math.abs(sh.x - p.x) < 130 && sh.lift < 220);
-    if (near !== undefined) return withInput({ dashPressed: true, moveX: near.x > p.x ? -1 : 1 });
+    // A bolt that comes in along the floor from an edge cannot be dashed away from (another comes from the other edge, and the wall is behind), and a jump
+    // that clears one can land in the next. A player who knows it reads them: a short look ahead for an answer (jump, or dash through) that takes no damage.
+    const fromEdge = (sh: GameState['shots'][number]) => sh.kind === 'bolt' && sh.attackId !== 'bolt-volley' && sh.lift < 40 && (sh.dir === 1 ? sh.x < p.x + 40 : sh.x > p.x - 40);
+    const edge = prev.shots.filter((sh) => fromEdge(sh) && Math.abs(sh.x - p.x) < 200);
+    if (edge.length > 0 && looking) {
+      const safe = safeFor(prev);
+      const toward = edge[0]!.x < p.x ? -1 : 1;
+      const answers = [NO_INPUT, withInput({ jumpPressed: true, jumpHeld: true }), withInput({ dashPressed: true, moveX: toward })];
+      const answer = answers.find(safe);
+      if (answer !== undefined && answer !== NO_INPUT) return answer;
+      if (answer === undefined && !p.onGround) return withInput({ jumpHeld: true });
+    }
+    const near = prev.shots.find((sh) => sh.kind === 'bolt' && !fromEdge(sh) && Math.abs(sh.x - p.x) < 170 && sh.lift < 220);
+    if (near !== undefined) {
+      const away = near.x > p.x ? -1 : 1;
+      // Dashing away from a bolt with a wall behind only puts the player in a corner; a player who sees that dashes through it instead.
+      const tries = [withInput({ dashPressed: true, moveX: away }), withInput({ dashPressed: true, moveX: -away }), withInput({ jumpPressed: true, jumpHeld: true })];
+      return (looking ? tries.find(safeFor(prev)) : undefined) ?? tries[0]!;
+    }
     if (b.mode === 'attack' && b.attackId !== null) {
       const dive = attack(b.attackId).dive;
       if (dive !== undefined && dive.shape === 'plunge') {
@@ -397,10 +425,34 @@ describe('the Kite can be beaten', () => {
     return withInput({ moveX: Math.abs(dx) < 70 ? 0 : dx > 0 ? 1 : -1, attackPressed: n % 8 === 0 });
   };
 
+  // On top of that, in a swoop a player who sees the plan is going to be hit (a bolt still on its way, a dash on cooldown) changes it: jump now, or dash.
+  const knower: Bot = (n, prev) => {
+    const first = base(n, prev);
+    const b = prev.boss;
+    const dive = b.mode === 'attack' && b.attackId !== null ? attack(b.attackId).dive : undefined;
+    if (dive === undefined || dive.shape !== 'swoop' || b.attackTick + 1 < dive.from - 4 || b.attackTick + 1 > Math.max(...attack(b.attackId!).hits.map((h) => h.to))) return first;
+    const ok = (f: InputFrame): boolean => {
+      let s = prev;
+      looking = false;
+      try {
+        for (let k = 0; k < 26; k++) {
+          s = step(s, k === 0 ? f : base(n + k, s), NORMAL_KITE);
+          if (s.player.health < prev.player.health) return false;
+        }
+      } finally {
+        looking = true;
+      }
+      return true;
+    };
+    if (ok(first)) return first;
+    const away = b.x > prev.player.x ? -1 : 1;
+    return [withInput({ jumpPressed: prev.player.onGround, jumpHeld: true }), withInput({ dashPressed: true, moveX: away }), withInput({ dashPressed: true, moveX: -away })].find(ok) ?? first;
+  };
+
   it('a player who knows its dives wins some fights at Normal, barely touched', () => {
     const boss = applyDials(STORM_KITE, presetDials('normal'));
     const results = SEEDS.map((seed) => fight(knower, boss, seed));
     expect(results.some((r) => r.won)).toBe(true);
     expect(Math.max(...results.map((r) => r.damage))).toBeLessThanOrEqual(2);
-  });
+  }, 60_000);
 });

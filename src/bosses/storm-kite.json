@@ -154,6 +154,103 @@
           "top": 100
         }
       ]
+    },
+    {
+      "id": "crossfire",
+      "name": "Crossfire",
+      "pose": "down",
+      "class": "mustDodge",
+      "windup": 30,
+      "active": 20,
+      "recovery": 34,
+      "range": {
+        "min": 0,
+        "max": 900
+      },
+      "hits": [],
+      "shots": [
+        {
+          "kind": "bolt",
+          "at": 30,
+          "height": 0,
+          "size": 26,
+          "speed": 500,
+          "edge": "left"
+        },
+        {
+          "kind": "bolt",
+          "at": 30,
+          "height": 0,
+          "size": 26,
+          "speed": 500,
+          "edge": "right"
+        },
+        {
+          "kind": "bolt",
+          "at": 36,
+          "height": 0,
+          "size": 26,
+          "speed": 500,
+          "edge": "left"
+        },
+        {
+          "kind": "bolt",
+          "at": 36,
+          "height": 0,
+          "size": 26,
+          "speed": 500,
+          "edge": "right"
+        }
+      ]
+    },
+    {
+      "id": "tempest-pass",
+      "name": "Tempest Pass",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 36,
+      "active": 46,
+      "recovery": 30,
+      "range": {
+        "min": 260,
+        "max": 480
+      },
+      "dive": {
+        "from": 36,
+        "to": 82,
+        "shape": "swoop",
+        "target": "forward",
+        "distance": 800,
+        "low": 18
+      },
+      "hits": [
+        {
+          "from": 50,
+          "to": 68,
+          "x0": -30,
+          "x1": 90,
+          "bottom": 0,
+          "top": 100
+        }
+      ],
+      "shots": [
+        {
+          "kind": "bolt",
+          "at": 44,
+          "height": 0,
+          "size": 26,
+          "speed": 500,
+          "edge": "right"
+        },
+        {
+          "kind": "bolt",
+          "at": 56,
+          "height": 0,
+          "size": 26,
+          "speed": 500,
+          "edge": "left"
+        }
+      ]
     }
   ],
   "phases": [
@@ -172,6 +269,11 @@
         {
           "id": "bolt-volley",
           "weight": 2
+        },
+        {
+          "id": "crossfire",
+          "weight": 2,
+          "heavy": true
         }
       ],
       "gap": 60,
@@ -199,7 +301,17 @@
         },
         {
           "id": "long-strafe",
-          "weight": 3
+          "weight": 3,
+          "heavy": true
+        },
+        {
+          "id": "crossfire",
+          "weight": 2
+        },
+        {
+          "id": "tempest-pass",
+          "weight": 2,
+          "heavy": true
         }
       ],
       "gap": 36,
@@ -208,5 +320,6 @@
       "walkSpeed": 240,
       "retreatSpeed": 180
     }
-  ]
+  ],
+  "temper": 0.25
 }
