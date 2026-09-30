@@ -256,6 +256,11 @@ export interface BossDef {
    * `cooldown` updates. Off in a fight with partners and in the study.
    */
   reaction?: { attack: string; cooldown: number };
+  /**
+   * A shield held in front while the boss walks, waits or winds up: hits from the front are blocked (see `shieldUp`).
+   * The boss takes `turnTicks` updates to turn round toward a player who is behind it. Off in a fight with partners.
+   */
+  shield?: { turnTicks: number };
   /** Platforms and cover in the arena. Absent means a bare arena. */
   arena?: ArenaDef;
 }

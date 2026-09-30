@@ -13,6 +13,7 @@ import {
   isInvulnerable,
   overlaps,
   playerBox,
+  shieldUp,
   shotBox,
 } from './geometry';
 import { GAME, PLAYER, TEMPER, WORLD } from './params';
@@ -188,6 +189,7 @@ function counterBoss(s: GameState, boss: BossDef, index: number, arena: ArenaDef
   landBoss(b);
   b.mode = 'stagger';
   b.modeTick = 0;
+  b.turnTicks = 0;
   b.attackId = null;
   b.attackTick = 0;
   b.pendingAttackId = null;
@@ -202,6 +204,7 @@ function downBoss(s: GameState, index: number): void {
   landBoss(b);
   b.mode = 'gap';
   b.modeTick = 0;
+  b.turnTicks = 0;
   b.attackId = null;
   b.attackTick = 0;
   b.pendingAttackId = null;
@@ -234,6 +237,11 @@ function resolvePlayerAttack(s: GameState, fight: FightDef, studying: boolean): 
   const boss = bossDefFor(s, fight, target);
   const b = bossAt(s, target);
   p.attackConnected = true;
+  // A shield blocks a hit from the front (a downward pogo from above gets over it). Nothing is hurt and the swing is used up.
+  if (s.partners.length === 0 && p.attackAim !== 'down' && shieldUp(b, boss) && (p.x - b.x) * b.facing > 0) {
+    s.events.push('bossBlocked');
+    return;
+  }
   if (p.attackAim === 'down') {
     // The pogo: a downward hit bounces the player up, and the bounce is not cut short by letting go of jump.
     p.vy = -PLAYER.attack.pogoSpeed;

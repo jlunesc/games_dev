@@ -83,6 +83,24 @@ function faceTarget(b: BossState, targetX: number): void {
   b.facing = targetX < b.x ? -1 : 1;
 }
 
+/**
+ * Turns a waiting boss toward `targetX`. A boss with a shield turns slowly: while the player is behind it, it counts
+ * `turnTicks` up and only turns round when the count reaches `shield.turnTicks`.
+ */
+function turnToward(s: GameState, boss: BossDef, b: BossState, targetX: number): void {
+  const want: 1 | -1 = targetX < b.x ? -1 : 1;
+  if (boss.shield === undefined || s.partners.length > 0 || b.facing === want) {
+    b.facing = want;
+    b.turnTicks = 0;
+    return;
+  }
+  b.turnTicks += 1;
+  if (b.turnTicks >= boss.shield.turnTicks) {
+    b.facing = want;
+    b.turnTicks = 0;
+  }
+}
+
 /** Moves the boss along the floor, inside the arena. Returns whether its position changed (false when it is against a wall). */
 function moveBoss(b: BossState, boss: BossDef, direction: 1 | -1, speed: number): boolean {
   const half = boss.width / 2;
@@ -150,6 +168,10 @@ export function startAttack(s: GameState, boss: BossDef, id: string, index: numb
   b.attackId = id;
   b.attackTick = 0;
   b.pendingAttackId = null;
+  if (boss.shield !== undefined) {
+    faceTarget(b, s.player.x);
+    b.turnTicks = 0;
+  }
   // Only an attack with a hold draws, and never during the study, so every other fight keeps its random sequence.
   b.holdLeft = attack.hold !== undefined && !s.study.active ? Math.floor(draw(s) * (attack.hold + 1)) : 0;
   b.lastAttacks = [...b.lastAttacks, id].slice(-2);
@@ -174,11 +196,14 @@ export function reactToHit(s: GameState, boss: BossDef, index: number): void {
 function updateGap(s: GameState, boss: BossDef, phase: PhaseDef, index: number, mayCommit: boolean): void {
   const b = bossAt(s, index);
   const p = s.player;
-  faceTarget(b, p.x);
+  turnToward(s, boss, b, p.x);
   const distance = Math.abs(p.x - b.x);
   const toward: 1 | -1 = p.x < b.x ? -1 : 1;
   const spacing = phase.spacing ?? boss.spacing;
-  if (distance > spacing.max) {
+  const turning = b.turnTicks > 0;
+  if (turning) {
+    // Still turning round behind its shield: it stands still.
+  } else if (distance > spacing.max) {
     moveBoss(b, boss, toward, phase.walkSpeed);
   } else if (distance < spacing.min) {
     moveBoss(b, boss, toward === 1 ? -1 : 1, phase.retreatSpeed);
@@ -449,6 +474,7 @@ export function beginTransition(s: GameState, boss: BossDef, index = 0): void {
   endMotion(b, boss);
   b.mode = 'transition';
   b.modeTick = 0;
+  b.turnTicks = 0;
   b.attackId = null;
   b.attackTick = 0;
   b.pendingAttackId = null;

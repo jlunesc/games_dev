@@ -84,6 +84,8 @@ export interface BossState {
   holdLeft: number;
   /** Updates left before the boss may react to a hit again (see `BossDef.reaction`). */
   reactCooldown: number;
+  /** Updates the boss has spent turning round toward a player behind its shield (see `BossDef.shield`). */
+  turnTicks: number;
 }
 
 interface ShotBase {
@@ -139,6 +141,7 @@ export type ShotState = BoltState | ArcState | EruptionState;
 
 export type GameEvent =
   | 'bossHit'
+  | 'bossBlocked'
   | 'playerHit'
   | 'dash'
   | 'bossWindupGold'
@@ -248,6 +251,7 @@ function initialBoss(boss: BossDef): BossState {
     comboQueue: [],
     holdLeft: 0,
     reactCooldown: 0,
+    turnTicks: 0,
   };
 }
 

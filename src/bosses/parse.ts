@@ -547,6 +547,11 @@ export function parseBoss(data: unknown): BossDef {
 
   const parsedTemper = o.temper === undefined ? undefined : num(o.temper, 'boss.temper', { min: 0, max: 1 });
 
+  let shield: { turnTicks: number } | undefined;
+  if (o.shield !== undefined) {
+    const k = object(o.shield, 'boss.shield');
+    shield = { turnTicks: num(k.turnTicks, 'boss.shield.turnTicks', { min: 10, max: 300, integer: true }) };
+  }
   let reaction: { attack: string; cooldown: number } | undefined;
   if (o.reaction !== undefined) {
     const r = object(o.reaction, 'boss.reaction');
@@ -572,6 +577,7 @@ export function parseBoss(data: unknown): BossDef {
     ...(parsedFlight === undefined ? {} : { flight: parsedFlight }),
     ...(parsedTemper === undefined ? {} : { temper: parsedTemper }),
     ...(reaction === undefined ? {} : { reaction }),
+    ...(shield === undefined ? {} : { shield }),
     ...(parsedArena === undefined ? {} : { arena: parsedArena }),
   };
 }

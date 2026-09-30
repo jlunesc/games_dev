@@ -97,6 +97,15 @@ export function bossHidden(b: BossState, boss: BossDef): boolean {
   return blink !== undefined && b.attackTick >= blink.from && b.attackTick < blink.to;
 }
 
+/** Whether the boss holds its shield up right now: it has one, and is waiting, walking or winding up (not swinging, recovering, staggered or changing phase). */
+export function shieldUp(b: BossState, boss: BossDef): boolean {
+  if (boss.shield === undefined) return false;
+  if (b.mode === 'gap' || b.mode === 'approach') return true;
+  if (b.mode !== 'attack' || b.attackId === null) return false;
+  const attack = boss.attacks.find((a) => a.id === b.attackId);
+  return attack !== undefined && b.attackTick < attack.windup;
+}
+
 /** The box of a shot that can hurt right now: a bolt's square, an arc's landing burst or an eruption's blast; null before those. */
 export function shotBox(shot: ShotState): Box | null {
   if (shot.kind === 'bolt') {
