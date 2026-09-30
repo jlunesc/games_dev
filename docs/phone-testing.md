@@ -716,6 +716,16 @@ After a fight (win, loss or leaving with the hold), the summary shows a "Work on
 - [ ] A fight after another fight never shows the earlier fight's lines.
 - [ ] Two-boss fights name attacks of both bosses correctly.
 
+## Generated boss figures
+Every generated boss now has its own look: a body plan (two-legged, beast, floating wisp, stacked totem or wide crawler) with its own head, arm, back piece and trim. The look depends only on the fight's seed, so Redo gives a new boss and a new look. Hand-built bosses look exactly as before.
+- [ ] Fight Generated ten times: each boss looks clearly different from the last, not only in size and colour.
+- [ ] A boss that shoots tends to look like a caster (hood, big eye, orbs, a floating wisp); one with floor eruptions tends to have spines, a crown or a stacked totem. It is a tendency, not a rule.
+- [ ] The arm still shows every wind-up clearly: raised, down, sideways, back and crouch are as easy to read as on the hand-built bosses.
+- [ ] Nothing is cut off, and the boss seems to fit where the sword can hit it.
+- [ ] The game runs as smoothly as with a hand-built boss, in a fight with the Effects switch on.
+- [ ] The Ember Duelist, the Ashen Hound and the other hand-built bosses (and the pairs) look as before.
+- [ ] Which plans, heads or parts look ugly or confusing? Tell me and I will change or drop them. Every size and chance is in `LOOK.genFigure` (`src/ui/look/tuning.ts`) and the option tables in `src/ui/look/generated-figure.ts`.
+
 ## Things I would like to know
 After playing, answer these in plain words:
 - Does the counter feel too easy or too hard? Note that it can also be triggered by mashing attack, and by a swing that faces away from the boss (the game only checks that you are close and press attack in the window).

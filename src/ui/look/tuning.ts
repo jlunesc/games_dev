@@ -373,4 +373,23 @@ export const LOOK = {
   floorTileAlpha: 0.16,
   /** How far below the floor's top edge the faint horizontal tile line sits. */
   floorTileRow: 32,
+
+  // ---- Generated boss figures (`generated-figure.ts`): look only, all sizes in world units ----
+  genFigure: {
+    /** How much a hinted option is favoured: its weight is 1 + hint * (share of the boss's attacks of that kind). */
+    hint: 3,
+    /** The most shapes one generated figure may use (phone limit). */
+    maxShapes: 48,
+    /** The tallest a head piece, spike or horn may stand above its head. */
+    reach: 14,
+    legSwing: 6,
+    legLift: 4,
+    /** How far capes, tails and the wisp sway, and how many ticks one sway takes. */
+    sway: 5,
+    swayTicks: 40,
+    flapTicks: 18,
+    orbitTicks: 120,
+    /** How much the glowing core grows and shrinks (a fraction of its size). */
+    corePulse: 0.12,
+  },
 } as const;
