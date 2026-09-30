@@ -192,15 +192,18 @@ describe('the Boss row with a pair', () => {
   const valueOf = (m: MenuModel) => menuRows(m).find((r) => r.id === 'boss')!.value;
   const withBoss = (bossId: string): MenuModel => at('boss', createMenu({ ...DEFAULT_PREFS, bossId }));
 
-  it('right from the last named boss lands on the pair, and right again on Generated', () => {
+  it('right from the last named boss walks through each pair in order, then Generated', () => {
     const lastNamed = BOSS_CHOICES[BOSS_CHOICES.findIndex((c) => c.id === 'hound-and-sage') - 1]!;
     let m = withBoss(lastNamed.id);
     m = press(m, 'right');
     expect(m.prefs.bossId).toBe('hound-and-sage');
     expect(valueOf(m)).toBe('Hound and Sage');
     m = press(m, 'right');
+    expect(m.prefs.bossId).toBe('golem-and-kite');
+    expect(valueOf(m)).toBe('Golem and Kite');
+    m = press(m, 'right');
     expect(m.prefs.bossId).toBe('generated');
-    m = press(m, 'left', 'left');
+    m = press(m, 'left', 'left', 'left');
     expect(m.prefs.bossId).toBe(lastNamed.id);
   });
 

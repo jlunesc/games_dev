@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, BOSSES, VESPER_SAGE, bossById } from '../src/bosses';
+import { ASHEN_HOUND, BOSSES, CINDER_GOLEM, STORM_KITE, VESPER_SAGE, bossById } from '../src/bosses';
 import { PairFormatError, parsePair } from '../src/bosses/pair';
 import rawPair from '../src/bosses/hound-and-sage.json';
-import { HOUND_AND_SAGE, PAIRS, pairById } from '../src/bosses/pairs';
+import { GOLEM_AND_KITE, HOUND_AND_SAGE, PAIRS, pairById } from '../src/bosses/pairs';
 import type { BossDef } from '../src/bosses/schema';
 
 const strict = (id: string): BossDef | undefined => BOSSES.find((b) => b.id === id);
@@ -124,8 +124,14 @@ describe('parsePair', () => {
 });
 
 describe('the pair registry', () => {
+  it('lists Golem and Kite, the Golem first (the Golem is the primary boss)', () => {
+    expect(GOLEM_AND_KITE.id).toBe('golem-and-kite');
+    expect(GOLEM_AND_KITE.name).toBe('Golem and Kite');
+    expect(GOLEM_AND_KITE.bosses.map((m) => m.boss)).toEqual([CINDER_GOLEM.id, STORM_KITE.id]);
+  });
+
   it('lists Hound and Sage, the Hound first (the Hound is the primary boss)', () => {
-    expect(PAIRS).toEqual([HOUND_AND_SAGE]);
+    expect(PAIRS).toEqual([HOUND_AND_SAGE, GOLEM_AND_KITE]);
     expect(HOUND_AND_SAGE.id).toBe('hound-and-sage');
     expect(HOUND_AND_SAGE.name).toBe('Hound and Sage');
     expect(HOUND_AND_SAGE.bosses.map((m) => m.boss)).toEqual([ASHEN_HOUND.id, VESPER_SAGE.id]);
@@ -133,6 +139,7 @@ describe('the pair registry', () => {
 
   it('finds a pair by id and returns undefined for anything else', () => {
     expect(pairById('hound-and-sage')).toBe(HOUND_AND_SAGE);
+    expect(pairById('golem-and-kite')).toBe(GOLEM_AND_KITE);
     expect(pairById('ember-duelist')).toBeUndefined();
     expect(pairById('generated')).toBeUndefined();
     expect(pairById('nobody')).toBeUndefined();

@@ -524,6 +524,30 @@ A new choice on the **Boss** row, after the single bosses and before Generated: 
 - Did one of the two bosses feel like it did most of the work?
 - Did the Sage's bolts and the Hound's rushes ever feel like they came at once, even though only one boss attacks at a time?
 
+## Two bosses in one fight (Golem and Kite)
+The second pair, right after Hound and Sage on the **Boss** row: **Golem and Kite**. The Cinder Golem (a slow, heavy walker with long warnings and 2-damage slams) and the Storm Kite (a bird that hangs above the arena, dives at you and fires bolts from above and from the sides) fight you together, on the Golem's flat floor. All the pair rules are the same as for Hound and Sage (read "What to expect" above): two health bars, turns, the sword hits the nearest boss in reach, the survivor is enraged, no study ("Off (pairs)"). What this pair is meant to train: holding your ground against a slow heavy boss while dodging shots from a flying one, so you are always deciding where to stand.
+
+### What to expect
+- The Golem is the primary boss (its bar is on top). The Kite can only be hit while it is low, so you often have to deal with the Golem while the Kite is out of reach, and the other way round.
+- In scripted tests this pair is harder than Hound and Sage: a bot that only runs at the nearest boss and swings, never dodging, wins 4 of 8 on Easy and none on Normal or Hard (Hound and Sage: 8, 6 and 0). A real player who dodges should do much better. Please say if it feels like a wall.
+- The health numbers (60% of each boss's usual health) and the angry-survivor numbers are first guesses, the same as for the first pair.
+
+### Checklist
+- [ ] Golem and Kite is on the Boss row right after Hound and Sage (before Generated), the menu remembers it, and Fight starts it. The Study row reads "Off (pairs)".
+- [ ] The Golem (bar on top) and the Kite (bar under it) are both readable and in view. The Kite hanging high does not leave the screen or hide behind the top bars.
+- [ ] The turn marker follows the boss that holds the turn, including while the Kite is up in the air.
+- [ ] Only one boss attacks at a time. The Kite's bolts (from above and from the sides) never overlap with a Golem slam.
+- [ ] A swing hits only the nearest boss in reach. Note what happens when the Kite is high and the Golem is close: which one does the swing hit, and does it feel right?
+- [ ] When one boss falls its bar dims, its shots vanish, and the survivor is quicker but its warnings are still fair.
+- [ ] The fight ends in victory only when both bars are at zero. The summary, stats and export work; the exported `bossId` is `"golem-and-kite"` and the analysis has two entries in `bosses`.
+- [ ] The phone stays smooth with the Kite's bolts, the Golem's slam effects and both bosses on screen.
+
+### Questions about the pair
+- Is it too hard, too easy or about right on Normal? Which boss makes it hard?
+- Is there a moment where you cannot hit anything (the Kite stays high, the Golem is far)? How long is it?
+- Is it clear where to stand? Did the Kite's bolts and the Golem's slam ever feel unavoidable together?
+- Is the angry survivor a wall, or too easy?
+
 ## Sound (M7)
 The ten placeholder beeps are gone. Every sound is made in code, so nothing extra was downloaded. **Settings** now has a **Volume** row (Off, Low, Medium, High; it starts on **Medium**). An old saved "Sound off" becomes Volume Off. Sound still needs one tap on the screen after the app starts.
 

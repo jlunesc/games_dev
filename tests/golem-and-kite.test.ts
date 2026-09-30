@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { ASHEN_HOUND, VESPER_SAGE } from '../src/bosses';
+import { CINDER_GOLEM, STORM_KITE } from '../src/bosses';
 import { GEN } from '../src/bosses/generate/tuning';
-import { HOUND_AND_SAGE } from '../src/bosses/pairs';
+import { GOLEM_AND_KITE } from '../src/bosses/pairs';
 import { resolveFight } from '../src/bosses/resolve';
 import { NORMAL_DIALS, applyDialsToFight, presetDials, type PresetId } from '../src/game/difficulty';
 import type { FightDef } from '../src/game/fight';
@@ -16,27 +16,27 @@ const LONG_RUN = 3600;
 const CHASE_CAP = 10800;
 
 const pairFight = (seed: number, preset: PresetId = 'normal'): FightDef =>
-  applyDialsToFight(resolveFight(HOUND_AND_SAGE.id, seed).fight, presetDials(preset));
+  applyDialsToFight(resolveFight(GOLEM_AND_KITE.id, seed).fight, presetDials(preset));
 
-describe('the Hound and Sage pair file', () => {
-  it('is found by id and fights the Hound first, then the Sage, each with less health than alone', () => {
-    const { fight } = resolveFight('hound-and-sage', 1);
-    expect(HOUND_AND_SAGE.id).toBe('hound-and-sage');
-    expect(fight.bosses.map((b) => b.id)).toEqual([ASHEN_HOUND.id, VESPER_SAGE.id]);
+describe('the Golem and Kite pair file', () => {
+  it('is found by id and fights the Golem first, then the Kite, each with less health than alone', () => {
+    const { fight } = resolveFight('golem-and-kite', 1);
+    expect(GOLEM_AND_KITE.id).toBe('golem-and-kite');
+    expect(fight.bosses.map((b) => b.id)).toEqual([CINDER_GOLEM.id, STORM_KITE.id]);
     expect(fight.bosses[0]!.maxHp).toBeGreaterThanOrEqual(1);
-    expect(fight.bosses[0]!.maxHp).toBeLessThan(ASHEN_HOUND.maxHp);
+    expect(fight.bosses[0]!.maxHp).toBeLessThan(CINDER_GOLEM.maxHp);
     expect(fight.bosses[1]!.maxHp).toBeGreaterThanOrEqual(1);
-    expect(fight.bosses[1]!.maxHp).toBeLessThan(VESPER_SAGE.maxHp);
+    expect(fight.bosses[1]!.maxHp).toBeLessThan(STORM_KITE.maxHp);
     expect(fight.enrage).not.toBeNull();
   });
 
   it('is the same fight at Normal difficulty as the file gives', () => {
-    const { fight } = resolveFight('hound-and-sage', 1);
+    const { fight } = resolveFight('golem-and-kite', 1);
     expect(applyDialsToFight(fight, NORMAL_DIALS)).toEqual(fight);
   });
 
   it('makes the survivor wait at least a quarter of a second and leaves its warnings unchanged', () => {
-    const fight = resolveFight('hound-and-sage', 1).fight;
+    const fight = resolveFight('golem-and-kite', 1).fight;
     fight.enraged.forEach((boss, i) => {
       for (const phase of boss.phases) expect(phase.gap).toBeGreaterThanOrEqual(15);
       expect(boss.attacks.map((a) => a.windup)).toEqual(fight.bosses[i]!.attacks.map((a) => a.windup));
@@ -65,7 +65,7 @@ describe('an idle player always loses to the pair', () => {
     }
   });
 
-  it('after the Sage has fallen and the Hound is enraged, and the other way round', () => {
+  it('after the Kite has fallen and the Golem is enraged, and the other way round', () => {
     for (const fallen of [0, 1]) {
       for (const seed of [1, 2, 3, 4]) {
         const fight = pairFight(seed);
@@ -112,8 +112,8 @@ describe('the turn rule over whole runs of the real pair', () => {
     for (const seed of [1, 2, 3, 4]) {
       const r = watch(seed, PLAYER.startX);
       expect(r.end.phase).toBe('fight');
-      expect(r.attackStarts[0], `Hound, seed ${seed}`).toBeGreaterThanOrEqual(5);
-      expect(r.attackStarts[1], `Sage, seed ${seed}`).toBeGreaterThanOrEqual(5);
+      expect(r.attackStarts[0], `Golem, seed ${seed}`).toBeGreaterThanOrEqual(5);
+      expect(r.attackStarts[1], `Kite, seed ${seed}`).toBeGreaterThanOrEqual(5);
     }
   });
 });

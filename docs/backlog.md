@@ -159,14 +159,35 @@ Idea: sample real performance during a fight, either shown live (a small debug o
 Built: hold up (ground or air) or down (air only) and press attack (SPEC section 11, "Up and down swings"). The pogo bounce off the boss was added right after (2026-09-29). Not built: bouncing off spikes or hazards, an up or down counter, a swing that changes the boss's attacks (bosses that can only be hit from above or below), and the fairness bots (`src/bosses/generate/fairness.ts`) using up and down swings.
 
 ## Two-boss fights, left out (raised 2026-09-29)
-Built: two bosses in one fight as a named pair, first pair Hound and Sage (`docs/SPEC.md` section 11, "Two bosses in one fight"; checklist in `docs/phone-testing.md`). Not built:
+Built: two bosses in one fight as a named pair (`docs/SPEC.md` section 11, "Two bosses in one fight"; checklists in `docs/phone-testing.md`). Two pairs exist: **Hound and Sage** (built 2026-09-29) and **Golem and Kite** (built 2026-09-30). Both are DEFAULT numbers awaiting the owner's phone playtest. Not built:
 - **A study for pairs**: each boss showing its attacks in turn (agreed in the design). The first version switches the study off for pair fights and records `study: 0`.
-- **More pairs**: only Hound and Sage exists. A new pair is a small file plus the same checks in `tests/hound-and-sage.test.ts`; bosses were tuned for solo fights, so each pair needs its own health scales and enrage strength.
+- **More pairs**: see "Pair candidates" below.
 - **Generated pairs, and "any two bosses" chosen from the menu**: generated bosses stay solo, and every pair is its own file.
 - **Bosses attacking at the same time**: a later step could allow overlap as a difficulty dial, or in a pair's second stage.
 - **Bosses that move with or shield each other, or share attacks.**
-- **A fairness check for pairs in the generator**: `checkFairness` and its skilled bot (`src/bosses/generate/fairness.ts`) work on one boss and read only the primary. Pairs are checked by `tests/hound-and-sage.test.ts` (an idle player loses, the turn rule holds, both bosses get turns, a player who cannot die and only chases and swings can win); there is no scripted player that dodges a pair, so "a good player can win without being hit" is not checked for pairs.
-- **A partner's arena in hit windows**: `resolveBossHits` in `src/game/step.ts` cuts a partner's hit windows with the partner's own `arena.covers`, while the player and shots use the primary boss's arena. Hound and Sage have no arena, so it does not matter for the first pair; a pair of bosses with different arenas would need this settled.
+- **A fairness check for pairs in the generator**: `checkFairness` and its skilled bot (`src/bosses/generate/fairness.ts`) work on one boss and read only the primary. Pairs are checked by `tests/hound-and-sage.test.ts` and `tests/golem-and-kite.test.ts` (an idle player loses, the turn rule holds, both bosses get turns, a player who cannot die and only chases and swings can win); there is no scripted player that dodges a pair, so "a good player can win without being hit" is not checked for pairs.
+- **A partner's arena in hit windows**: `resolveBossHits` in `src/game/step.ts` cuts a partner's hit windows with the partner's own `arena.covers`, while the player and shots use the primary boss's arena. Neither built pair has an arena, so it does not matter yet; a pair of bosses with different arenas would need this settled.
+
+### Pair candidates (proposed by Claude 2026-09-30, owner asked for the list)
+Picked from each boss's attacks so that each pair trains something different from the others. Only the first one is built; the owner has not yet chosen which of the others come next.
+
+| Pair | Status | What it trains | Why it fits |
+|---|---|---|---|
+| Hound + Sage | built 2026-09-29 | Reading a fast close fighter and a distant shooter | The owner's choice for the first pair. |
+| Golem + Kite | built 2026-09-30 (`src/bosses/golem-and-kite.json`), DEFAULT numbers | Holding your ground against a slow heavy boss while dodging shots from a flying one | The Golem has long windups and 2-damage slams; the Kite hangs above and fires bolts from above and the sides. The Kite can only be hit while low. |
+| Sentinel + Reaver | idea, not built | Choosing which boss to face | The Sentinel's shield blocks front hits and the Reaver is fast with quick jabs; with one boss on each side, a swing at the shield is wasted. **Open question for the owner before building:** how the shield interacts with "the sword hits the nearest boss in reach" (a swing at a shielded nearest boss is blocked even if the other boss is open). `src/ui/render.ts` draws the shield plate only when `state.partners.length === 0`, so pair drawing of a shield also needs a look. |
+| Brute + Dancer | idea, not built | Jumping floor shockwaves while a boss blinks around | The Brute's quakes and floor waves reach up to 700 units; the Dancer blinks and fires needle fans, so you cannot stand still after a jump. |
+| Warden + Brute | idea, not built | Reach against close range | The Warden pokes from far away and the Brute has to be near you, so where you stand changes which one is dangerous. |
+| Hound + Reaver (or any two fast melee bosses) | not recommended | | Turns cannot overlap, but two fast bosses leave almost no gap to recover in. |
+
+**How a new pair was added (Golem and Kite, use it as the recipe):**
+1. `src/bosses/<pair-id>.json` (format in `docs/bosses.md` section 5a): two boss ids (the first is the primary: its floor and backdrop are used), `healthScale` for each, `enrage`. First guess used so far: 0.6 for each boss, enrage `gapScale` 0.6 and `walkScale` 1.3.
+2. Load it in `src/bosses/pairs.ts` and add it to `PAIRS`. The Boss row, saved menu choice, fight setup and stats pick it up with no other change. No sound, look or engine change was needed for Golem and Kite (the drawing code is generic for partners, including a flying one).
+3. Tests: copy `tests/golem-and-kite.test.ts` (the checks listed above; the shared scripted players are in `tests/pair-helpers.ts`), add the pair to `tests/pair-parse.test.ts` (registry) and update the Boss-row walk in `tests/menu-model.test.ts` ("walks through each pair in order").
+4. Docs: a section in `docs/phone-testing.md` (checklist and questions), the tags in `docs/SPEC.md` section 11, and a row in the table above.
+5. `GAME_VERSION` needs no bump for a new pair (nothing recorded uses it yet). It does need a bump if a pair file's numbers are changed after fights of that pair were exported.
+
+Scripted-player results for Golem and Kite (8 seeds, a bot that runs at the nearest boss and swings, never dodges; an idle player, for comparison): Easy idle dies in about 12s and the chaser wins 4/8; Normal 10s and 0/8; Hard 7s and 0/8. Hound and Sage on the same measure: Easy 10s and 8/8; Normal 9s and 6/8; Hard 5s and 0/8. So Golem and Kite is expected to feel harder; the owner's play test decides whether the health scales go up.
 
 ## Sound, left out (raised 2026-09-29)
 Built: fight sounds, attack-specific sounds and layered music, all generated in code, with one master Volume (`docs/SPEC.md` section 11, "Sound and music (M7)"; checklist in `docs/phone-testing.md`). Not built:
