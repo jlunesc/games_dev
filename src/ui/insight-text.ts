@@ -22,17 +22,17 @@ export function insightText(insight: Insight, nameOf: (id: string) => string): s
   const seen = evidence(insight.attackIds, nameOf);
   switch (insight.skill) {
     case 'dodge-late':
-      return `Dodging too late: ${count(insight.hits, 'hit', 'hits')} came after a dodge that began in the last moments of the warning${seen}.`;
+      return `Dodging too late: ${count(insight.hits, 'hit', 'hits')} came after a dodge that began too late or only just in time${seen}.`;
     case 'dodge-early':
-      return `Dodging too early: ${count(insight.hits, 'hit', 'hits')} landed after a dodge that began so soon it was over before the attack arrived${seen}.`;
+      return `Dodging too early: ${count(insight.hits, 'hit', 'hits')} landed after a dodge that began very early in the warning, so it may have ended before the attack arrived${seen}.`;
     case 'dodge-other':
       return `Dodging at the wrong moment: ${count(insight.hits, 'hit', 'hits')} came even though you dashed or jumped${seen}.`;
     case 'no-dodge':
       return `Not dodging: ${count(insight.hits, 'hit', 'hits')} came with no dash or jump${seen}.`;
     case 'greedy-swing':
-      return `Swinging at the wrong time: ${count(insight.swings, 'swing was', 'swings were')} still going when an attack landed, and ${insight.hurt} hurt you${seen}.`;
+      return `Swinging at the wrong time: ${count(insight.swings, 'swing was', 'swings were')} still going when an attack became dangerous, and ${insight.hurt} of those attacks hurt you${seen}.`;
     case 'openings':
-      return `Openings: you hit the boss in ${insight.taken} of ${count(insight.opened, 'opening', 'openings')} after its attacks, and ${count(insight.closeButMissed, 'time', 'times')} you were close enough but did not land a hit${seen}.`;
+      return `Openings: you hit the boss in ${insight.taken} of ${count(insight.opened, 'opening', 'openings')} after its attacks, and ${count(insight.closeButMissed, 'time', 'times')} you could have reached the boss but did not land a hit${seen}.`;
     case 'approach':
       return `Closing in: ${count(insight.tooFar, 'opening closed', 'openings closed')} before you could reach the boss. You were in swing range ${insight.inReachPercent}% of the time and ${Math.round(insight.meanDistance)} units away on average${seen}.`;
   }

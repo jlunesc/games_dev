@@ -28,23 +28,23 @@ describe('insightText', () => {
       { skill: 'approach', cost: 0.1, attackIds: ['slam'], opened: 10, tooFar: 4, meanDistance: 312.4, inReachPercent: 12 },
     ];
     expect(all.map((i) => insightText(i, nameOf))).toEqual([
-      'Dodging too late: 3 hits came after a dodge that began in the last moments of the warning (Ember slam, Low sweep).',
-      'Dodging too early: 2 hits landed after a dodge that began so soon it was over before the attack arrived (Lunge).',
+      'Dodging too late: 3 hits came after a dodge that began too late or only just in time (Ember slam, Low sweep).',
+      'Dodging too early: 2 hits landed after a dodge that began very early in the warning, so it may have ended before the attack arrived (Lunge).',
       'Dodging at the wrong moment: 2 hits came even though you dashed or jumped (Burst).',
       'Not dodging: 2 hits came with no dash or jump (Ember slam).',
-      'Swinging at the wrong time: 4 swings were still going when an attack landed, and 2 hurt you (Low sweep).',
-      'Openings: you hit the boss in 1 of 10 openings after its attacks, and 5 times you were close enough but did not land a hit (Ember slam).',
+      'Swinging at the wrong time: 4 swings were still going when an attack became dangerous, and 2 of those attacks hurt you (Low sweep).',
+      'Openings: you hit the boss in 1 of 10 openings after its attacks, and 5 times you could have reached the boss but did not land a hit (Ember slam).',
       'Closing in: 4 openings closed before you could reach the boss. You were in swing range 12% of the time and 312 units away on average (Ember slam).',
     ]);
   });
 
   it('uses the singular for one', () => {
     expect(insightText(late(1), nameOf)).toBe(
-      'Dodging too late: 1 hit came after a dodge that began in the last moments of the warning (Ember slam).',
+      'Dodging too late: 1 hit came after a dodge that began too late or only just in time (Ember slam).',
     );
     expect(
       insightText({ skill: 'greedy-swing', cost: 0.2, attackIds: ['sweep'], swings: 1, hurt: 1 }, nameOf),
-    ).toBe('Swinging at the wrong time: 1 swing was still going when an attack landed, and 1 hurt you (Low sweep).');
+    ).toBe('Swinging at the wrong time: 1 swing was still going when an attack became dangerous, and 1 of those attacks hurt you (Low sweep).');
   });
 
   it('names at most three attacks', () => {
@@ -62,7 +62,7 @@ describe('workOnLines', () => {
   it('heads the lines with "Work on:"', () => {
     expect(workOnLines([late(2)], nameOf)).toEqual([
       'Work on:',
-      'Dodging too late: 2 hits came after a dodge that began in the last moments of the warning (Ember slam).',
+      'Dodging too late: 2 hits came after a dodge that began too late or only just in time (Ember slam).',
     ]);
   });
 
