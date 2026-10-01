@@ -82,6 +82,10 @@ export interface PunishWindow {
   /** The player began a swing inside the window, and hit the boss in it. */
   swung: boolean;
   hit: boolean;
+  /** Updates from the window opening to the first swing the player began in it; null when none began. */
+  replyTicks: number | null;
+  /** Updates from the window opening to the first hit the player landed on the boss in it; null when none. */
+  hitTicks: number | null;
   /** Could the player have run from `distanceAtOpen` into swing reach before the window closed? */
   reachable: boolean;
 }
@@ -153,6 +157,10 @@ export interface Analysis {
   hitsTaken: number;
   bossHitTicks: number[];
   playerHitTicks: number[];
+  /** The update each swing, dash and jump began on, the study included (those after `study.ticks` are the real fight's). */
+  swingTicks: number[];
+  dashTicks: number[];
+  jumpTicks: number[];
   swings: number;
   swingsThatHit: number;
   /** Swings that hit divided by swings; null when the player never swung. */
@@ -260,6 +268,9 @@ interface OpenAttack {
   windowClosest: number;
   windowTicks: number;
   windowSwung: boolean;
+  /** Updates from the window opening to the first swing begun in it, and to the first hit landed in it (null until then). */
+  windowReply: number | null;
+  windowHit: number | null;
   /** Centre-to-centre distance at which a swing reaches the attacking boss. */
   windowReach: number;
   /** Updates the attack spent frozen on the end of its wind-up (a hold); danger times are shifted by it. */
@@ -333,6 +344,8 @@ function windowOf(open: OpenAttack): PunishWindow {
     closestDistance: round1(open.windowClosest),
     swung: open.windowSwung,
     hit: open.windowTaken,
+    replyTicks: open.windowReply,
+    hitTicks: open.windowHit,
     reachable: open.windowDistance - open.windowReach <= PLAYER.runSpeed * seconds,
   };
 }
@@ -377,6 +390,9 @@ export function analyzeRun(
   const attacks: AttackOccurrence[] = [];
   const bossHitTicks: number[] = [];
   const playerHitTicks: number[] = [];
+  const swingTicks: number[] = [];
+  const dashTicks: number[] = [];
+  const jumpTicks: number[] = [];
   const positions: number[] = [];
   const punish: PunishWindows = { opened: 0, taken: 0, missed: 0, windows: [] };
   const dashUse: DashUse = { escaped: 0, hitAnyway: 0, notNeeded: 0, other: 0, travel: { closer: 0, farther: 0, even: 0 } };
@@ -571,9 +587,15 @@ export function analyzeRun(
     if (attack.windowOpen && owner.mode === 'attack') {
       attack.windowTicks += 1;
       attack.windowClosest = Math.min(attack.windowClosest, Math.abs(after.player.x - owner.x));
-      if (after.player.attackTick === 0) attack.windowSwung = true;
+      if (after.player.attackTick === 0) {
+        attack.windowSwung = true;
+        attack.windowReply ??= tick - attack.windowStart;
+      }
     }
-    if (attack.windowOpen && events.includes('bossHit')) attack.windowTaken = true;
+    if (attack.windowOpen && events.includes('bossHit')) {
+      attack.windowTaken = true;
+      attack.windowHit ??= tick - attack.windowStart;
+    }
     observeShots(attack, before, after, frame);
   };
 
@@ -588,14 +610,23 @@ export function analyzeRun(
     const dashStarted = events.includes('dash');
     const jumpStarted = before.player.onGround && !after.player.onGround && after.player.vy < 0;
     const playerHit = events.includes('playerHit');
-    if (dashStarted) dashes += 1;
+    if (dashStarted) {
+      dashes += 1;
+      dashTicks.push(tick);
+    }
     if (dashStarted && !before.study.active) {
       const live = liveAttack(tick);
       if (live !== null) live.dashes += 1;
       else travelling.push({ endTick: tick + PLAYER.dash.duration, from: nearestDistance(before) });
     }
-    if (jumpStarted) jumps += 1;
-    if (after.player.attackTick === 0) swings += 1;
+    if (jumpStarted) {
+      jumps += 1;
+      jumpTicks.push(tick);
+    }
+    if (after.player.attackTick === 0) {
+      swings += 1;
+      swingTicks.push(tick);
+    }
     if (events.includes('bossHit')) {
       swingsThatHit += 1;
       bossHitTicks.push(tick);
@@ -696,6 +727,8 @@ export function analyzeRun(
         windowClosest: 0,
         windowTicks: 0,
         windowSwung: false,
+        windowReply: null,
+        windowHit: null,
         windowReach: 0,
         held: 0,
         dangerSeen: false,
@@ -741,6 +774,9 @@ export function analyzeRun(
     hitsTaken,
     bossHitTicks,
     playerHitTicks,
+    swingTicks,
+    dashTicks,
+    jumpTicks,
     swings,
     swingsThatHit,
     accuracy: swings === 0 ? null : swingsThatHit / swings,

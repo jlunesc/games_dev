@@ -177,6 +177,8 @@ describe('opening detail', () => {
       closestDistance: 100,
       swung: false,
       hit: false,
+      replyTicks: null,
+      hitTicks: null,
       reachable: true,
     });
   });
@@ -208,6 +210,60 @@ describe('opening detail', () => {
     expect(w.distanceAtOpen).toBeGreaterThanOrEqual(w.closestDistance);
     expect(w.closestDistance).toBeLessThan(400);
     expect(w.reachable).toBe(true);
+  });
+});
+
+describe('reply time', () => {
+  it('an opening nobody used has no reply and no hit time', () => {
+    const first = firstWindup(slowBoss, 100);
+    const a = analyzeRun(slowBoss, standAt(slowBoss, 100), frames(first + 75));
+    expect(a.behavior.punish.windows[0]).toMatchObject({ replyTicks: null, hitTicks: null });
+  });
+
+  it('counts the updates from the opening to the swing that began in it, and to the hit it landed', () => {
+    const first = firstWindup(slowBoss, 100);
+    const a = analyzeRun(
+      slowBoss,
+      standAt(slowBoss, 100),
+      frames(first + 75, { [first + 20]: { attackPressed: true } }),
+    );
+    const w = a.behavior.punish.windows[0]!;
+    expect(w.startTick).toBe(first + 10);
+    expect(w.replyTicks).toBe(10);
+    expect(w.hitTicks).not.toBeNull();
+    expect(w.hitTicks!).toBeGreaterThanOrEqual(10);
+    expect(w.hitTicks!).toBeLessThan(w.ticks);
+  });
+
+  it('a swing in the opening that misses has a reply time and no hit time', () => {
+    const first = firstWindup(slowBoss, 400);
+    const a = analyzeRun(
+      slowBoss,
+      standAt(slowBoss, 400),
+      frames(first + 75, { [first + 12]: { attackPressed: true } }),
+    );
+    expect(a.behavior.punish.windows[0]).toMatchObject({ replyTicks: 2, hit: false, hitTicks: null });
+  });
+});
+
+describe('action ticks', () => {
+  it('lists the update each swing, dash and jump began on', () => {
+    const a = analyzeRun(
+      QUIET_BOSS,
+      standAt(QUIET_BOSS, 300),
+      frames(80, {
+        5: { attackPressed: true },
+        40: { attackPressed: true },
+        20: { dashPressed: true },
+        60: { jumpPressed: true, jumpHeld: true },
+      }),
+    );
+    expect(a.swingTicks).toEqual([5, 40]);
+    expect(a.dashTicks).toEqual([20]);
+    expect(a.jumpTicks).toEqual([60]);
+    expect(a.swings).toBe(2);
+    expect(a.dashes).toBe(1);
+    expect(a.jumps).toBe(1);
   });
 });
 

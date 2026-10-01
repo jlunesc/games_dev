@@ -4,7 +4,7 @@ import type { MenuAction } from './menu-model';
 import { wrap } from './nav';
 import { formatDial } from './tweak-model';
 
-export type SummaryItem = 'redo' | 'again' | 'menu';
+export type SummaryItem = 'redo' | 'details' | 'again' | 'menu';
 
 export interface SummaryMenu {
   focus: number;
@@ -18,10 +18,14 @@ export interface SummaryRow {
   help: string;
 }
 
-/** Redo needs a win or a loss to base the change on, and a dial that can still move. */
-export function createSummaryMenu(result: FightResult, redo: RedoChange | null): SummaryMenu {
+/**
+ * Redo needs a win or a loss to base the change on, and a dial that can still move. Fight details needs a fight
+ * that ran past its study (`hasDetails`).
+ */
+export function createSummaryMenu(result: FightResult, redo: RedoChange | null, hasDetails: boolean): SummaryMenu {
   const canRedo = result !== 'left' && redo !== null;
-  return { focus: 0, items: canRedo ? ['redo', 'again', 'menu'] : ['again', 'menu'] };
+  const items: SummaryItem[] = [...(canRedo ? (['redo'] as const) : []), ...(hasDetails ? (['details'] as const) : []), 'again', 'menu'];
+  return { focus: 0, items };
 }
 
 export function summaryRows(menu: SummaryMenu, redo: RedoChange | null): SummaryRow[] {
@@ -35,6 +39,7 @@ export function summaryRows(menu: SummaryMenu, redo: RedoChange | null): Summary
         help: 'Fight this boss again with one random change. Damage is always 1 hit.',
       };
     }
+    if (id === 'details') return { id, label: 'Fight details', help: 'Charts and numbers about how this fight went, and what to work on.' };
     if (id === 'again') return { id, label: 'Fight again', help: 'Fight again with exactly the same settings.' };
     return { id, label: 'Back to the menu', help: 'Return to the menu.' };
   });

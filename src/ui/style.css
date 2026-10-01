@@ -257,12 +257,6 @@ body {
   }
 }
 
-.summary-line.compact {
-  margin: 0.1rem 0;
-  font-size: 0.8rem;
-  line-height: 1.25;
-}
-
 /* The menus sit over the arena of the selected boss (drawn on .scene-canvas); --accent is set per boss on .panel. */
 .scene-canvas {
   position: fixed;
@@ -396,4 +390,148 @@ body {
   .dropdown {
     max-height: 9rem;
   }
+}
+
+/* Fight details: plots are inline SVG; each plot-* class only sets a colour (--c) that fills rects, strokes marks and tints legend swatches. */
+.plot-landed { --c: #5ec27a; }
+.plot-taken { --c: #e5596b; }
+.plot-swing { --c: #8fa3ff; }
+.plot-missed { --c: #6b6f86; }
+.plot-dash { --c: #4fc3f7; }
+.plot-jump { --c: #ffd166; }
+.plot-platform { --c: #b388ff; }
+.plot-cover { --c: #f78fb3; }
+.plot-distance { --c: #7ee0c3; }
+.plot-countered { --c: #ff9f5a; }
+.plot-close { --c: #e5596b; }
+.plot-mid { --c: #ffd166; }
+.plot-far { --c: #4fc3f7; }
+
+.plot {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.plot rect {
+  fill: var(--c);
+}
+
+.plot line {
+  stroke: var(--c);
+}
+
+.plot .plot-axis {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 1;
+}
+
+.plot-label {
+  fill: #b4b4c8;
+  font-size: 9px;
+}
+
+.detail-section {
+  margin: 1rem 0;
+}
+
+.detail-section h2 {
+  margin: 0 0 0.1rem;
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+.detail-note {
+  margin: 0.1rem 0 0.4rem;
+  color: #b4b4c8;
+  font-size: 0.85rem;
+}
+
+.recommendation {
+  margin: 0.5rem 0 0.8rem;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--accent);
+  background: rgba(20, 20, 32, 0.6);
+  font-size: 1.05rem;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.tile {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.4rem;
+  background: rgba(20, 20, 32, 0.6);
+}
+
+.tile-value {
+  color: var(--accent);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.tile-label {
+  font-size: 0.9rem;
+}
+
+.tile-sub {
+  color: #b4b4c8;
+  font-size: 0.8rem;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.9rem;
+  margin-top: 0.3rem;
+  color: #b4b4c8;
+  font-size: 0.8rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 0.15rem;
+  background: var(--c);
+}
+
+.attack-row {
+  display: grid;
+  grid-template-columns: 6rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+.attack-bar {
+  display: block;
+  height: 0.6rem;
+  border-radius: 0.3rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.attack-fill {
+  display: block;
+  width: var(--w, 0%);
+  height: 100%;
+  border-radius: 0.3rem;
+  background: var(--accent);
+}
+
+.attack-text {
+  color: #b4b4c8;
+  white-space: nowrap;
 }

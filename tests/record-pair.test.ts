@@ -76,9 +76,9 @@ function playLiveSolo(
 
 describe('the schema version', () => {
   it('is 7, and a record of a pair carries the pair id as its boss id', () => {
-    expect(STATS_SCHEMA_VERSION).toBe(7);
+    expect(STATS_SCHEMA_VERSION).toBe(8);
     const record = buildRecord(startRecording(metaOf()), 'left', 1, null);
-    expect(record.schemaVersion).toBe(7);
+    expect(record.schemaVersion).toBe(8);
     expect(record.bossId).toBe('hound-and-sage');
     expect(record.study).toBe(0);
   });

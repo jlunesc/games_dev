@@ -25,11 +25,12 @@ import { createInitialState, type GameState } from '../game/state';
 import type { FightResult, FightSummary } from '../game/summary';
 import { analyzeRecording } from '../stats/analyze';
 import { buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
-import { insightsFor } from '../stats/insights';
+import { fightDetails, type FightDetails } from '../stats/details';
 import { buildRecord, type Recording } from '../stats/record';
 import { openIndexedDbStore, type FightStore } from '../stats/store';
 import { createSound } from './sound';
-import { attackNamer, workOnLines } from './insight-text';
+import { attackNamer } from './details-text';
+import { renderDetails } from './details-view';
 import { mountControllerScreen } from './controller-screen';
 import { el } from './dom';
 import { NO_FEEDBACK, advanceFeedback, applyEvents, flashBossFor, freezeFor, type FeedbackState } from './feedback';
@@ -70,7 +71,7 @@ import { createSummaryMenu, summaryRows, summaryStep, type SummaryMenu } from '.
 import { summaryLines } from './summary-text';
 import { createTweak, tweakRows, tweakStep, type TweakModel } from './tweak-model';
 
-type Screen = 'menu' | 'tweak' | 'stats' | 'settings' | 'summary' | 'fight' | 'test';
+type Screen = 'menu' | 'tweak' | 'stats' | 'settings' | 'summary' | 'details' | 'fight' | 'test';
 
 function firstPad(): Gamepad | null {
   if (typeof navigator.getGamepads !== 'function') return null;
@@ -147,8 +148,10 @@ export function mountApp(root: HTMLElement): void {
   let statsBusy = false;
   // The extra last line on the summary: whether the fight just played was saved. Null while unknown.
   let saveLine: string | null = null;
-  // The "Work on:" lines of the fight just played: empty until its analysis is done, and for a fight left during the study.
-  let insightLines: string[] = [];
+  // The fight details (plots and the recommendation) of the fight just played: null until its analysis is done, and for a fight left during the study.
+  let shownDetails: FightDetails | null = null;
+  // The attack names of that fight, for the details screen.
+  let detailsNames: (attackId: string) => string = (id) => id;
   // Bumped when a new fight starts, so a save still running from an earlier fight does not write its line into the new one.
   let saveEpoch = 0;
   // What the summary screen currently shows, kept so the save line can be added when the save finishes.
@@ -156,7 +159,7 @@ export function mountApp(root: HTMLElement): void {
   // The dials of the fight being played or just played. A redo changes these, not the menu's own settings.
   let fightDials: Dials = prefs.dials;
   // The after-fight menu, and the change a Redo would make (picked when the summary opens, so the row can say it).
-  let summaryMenu: SummaryMenu = createSummaryMenu('left', null);
+  let summaryMenu: SummaryMenu = createSummaryMenu('left', null, false);
   let redoPlan: { dials: Dials; change: RedoChange | null } = { dials: prefs.dials, change: null };
   let nav: NavState = NAV_START;
   let held: HeldButtons = NOTHING_HELD;
@@ -495,31 +498,49 @@ export function mountApp(root: HTMLElement): void {
     renderSummary(
       panel,
       text.title,
-      [...text.lines, ...insightLines, ...(saveLine === null ? [] : [saveLine])],
+      [...text.lines, ...(saveLine === null ? [] : [saveLine])],
       rows,
       summaryMenu.focus,
       (index) => {
         summaryMenu = { ...summaryMenu, focus: index };
         handleSummary('confirm');
       },
-      { from: text.lines.length, count: insightLines.length },
     );
   }
 
   function handleSummary(action: MenuAction): void {
     const result = summaryStep(summaryMenu, action);
     summaryMenu = result.menu;
-    if (result.pick === 'redo') startFight(redoPlan.dials);
+    if (result.pick === 'details') showDetails();
+    else if (result.pick === 'redo') startFight(redoPlan.dials);
     else if (result.pick === 'again') startFight(fightDials);
     else if (result.pick === 'menu') showMenu();
     else renderSummaryScreen();
+  }
+
+  function showDetails(): void {
+    if (shownDetails === null) return;
+    screen = 'details';
+    renderDetails(panel, shownDetails, detailsNames, backFromDetails);
+    window.scrollTo(0, 0);
+  }
+
+  function backFromDetails(): void {
+    screen = 'summary';
+    renderSummaryScreen();
+  }
+
+  function handleDetails(action: MenuAction): void {
+    if (action === 'confirm' || action === 'back') backFromDetails();
+    else if (action === 'up') window.scrollBy(0, -140);
+    else if (action === 'down') window.scrollBy(0, 140);
   }
 
   function showSummary(summary: FightSummary): void {
     screen = 'summary';
     shownSummary = summary;
     redoPlan = redoDials(fightDials, summary.result === 'victory', newSeed());
-    summaryMenu = createSummaryMenu(summary.result, redoPlan.change);
+    summaryMenu = createSummaryMenu(summary.result, redoPlan.change, shownDetails !== null);
     summaryUnlockAt = performance.now() + SUMMARY_LOCK_MS;
     leaveFightScreen();
     renderSummaryScreen();
@@ -534,19 +555,19 @@ export function mountApp(root: HTMLElement): void {
     // Taken now: a new fight may start while the save below is waiting.
     const nameOf = attackNamer(fight);
     let line: string;
-    let lines: string[] = [];
+    let details: FightDetails | null = null;
     try {
       const target = await storeReady;
       // Let the browser paint the summary or the end pause before the replay below runs (it can take a moment
       // on a long fight and would otherwise freeze the screen on the last fight frame).
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       const analysis = analyzeRecording(recording);
-      // A fight left during the study has no fight time: no block at all.
+      // A fight left during the study has no fight time: no details at all.
       if (analysis.fightSeconds > 0) {
         try {
-          lines = workOnLines(insightsFor(analysis), nameOf);
+          details = fightDetails(analysis);
         } catch {
-          lines = []; // a fault in the insights must never stop the fight being saved
+          details = null; // a fault in the details must never stop the fight being saved
         }
       }
       if (target === null) {
@@ -562,8 +583,15 @@ export function mountApp(root: HTMLElement): void {
     // A new fight has started since: its summary must not show this line.
     if (epoch !== saveEpoch) return;
     saveLine = line;
-    insightLines = lines;
-    if (screen === 'summary') renderSummaryScreen();
+    shownDetails = details;
+    detailsNames = nameOf;
+    if (screen === 'summary') {
+      // The menu gains its Fight details row now that the analysis is done.
+      const focused = summaryMenu.items[summaryMenu.focus];
+      const rebuilt = createSummaryMenu(shownSummary?.result ?? 'left', redoPlan.change, details !== null);
+      summaryMenu = { ...rebuilt, focus: Math.max(0, rebuilt.items.indexOf(focused ?? 'again')) };
+      renderSummaryScreen();
+    }
   }
 
   /** Leaves the fight for the summary: how it ended, or "left" if it was still going. */
@@ -577,7 +605,7 @@ export function mountApp(root: HTMLElement): void {
     const leaving = leaveRecording(flow);
     if (leaving !== null) {
       saveLine = null;
-      insightLines = [];
+      shownDetails = null;
       void saveFight(leaving.recording, 'left');
     }
     showSummary(leaveSummary(flow, state, fight));
@@ -588,7 +616,7 @@ export function mountApp(root: HTMLElement): void {
     fightDials = dials;
     saveEpoch += 1;
     saveLine = null;
-    insightLines = [];
+    shownDetails = null;
     shownSummary = null;
     const seed = newSeed();
     const setup = setUpFight(prefs.bossId, seed, dials, prefs.study);
@@ -707,7 +735,7 @@ export function mountApp(root: HTMLElement): void {
       flow = advanced.flow;
       if (advanced.finished !== null) {
         saveLine = null;
-        insightLines = [];
+        shownDetails = null;
         void saveFight(advanced.finished.recording, advanced.finished.result);
       }
       if (advanced.show !== null) {
@@ -790,6 +818,7 @@ export function mountApp(root: HTMLElement): void {
     else if (screen === 'tweak') handleTweak(action);
     else if (screen === 'stats') handleStats(action);
     else if (screen === 'settings') handleSettings(action);
+    else if (screen === 'details') handleDetails(action);
     else if (now >= summaryUnlockAt) handleSummary(action);
   }
 

@@ -705,16 +705,16 @@ Every hand-built boss now has one question it asks you, and the game has new mec
 - [ ] Leaving a fight with the hold shows only Fight again and Back to the menu, with no Redo.
 - [ ] The redone fights are saved, and the Stats show them as Custom.
 
-## Fight insights
-After a fight (win, loss or leaving with the hold), the summary shows a "Work on:" block with up to three lines, or "Nothing stands out this fight." Nothing shows if you leave during the study. The lines come from that one fight only.
-- [ ] The block appears a moment after the summary opens (it is worked out after the fight), below the usual lines and above the choices.
-- [ ] The layout fits: with three lines, the usual lines, Redo, Fight again and Back to the menu are all on screen, or the screen scrolls without anything cut off. In the other orientation too. (This was not checked in a browser: it is the one thing to look at first.)
-- [ ] When the block arrives late, the screen does not jump so that the new lines are scrolled out of sight. With the controller, the highlighted choice stays on screen.
-- [ ] The sentences are understandable without knowing the game's numbers. "units" in the "Closing in" line is a world distance: is it useful, or would "about N sword lengths" be better?
-- [ ] Compare with what you felt went wrong in the fight: do the lines point at the same problems? Late dodges, early dodges, dodging at the wrong moment, not dodging, swinging while an attack becomes dangerous, openings and getting close.
-- [ ] A short fight with little to say shows "Nothing stands out this fight." and not a wrong claim.
-- [ ] A fight after another fight never shows the earlier fight's lines.
-- [ ] Two-boss fights name attacks of both bosses correctly.
+## Fight details
+After a fight (win, loss or leaving with the hold), the after-fight menu gets a **Fight details** row a moment after the summary opens (the fight is analysed first). It opens a screen with one recommendation sentence on top, four key numbers (attacks avoided, swings that hit, attacks replied to, median reply time) and plots. No row if you leave during the study.
+- [ ] The Fight details row appears a moment after the summary opens, and the highlighted row does not jump to a different choice when it appears.
+- [ ] The screen fits the phone width in both orientations and scrolls with a finger. With the controller, up and down scroll and the confirm or back button returns to the summary.
+- [ ] The recommendation on top is one sentence that quotes its numbers and the target. Does it point at what you felt went wrong? Is it understandable without knowing the game's numbers?
+- [ ] The timeline shows your swings, hits landed (above the line) and hits taken (below it) where you remember them.
+- [ ] Reply time: do the bars and the "Reply by attack" rows make sense? A reply time is from the boss's attack ending to you starting a swing.
+- [ ] A short fight with little to say says there are too few attacks and not a wrong claim. A fight after another fight never shows the earlier fight's numbers.
+- [ ] Two-boss fights name the attacks of both bosses correctly.
+- [ ] The targets (70% avoided, 50% swings that hit, 60% replied to, 0.5 s reply) feel right? They are in `src/stats/details-tuning.ts`.
 
 ## Generated boss figures
 Every generated boss now has its own look: a body plan (two-legged, beast, floating wisp, stacked totem or wide crawler) with its own head, arm, back piece and trim. The look depends only on the fight's seed, so Redo gives a new boss and a new look. Hand-built bosses look exactly as before.

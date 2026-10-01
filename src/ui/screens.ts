@@ -75,7 +75,7 @@ export function renderList(
   focusedNode?.scrollIntoView({ block: 'nearest' });
 }
 
-/** Draws the summary screen: a title, one line per fact (`compact` marks a run of lines drawn smaller), then the choices for what to do next with the focused one highlighted. */
+/** Draws the summary screen: a title, one line per fact, then the choices for what to do next with the focused one highlighted. */
 export function renderSummary(
   panel: HTMLElement,
   title: string,
@@ -83,7 +83,6 @@ export function renderSummary(
   rows: readonly ListRow[],
   focus: number,
   onPick: (index: number) => void,
-  compact?: { from: number; count: number },
 ): void {
   const list = el('div', 'rows');
   rows.forEach((row, index) => {
@@ -97,15 +96,7 @@ export function renderSummary(
   const help = rows[focus]?.help;
   panel.replaceChildren(
     el('h1', undefined, title),
-    ...lines.map((line, index) =>
-      el(
-        'p',
-        compact !== undefined && index >= compact.from && index < compact.from + compact.count
-          ? 'summary-line compact'
-          : 'summary-line',
-        line,
-      ),
-    ),
+    ...lines.map((line) => el('p', 'summary-line', line)),
     list,
     ...(help === undefined || help === '' ? [] : [el('p', 'help', help)]),
   );
