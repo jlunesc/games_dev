@@ -737,6 +737,15 @@ Every boss except the Trainee now changes at half health: it keeps its moves and
 - [ ] The four pairs: when both bosses reach half health the fight is harder but you can still read each boss's attacks. Are the pairs now too hard?
 - [ ] The old records of these bosses (game version 0.10.0 or earlier) will not line up in the export (`docs/stats.md`, game version 0.11.0).
 
+## Attacks that fit the distance
+Bosses now use close-range attacks mainly when you are close (`docs/bosses.md` section 3a-nonies).
+- [ ] Back away from the Ashen Hound: it should not bite or swing at nothing from far off. It should rush or pounce to close the gap, or keep walking after you.
+- [ ] Do the same with the Quill Warden, Cinder Golem, Veil Dancer, Gale Reaver and Brass Sentinel. Does any boss now feel passive, or chase you for too long without attacking?
+- [ ] Keep running away from a boss for a long time: after about 3 seconds of chasing it should swing anyway, so it is never quiet for long. Does that feel fair, or does it whiff too often?
+- [ ] Standing still next to a boss, the fight feels the same as before.
+- [ ] The Ember Duelist is unchanged.
+- [ ] If it feels too strict or too loose, `rangeBias` in each boss file is the number to change (0.25 now; 1 turns it off).
+
 ## Things I would like to know
 After playing, answer these in plain words:
 - Does the counter feel too easy or too hard? Note that it can also be triggered by mashing attack, and by a swing that faces away from the boss (the game only checks that you are close and press attack in the window).

@@ -12,6 +12,7 @@
   },
   "approachTimeout": 45,
   "predictability": 0.25,
+  "rangeBias": 0.25,
   "flight": {
     "height": 320,
     "rise": 260

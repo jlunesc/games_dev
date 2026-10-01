@@ -42,8 +42,11 @@ export const STATS_SCHEMA_VERSION = 8;
  * 0.11.0: every boss except the Trainee has a second phase from half health (the same attacks plus one twist), so
  * records of those bosses made by 0.10.0 or earlier no longer replay exactly once the boss passes half health. A
  * generated boss draws three more random values, so the same seed makes a different boss. The Trainee is unchanged.
+ * 0.12.0: close-range attacks are picked mainly when the player is close (`rangeBias`, docs/bosses.md section 2), so
+ * records of the nine hand-built bosses that have it (all but the Ember Duelist and the Trainee) made by 0.11.0 or
+ * earlier no longer replay exactly. The Ember Duelist, the Trainee and generated bosses are unchanged.
  */
-export const GAME_VERSION = '0.11.0';
+export const GAME_VERSION = '0.12.0';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {

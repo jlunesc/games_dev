@@ -1,6 +1,6 @@
 import type { AttackDef, BlinkDef, BossDef, DiveDef, FlightDef, LeapDef, LeapTarget, PhaseAttack, PhaseDef } from '../bosses/schema';
 import { DT } from '../engine/time';
-import { TEMPER, WORLD } from './params';
+import { RANGE_PATIENCE_TICKS, TEMPER, WORLD } from './params';
 import { nextRandom } from './rng';
 import { spawnShots } from './shots';
 import type { FightDef } from './fight';
@@ -110,6 +110,15 @@ function moveBoss(b: BossState, boss: BossDef, direction: 1 | -1, speed: number)
   return moved;
 }
 
+/** Whether the boss can get the player inside the attack's range within `approachTimeout`, walking in or backing off. */
+function inReach(s: GameState, boss: BossDef, phase: PhaseDef, b: BossState, id: string): boolean {
+  if (boss.rangeBias === undefined) return true;
+  const { range } = attackById(boss, id);
+  const distance = Math.abs(s.player.x - b.x);
+  const time = boss.approachTimeout * DT;
+  return distance <= range.max + phase.walkSpeed * time && distance >= range.min - phase.retreatSpeed * time;
+}
+
 /**
  * Picks the next attack from the phase's list: never the same attack three times in a row, and with
  * probability `predictability` the next one in the fixed cycle, otherwise by weight. Both random numbers
@@ -138,8 +147,10 @@ function chooseAttack(s: GameState, boss: BossDef, phase: PhaseDef, index: numbe
   }
 
   const anger = boss.temper === undefined ? 0 : boss.temper * temperLevel(s, boss, b);
-  const weightOf = (entry: PhaseAttack): number =>
-    entry.heavy === true ? entry.weight * (1 + anger * TEMPER.headWeight) : entry.weight;
+  const weightOf = (entry: PhaseAttack): number => {
+    const base = entry.heavy === true ? entry.weight * (1 + anger * TEMPER.headWeight) : entry.weight;
+    return inReach(s, boss, phase, b, entry.id) ? base : base * (boss.rangeBias ?? 1);
+  };
   const total = pool.reduce((sum, entry) => sum + weightOf(entry), 0);
   let roll = weightRoll * total;
   for (const entry of pool) {
@@ -244,7 +255,16 @@ function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef, index: num
   faceTarget(b, p.x);
   const distance = Math.abs(p.x - b.x);
   const inRange = distance >= attack.range.min && distance <= attack.range.max;
-  if (inRange || b.modeTick >= boss.approachTimeout) {
+  const timedOut = b.modeTick >= boss.approachTimeout;
+  if (inRange) {
+    startAttack(s, boss, id, index);
+    return;
+  }
+  // A boss with a `rangeBias` does not swing at a player who got away: it takes an attack that reaches the player
+  // where they are now, and otherwise keeps walking, for up to `RANGE_PATIENCE_TICKS` (the study, a boss pinned against a
+  // wall and a boss whose patience has run out attack as before).
+  const biased = boss.rangeBias !== undefined && !s.study.active && b.modeTick < RANGE_PATIENCE_TICKS;
+  if (timedOut && !biased) {
     startAttack(s, boss, id, index);
     return;
   }
@@ -253,8 +273,31 @@ function updateApproach(s: GameState, boss: BossDef, phase: PhaseDef, index: num
     distance > attack.range.max
       ? moveBoss(b, boss, toward, phase.walkSpeed)
       : moveBoss(b, boss, toward === 1 ? -1 : 1, phase.retreatSpeed);
+  if (biased && (timedOut || !moved)) {
+    const fitting = attackInRange(s, boss, phase, Math.abs(p.x - b.x));
+    if (fitting !== null) {
+      b.comboQueue = [];
+      startAttack(s, boss, fitting, index);
+      return;
+    }
+  }
   // Pinned against a wall it cannot make progress, so it attacks from where it stands instead of waiting.
   if (!moved) startAttack(s, boss, id, index);
+}
+
+/** An attack of the phase whose range holds `distance`, by weight (one random draw); null when there is none. */
+function attackInRange(s: GameState, boss: BossDef, phase: PhaseDef, distance: number): string | null {
+  const fitting = phase.attacks.filter((entry) => {
+    const { range } = attackById(boss, entry.id);
+    return distance >= range.min && distance <= range.max;
+  });
+  if (fitting.length === 0) return null;
+  let roll = draw(s) * fitting.reduce((sum, entry) => sum + entry.weight, 0);
+  for (const entry of fitting) {
+    roll -= entry.weight;
+    if (roll < 0) return entry.id;
+  }
+  return fitting[fitting.length - 1]!.id;
 }
 
 /** After an attack: straight into the next one of a chain, otherwise back to waiting. */

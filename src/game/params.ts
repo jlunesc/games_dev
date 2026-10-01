@@ -54,3 +54,6 @@ export const EMBER = { height: 40 };
  * pause between attacks is `gapCut * strength` shorter.
  */
 export const TEMPER = { start: 240, ramp: 360, relief: 180, headWeight: 2.5, gapCut: 0.5 };
+
+/** A boss with a `rangeBias` that has chased a player for this many updates (3 s) without an attack that fits swings the one it picked anyway. */
+export const RANGE_PATIENCE_TICKS = 180;

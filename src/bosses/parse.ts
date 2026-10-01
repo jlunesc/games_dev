@@ -553,6 +553,8 @@ export function parseBoss(data: unknown): BossDef {
 
   const parsedTemper = o.temper === undefined ? undefined : num(o.temper, 'boss.temper', { min: 0, max: 1 });
 
+  const parsedRangeBias = o.rangeBias === undefined ? undefined : num(o.rangeBias, 'boss.rangeBias', { min: 0.01, max: 1 });
+
   let shield: { turnTicks: number } | undefined;
   if (o.shield !== undefined) {
     const k = object(o.shield, 'boss.shield');
@@ -583,6 +585,7 @@ export function parseBoss(data: unknown): BossDef {
     phases,
     ...(parsedFlight === undefined ? {} : { flight: parsedFlight }),
     ...(parsedTemper === undefined ? {} : { temper: parsedTemper }),
+    ...(parsedRangeBias === undefined ? {} : { rangeBias: parsedRangeBias }),
     ...(reaction === undefined ? {} : { reaction }),
     ...(shield === undefined ? {} : { shield }),
     ...(parsedArena === undefined ? {} : { arena: parsedArena }),

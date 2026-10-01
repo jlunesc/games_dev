@@ -12,6 +12,7 @@
   },
   "approachTimeout": 45,
   "predictability": 0.2,
+  "rangeBias": 0.25,
   "counter": {
     "window": 12,
     "range": 200,

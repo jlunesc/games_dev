@@ -250,6 +250,12 @@ export interface BossDef {
   phases: PhaseDef[];
   /** Present for a boss that flies (see `FlightDef`); absent for a boss that walks. */
   flight?: FlightDef;
+  /**
+   * 0 to 1: the weight an attack keeps when the player is too far or too close for the boss to get into its range within
+   * `approachTimeout` (walking or backing off), so a close-range attack is picked mainly when the player is close. Absent means 1:
+   * every attack is picked by its weight whatever the distance.
+   */
+  rangeBias?: number;
   /** 0 to 1: how strongly the boss gets angrier the longer it is not hit (heavy attacks likelier, shorter pauses). Absent means not at all. */
   temper?: number;
   /**
