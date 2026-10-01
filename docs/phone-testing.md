@@ -726,6 +726,17 @@ Every generated boss now has its own look: a body plan (two-legged, beast, float
 - [ ] The Ember Duelist, the Ashen Hound and the other hand-built bosses (and the pairs) look as before.
 - [ ] Which plans, heads or parts look ugly or confusing? Tell me and I will change or drop them. Every size and chance is in `LOOK.genFigure` (`src/ui/look/tuning.ts`) and the option tables in `src/ui/look/generated-figure.ts`.
 
+## Second phases
+Every boss except the Trainee now changes at half health: it keeps its moves and adds one twist (`docs/bosses.md` section 3a-octies). The study still shows only the first phase.
+- [ ] Hit each boss to half health. A short invulnerable pause, then the new phase begins and the boss opens with the twist.
+- [ ] Ashen Hound: a Rush with a shorter warning (Snap Rush). Is it still fair to dash? Brass Sentinel: a Wide Sweep that reaches farther and is still gold, so you can counter it. Quill Warden: a poke that reaches much farther. Cinder Golem: the slam is followed at once by the second slam. Veil Dancer: the veil pierce is followed by the shadow cut. Gale Reaver: a cyclone whose strike comes late.
+- [ ] The twin looks like the move you know (same pose), so the difference is in the timing or reach, not a new picture. Can you tell them apart in time? Does it feel like the same boss, only angrier?
+- [ ] The boss waits less and walks faster in the second phase. Is the Gale Reaver (+20%, 504 units a second) now too fast to keep up with?
+- [ ] Fight Generated several times: the boss changes at half health and the new phase feels like the first plus one change. Tell me which kinds you meet (shorter warning, bigger, a second hit, a late strike) and which felt unfair.
+- [ ] More generated bosses than before may show the "couldn't be checked as fair" banner (about 1 in 4).
+- [ ] The four pairs: when both bosses reach half health the fight is harder but you can still read each boss's attacks. Are the pairs now too hard?
+- [ ] The old records of these bosses (game version 0.10.0 or earlier) will not line up in the export (`docs/stats.md`, game version 0.11.0).
+
 ## Things I would like to know
 After playing, answer these in plain words:
 - Does the counter feel too easy or too hard? Note that it can also be triggered by mashing attack, and by a swing that faces away from the boss (the game only checks that you are close and press attack in the window).

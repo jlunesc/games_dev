@@ -31,6 +31,7 @@ describe('the Quill Warden file', () => {
     expect(QUILL_WARDEN.name).toBe('Quill Warden');
     expect(QUILL_WARDEN.attacks.map((a) => a.id)).toEqual([
       'reaching-poke',
+      'far-thrust',
       'low-piercer',
       'overextended-thrust',
       'backwards-vault',
@@ -39,7 +40,7 @@ describe('the Quill Warden file', () => {
     ]);
     expect(QUILL_WARDEN.arena).toBeUndefined();
     expect(QUILL_WARDEN.attacks.filter((a) => a.class === 'counterable')).toHaveLength(1);
-    expect(QUILL_WARDEN.phases).toHaveLength(1);
+    expect(QUILL_WARDEN.phases).toHaveLength(2);
   });
 
   it('keeps a much larger spacing than the Duelist, to fight from range', () => {

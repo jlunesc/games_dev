@@ -43,20 +43,22 @@ describe('generateBoss', () => {
   it('has exactly one counterable attack, the rest mustDodge, for a sweep of seeds', () => {
     for (let seed = 1; seed <= 200; seed++) {
       const boss = generateBoss(seed);
-      const counterable = boss.attacks.filter((a) => a.class === 'counterable');
-      const mustDodge = boss.attacks.filter((a) => a.class === 'mustDodge');
-      expect(counterable.length).toBe(1);
-      expect(mustDodge.length).toBe(boss.attacks.length - 1);
+      const first = new Set(boss.phases[0]!.attacks.map((e) => e.id));
+      const drawn = boss.attacks.filter((a) => first.has(a.id));
+      expect(drawn.filter((a) => a.class === 'counterable').length).toBe(1);
+      expect(drawn.filter((a) => a.class === 'mustDodge').length).toBe(drawn.length - 1);
     }
   });
 
-  it('has one phase whose attack list has one entry per generated attack, each weight 1', () => {
+  it('has two phases: the first lists every first-draw attack once, each weight 1', () => {
     for (let seed = 1; seed <= 50; seed++) {
       const boss = generateBoss(seed);
-      expect(boss.phases.length).toBe(1);
+      expect(boss.phases.length).toBe(2);
       const phase = boss.phases[0]!;
-      expect(phase.attacks.length).toBe(boss.attacks.length);
+      expect(phase.startsAtHpFraction).toBe(1);
       const ids = new Set(boss.attacks.map((a) => a.id));
+      const drawn = boss.attacks.filter((a) => phase.attacks.some((e) => e.id === a.id));
+      expect(phase.attacks.length).toBe(drawn.length);
       for (const entry of phase.attacks) {
         expect(ids.has(entry.id)).toBe(true);
         expect(entry.weight).toBe(1);
@@ -110,8 +112,8 @@ describe('generateBoss', () => {
       expect(boss.predictability).toBeGreaterThanOrEqual(GEN.predictabilityMin);
       expect(boss.predictability).toBeLessThanOrEqual(GEN.predictabilityMax);
 
-      expect(boss.attacks.length).toBeGreaterThanOrEqual(GEN.attackCountMin);
-      expect(boss.attacks.length).toBeLessThanOrEqual(GEN.attackCountMax);
+      expect(phase.attacks.length).toBeGreaterThanOrEqual(GEN.attackCountMin);
+      expect(phase.attacks.length).toBeLessThanOrEqual(GEN.attackCountMax);
 
       expect(boss.counter.range).toBeGreaterThanOrEqual(GEN.counterRangeMin);
       expect(boss.counter.range).toBeLessThanOrEqual(GEN.counterRangeMax);

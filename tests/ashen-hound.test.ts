@@ -52,8 +52,8 @@ describe('the Ashen Hound file', () => {
   it('is loaded and found by id', () => {
     expect(ASHEN_HOUND).toBeDefined();
     expect(ASHEN_HOUND.id).toBe('ashen-hound');
-    expect(ASHEN_HOUND.attacks.map((a) => a.id)).toEqual(['bite', 'rush', 'slip', 'pounce', 'feint', 'skitter']);
-    expect(ASHEN_HOUND.phases).toHaveLength(1);
+    expect(ASHEN_HOUND.attacks.map((a) => a.id)).toEqual(['bite', 'rush', 'snap-rush', 'slip', 'pounce', 'feint', 'skitter']);
+    expect(ASHEN_HOUND.phases).toHaveLength(2);
     expect(bossById('ashen-hound')).toBe(ASHEN_HOUND);
   });
 

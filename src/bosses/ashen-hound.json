@@ -77,6 +77,34 @@
       ]
     },
     {
+      "id": "snap-rush",
+      "name": "Snap Rush",
+      "pose": "back",
+      "class": "mustDodge",
+      "windup": 21,
+      "active": 12,
+      "recovery": 34,
+      "range": {
+        "min": 240,
+        "max": 420
+      },
+      "move": {
+        "from": 21,
+        "to": 33,
+        "speed": 1600
+      },
+      "hits": [
+        {
+          "from": 21,
+          "to": 33,
+          "x0": 0,
+          "x1": 100,
+          "bottom": 0,
+          "top": 100
+        }
+      ]
+    },
+    {
       "id": "slip",
       "name": "Slip",
       "pose": "back",
@@ -196,6 +224,49 @@
       "chainChance": 0.35,
       "walkSpeed": 330,
       "retreatSpeed": 260,
+      "combos": [
+        [
+          "slip",
+          "bite"
+        ]
+      ]
+    },
+    {
+      "name": "Frenzy",
+      "startsAtHpFraction": 0.5,
+      "opening": "snap-rush",
+      "attacks": [
+        {
+          "id": "bite",
+          "weight": 3
+        },
+        {
+          "id": "rush",
+          "weight": 2
+        },
+        {
+          "id": "slip",
+          "weight": 2
+        },
+        {
+          "id": "pounce",
+          "weight": 3,
+          "heavy": true
+        },
+        {
+          "id": "feint",
+          "weight": 2
+        },
+        {
+          "id": "snap-rush",
+          "weight": 4
+        }
+      ],
+      "gap": 31,
+      "maxChain": 2,
+      "chainChance": 0.35,
+      "walkSpeed": 396,
+      "retreatSpeed": 312,
       "combos": [
         [
           "slip",

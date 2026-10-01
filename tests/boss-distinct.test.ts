@@ -18,7 +18,11 @@ const reach = (a: AttackDef): number => Math.max(0, ...a.hits.map((h) => h.x1));
 /** Near-copies (same kind, pose and class, wind-up within 6 updates, reach within 35%) between different bosses after Rounds 2 and 3. Lower it as later rounds remove more; never raise it. */
 const CEILING = 12;
 
-const roster = BOSSES.map((b) => ({ id: b.id, attacks: b.attacks }));
+/** The first phase's attacks: a second-phase twist is a copy of one of them, changed in one way, so it is meant to look like its original. */
+const roster = BOSSES.map((b) => {
+  const first = new Set(b.phases[0]!.attacks.map((a) => a.id));
+  return { id: b.id, attacks: b.attacks.filter((a) => first.has(a.id)) };
+});
 
 describe('every boss is distinct', () => {
   it('no special kind of attack is on more than three bosses', () => {

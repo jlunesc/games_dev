@@ -94,6 +94,29 @@
       ]
     },
     {
+      "id": "long-sweep",
+      "name": "Long Sweep",
+      "pose": "sideways",
+      "class": "counterable",
+      "windup": 24,
+      "active": 8,
+      "recovery": 22,
+      "range": {
+        "min": 120,
+        "max": 270
+      },
+      "hits": [
+        {
+          "from": 24,
+          "to": 32,
+          "x0": 0,
+          "x1": 310,
+          "bottom": 0,
+          "top": 100
+        }
+      ]
+    },
+    {
       "id": "spin-cycle",
       "name": "Spin Cycle",
       "pose": "sideways",
@@ -166,7 +189,7 @@
   ],
   "phases": [
     {
-      "name": "Only phase",
+      "name": "First phase",
       "startsAtHpFraction": 1,
       "attacks": [
         {
@@ -201,6 +224,48 @@
       "chainChance": 0,
       "walkSpeed": 150,
       "retreatSpeed": 80
+    },
+    {
+      "name": "Overbright",
+      "startsAtHpFraction": 0.5,
+      "opening": "long-sweep",
+      "attacks": [
+        {
+          "id": "herald-strike",
+          "weight": 3
+        },
+        {
+          "id": "late-herald",
+          "weight": 1,
+          "heavy": true
+        },
+        {
+          "id": "brass-slam",
+          "weight": 3
+        },
+        {
+          "id": "wide-sweep",
+          "weight": 2
+        },
+        {
+          "id": "spin-cycle",
+          "weight": 2
+        },
+        {
+          "id": "brass-snap",
+          "weight": 1,
+          "heavy": true
+        },
+        {
+          "id": "long-sweep",
+          "weight": 4
+        }
+      ],
+      "gap": 35,
+      "maxChain": 2,
+      "chainChance": 0.35,
+      "walkSpeed": 180,
+      "retreatSpeed": 96
     }
   ]
 }

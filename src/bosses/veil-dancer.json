@@ -188,7 +188,7 @@
   ],
   "phases": [
     {
-      "name": "Only phase",
+      "name": "First phase",
       "startsAtHpFraction": 1,
       "attacks": [
         {
@@ -225,6 +225,52 @@
       "combos": [
         [
           "blink-away",
+          "shadow-cut"
+        ]
+      ]
+    },
+    {
+      "name": "Unveiled",
+      "startsAtHpFraction": 0.5,
+      "attacks": [
+        {
+          "id": "piercing-veil",
+          "weight": 4
+        },
+        {
+          "id": "twin-cut",
+          "weight": 3
+        },
+        {
+          "id": "veil-slip",
+          "weight": 2
+        },
+        {
+          "id": "needle-fan",
+          "weight": 2
+        },
+        {
+          "id": "blink-away",
+          "weight": 2
+        },
+        {
+          "id": "shadow-cut",
+          "weight": 2,
+          "heavy": true
+        }
+      ],
+      "gap": 31,
+      "maxChain": 2,
+      "chainChance": 0.35,
+      "walkSpeed": 360,
+      "retreatSpeed": 312,
+      "combos": [
+        [
+          "blink-away",
+          "shadow-cut"
+        ],
+        [
+          "piercing-veil",
           "shadow-cut"
         ]
       ]

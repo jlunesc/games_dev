@@ -14,7 +14,7 @@ describe('the Veil Dancer file', () => {
     expect(VEIL_DANCER.name).toBe('Veil Dancer');
     expect(VEIL_DANCER.attacks.map((a) => a.id)).toEqual(['piercing-veil', 'veil-slip', 'needle-fan', 'twin-cut', 'blink-away', 'shadow-cut']);
     expect(VEIL_DANCER.arena).toBeUndefined();
-    expect(VEIL_DANCER.phases).toHaveLength(1);
+    expect(VEIL_DANCER.phases).toHaveLength(2);
   });
 
   it('the twin cut is two swings, and the second reaches to both sides', () => {

@@ -936,9 +936,12 @@ describe.each([
 
   it('shows a different shape for each attack', () => {
     const early = withBoss(base(boss), { mode: 'attack', attackId: boss.attacks[0]!.id, attackTick: 0, facing: 1, x: 700 });
+    // The second phase's twist is a copy of a first-phase attack, so it is meant to look like its original.
+    const first = new Set(boss.phases[0]!.attacks.map((a) => a.id));
+    const attacks = boss.attacks.filter((a) => first.has(a.id));
     const shapes = new Set(
-      boss.attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), boss, BOSS_COLORS))),
+      attacks.map((a) => JSON.stringify(bossFigure(withBoss(early, { attackId: a.id, attackTick: a.windup - 1 }), boss, BOSS_COLORS))),
     );
-    expect(shapes.size).toBe(boss.attacks.length);
+    expect(shapes.size).toBe(attacks.length);
   });
 });

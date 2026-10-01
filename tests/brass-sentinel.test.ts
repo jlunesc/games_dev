@@ -13,12 +13,13 @@ describe('the Brass Sentinel file', () => {
       'herald-strike',
       'brass-slam',
       'wide-sweep',
+      'long-sweep',
       'spin-cycle',
       'late-herald',
       'brass-snap',
     ]);
     expect(BRASS_SENTINEL.arena).toBeUndefined();
-    expect(BRASS_SENTINEL.phases).toHaveLength(1);
+    expect(BRASS_SENTINEL.phases).toHaveLength(2);
   });
 
   it('is mostly counterable: a real majority, with at least one mustDodge attack left', () => {

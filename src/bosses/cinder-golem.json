@@ -174,7 +174,7 @@
   ],
   "phases": [
     {
-      "name": "Only phase",
+      "name": "First phase",
       "startsAtHpFraction": 1,
       "attacks": [
         {
@@ -205,6 +205,45 @@
       "chainChance": 0,
       "walkSpeed": 160,
       "retreatSpeed": 130
+    },
+    {
+      "name": "Meltdown",
+      "startsAtHpFraction": 0.5,
+      "attacks": [
+        {
+          "id": "crag-slam",
+          "weight": 4
+        },
+        {
+          "id": "fault-slam",
+          "weight": 2
+        },
+        {
+          "id": "cinder-lob",
+          "weight": 2
+        },
+        {
+          "id": "furnace-stomp",
+          "weight": 2,
+          "heavy": true
+        },
+        {
+          "id": "kiln-crack",
+          "weight": 2,
+          "heavy": true
+        }
+      ],
+      "gap": 42,
+      "maxChain": 2,
+      "chainChance": 0.35,
+      "walkSpeed": 192,
+      "retreatSpeed": 156,
+      "combos": [
+        [
+          "crag-slam",
+          "fault-slam"
+        ]
+      ]
     }
   ]
 }

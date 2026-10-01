@@ -14,11 +14,12 @@ describe('the Gale Reaver file', () => {
       'gale-jab',
       'tempest-rush',
       'gale-cyclone',
+      'held-cyclone',
       'gale-carry',
       'gale-recoil',
     ]);
     expect(GALE_REAVER.arena).toBeUndefined();
-    expect(GALE_REAVER.phases).toHaveLength(1);
+    expect(GALE_REAVER.phases).toHaveLength(2);
   });
 
   it('is fast: short gap, real chaining, quick but not-below-floor wind-ups', () => {

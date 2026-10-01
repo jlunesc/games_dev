@@ -2,7 +2,7 @@ import { NO_INPUT, type InputFrame } from '../../engine/input-frame';
 import { PLAYER, WORLD } from '../../game/params';
 import { createInitialState, type GameState } from '../../game/state';
 import { step } from '../../game/step';
-import type { ArenaPiece, AttackDef, BossDef } from '../schema';
+import type { ArenaPiece, AttackDef, BossDef, PhaseDef } from '../schema';
 import { GEN } from './tuning';
 
 export interface FairnessResult {
@@ -59,6 +59,8 @@ function skilledInput(s: GameState, boss: BossDef): InputFrame {
     if (attack === undefined) return NO_INPUT;
     // The attack time the coming update (after this input is applied) will have.
     const t = b.attackTick + 1;
+    // A held strike freezes on its last wind-up update for a random while; every press waits for the strike to be due.
+    if (attack.hold !== undefined && b.holdLeft > 0) return NO_INPUT;
 
     if (attack.leap !== undefined) {
       // Hold still until the landing spot is known (fixed at take-off), then move away from it;
@@ -79,7 +81,7 @@ function skilledInput(s: GameState, boss: BossDef): InputFrame {
     // of the boss it happens to be facing, undoing the point of dashing across to the far side.
     if (attack.move !== undefined) {
       // Dash through it, like the Duelist's lunge.
-      const at = attack.windup - 3;
+      const at = attack.hold === undefined ? attack.windup - 3 : attack.windup;
       return t === at ? withInput({ dashPressed: true, moveX: towardBoss }) : NO_INPUT;
     }
 
@@ -147,7 +149,16 @@ function withoutShots(boss: BossDef): BossDef | null {
   if (!boss.attacks.some((a) => a.shots !== undefined)) return boss;
   const attacks = boss.attacks.filter((a) => a.shots === undefined);
   const ids = new Set(attacks.map((a) => a.id));
-  const phases = boss.phases.map((phase) => ({ ...phase, attacks: phase.attacks.filter((a) => ids.has(a.id)) }));
+  const phases = boss.phases.map((phase): PhaseDef => {
+    const { opening, combos, ...rest } = phase;
+    const kept = combos?.filter((combo) => combo.every((id) => ids.has(id)));
+    return {
+      ...rest,
+      attacks: phase.attacks.filter((a) => ids.has(a.id)),
+      ...(opening !== undefined && ids.has(opening) ? { opening } : {}),
+      ...(kept !== undefined && kept.length > 0 ? { combos: kept } : {}),
+    };
+  });
   if (phases.some((phase) => phase.attacks.length === 0)) return null;
   return { ...boss, attacks, phases };
 }

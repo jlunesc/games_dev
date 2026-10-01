@@ -74,11 +74,13 @@ export const ARMS: readonly ArmStyle[] = ARM_OPTIONS.map((o) => o.id);
 export const BACKS: readonly Back[] = BACK_OPTIONS.map((o) => o.id);
 export const TRIMS: readonly Trim[] = TRIM_OPTIONS.map((o) => o.id);
 
-/** The share (0 to 1) of the boss's attacks of each kind. An attack counts once, as the first kind that fits. */
+/** The share (0 to 1) of the boss's first-phase attacks of each kind (the second phase's twist adds none). An attack counts once, as the first kind that fits. */
 function shares(boss: BossDef): Record<Hint, number> {
-  const n = Math.max(1, boss.attacks.length);
+  const first = new Set(boss.phases[0]!.attacks.map((a) => a.id));
+  const attacks = boss.attacks.filter((a) => first.has(a.id));
+  const n = Math.max(1, attacks.length);
   const out: Record<Hint, number> = { shot: 0, eruption: 0, leap: 0, dash: 0, strike: 0 };
-  for (const a of boss.attacks) {
+  for (const a of attacks) {
     const shots = a.shots ?? [];
     if (shots.some((s) => s.kind !== 'eruption')) out.shot += 1 / n;
     else if (shots.some((s) => s.kind === 'eruption')) out.eruption += 1 / n;

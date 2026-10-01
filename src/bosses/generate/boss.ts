@@ -1,8 +1,9 @@
 import { nextRandom } from '../../game/rng';
 import { parseBoss } from '../parse';
-import type { AttackDef, BossDef, PhaseAttack } from '../schema';
+import type { AttackDef, BossDef, PhaseAttack, PhaseDef } from '../schema';
 import { generateArena } from './arena';
 import { generateAttack } from './attack';
+import { generateSecondPhase } from './phase2';
 import { GEN } from './tuning';
 
 /** Mixed into `seed` so the generator has its own stream, never a gameplay `rng`'s. */
@@ -118,6 +119,20 @@ export function generateBoss(seed: number): BossDef {
     }
   }
 
+  const firstPhase: PhaseDef = {
+    name: 'First phase',
+    startsAtHpFraction: 1,
+    attacks: phaseAttacks,
+    gap: gapDraw.value,
+    maxChain: maxChainDraw.value,
+    chainChance: chainChanceDraw.value,
+    walkSpeed: walkSpeedDraw.value,
+    retreatSpeed: retreatSpeedDraw.value,
+  };
+  const secondDraw = generateSecondPhase(s, attacks, firstPhase, `attack-${attackCount}`);
+  s = secondDraw.state;
+  const second = secondDraw.value;
+
   const boss = {
     id: 'generated',
     name: 'Generated Boss',
@@ -135,19 +150,8 @@ export function generateBoss(seed: number): BossDef {
       damageMultiplier: 2,
     },
     transitionTicks: 60,
-    attacks,
-    phases: [
-      {
-        name: 'Only phase',
-        startsAtHpFraction: 1,
-        attacks: phaseAttacks,
-        gap: gapDraw.value,
-        maxChain: maxChainDraw.value,
-        chainChance: chainChanceDraw.value,
-        walkSpeed: walkSpeedDraw.value,
-        retreatSpeed: retreatSpeedDraw.value,
-      },
-    ],
+    attacks: second.attack === undefined ? attacks : [...attacks, second.attack],
+    phases: [firstPhase, second.phase],
     ...(arenaDraw.value === undefined ? {} : { arena: arenaDraw.value }),
   };
 

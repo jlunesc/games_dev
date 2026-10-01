@@ -128,8 +128,8 @@ export const GEN = {
   fairnessSeeds: [11, 97],
   /** Update cap for the idle bot's run. */
   fairnessCapTicks: 3000,
-  /** Update cap for the skilled bot's run. */
-  fairnessSkilledCapTicks: 4000,
+  /** Update cap for the skilled bot's run (two phases take it up to about 4,000 updates when it does win). */
+  fairnessSkilledCapTicks: 6000,
   /** Chance a generated boss's arena is bare (no pieces at all), like the Ember Duelist. */
   arenaBareChance: 0.4,
   arenaPieceCountMin: 1,
@@ -148,4 +148,29 @@ export const GEN = {
    * generated cover is always jumpable, never a true wall. */
   arenaCoverHeightMin: 40,
   arenaCoverHeightMax: 160,
+
+  /**
+   * The second phase (first guesses, tune from play). It begins at half health, with a shorter gap, longer chains
+   * and a faster walk, and one twist: a copy of a first-phase attack that is snappier, reaches further, is held late,
+   * or is followed at once by a second strike. The twist is drawn `twistWeight` times as often as any other attack.
+   */
+  phase2Start: 0.5,
+  phase2GapFactor: 0.7,
+  phase2GapMin: 20,
+  phase2ChainMin: 2,
+  phase2ChainChanceMin: 0.35,
+  phase2WalkFactor: 1.2,
+  twistWeight: 3,
+  /** Snap: the wind-up shrinks to this share, never below the readability floor, and only when it loses at least `snapMinCut` updates. */
+  snapFactor: 0.65,
+  snapMinCut: 4,
+  /** Reach: hit boxes grow by `reachFactor`, the distance it starts from by `reachRangeFactor`; shots stop at the format's limits. */
+  reachFactor: 1.3,
+  reachRangeFactor: 1.2,
+  reachBoltSizeCap: 80,
+  reachArcRadiusCap: 200,
+  reachEruptionWidthCap: 600,
+  /** Delay: the strike is held back by up to this many updates (drawn per boss). */
+  holdMin: 8,
+  holdMax: 14,
 } as const;

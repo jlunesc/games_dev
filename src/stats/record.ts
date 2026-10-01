@@ -38,8 +38,12 @@ export const STATS_SCHEMA_VERSION = 8;
  * 0.9.0: Round 1 of the boss identity work (docs/superpowers/specs/2026-09-29-boss-identity-design.md) changed the
  * attack lists and numbers of nine hand-built bosses (everyone except the Ember Duelist), so their records made by
  * 0.8.0 or earlier no longer replay exactly. The Ember Duelist and generated bosses are unchanged.
+ * 0.10.0: Rounds 2 and 3 of the boss identity work (temper, reactions, the Sentinel's shield, new attacks).
+ * 0.11.0: every boss except the Trainee has a second phase from half health (the same attacks plus one twist), so
+ * records of those bosses made by 0.10.0 or earlier no longer replay exactly once the boss passes half health. A
+ * generated boss draws three more random values, so the same seed makes a different boss. The Trainee is unchanged.
  */
-export const GAME_VERSION = '0.10.0';
+export const GAME_VERSION = '0.11.0';
 
 /** What is fixed before the first update of a fight. */
 export interface FightMeta {

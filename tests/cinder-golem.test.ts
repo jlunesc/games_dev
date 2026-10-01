@@ -19,7 +19,7 @@ describe('the Cinder Golem file', () => {
     ]);
     expect(CINDER_GOLEM.arena).toBeUndefined();
     expect(CINDER_GOLEM.attacks.filter((a) => a.class === 'counterable')).toHaveLength(1);
-    expect(CINDER_GOLEM.phases).toHaveLength(1);
+    expect(CINDER_GOLEM.phases).toHaveLength(2);
   });
 
   it('is slow, with long wind-ups and long recoveries, matching a heavy bruiser', () => {

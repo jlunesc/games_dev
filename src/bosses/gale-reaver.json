@@ -123,6 +123,31 @@
       ]
     },
     {
+      "id": "held-cyclone",
+      "name": "Held Cyclone",
+      "pose": "sideways",
+      "class": "mustDodge",
+      "windup": 22,
+      "active": 8,
+      "recovery": 22,
+      "range": {
+        "min": 40,
+        "max": 140
+      },
+      "hits": [
+        {
+          "from": 22,
+          "to": 30,
+          "x0": 0,
+          "x1": 150,
+          "bottom": 0,
+          "top": 110,
+          "both": true
+        }
+      ],
+      "hold": 14
+    },
+    {
       "id": "gale-carry",
       "name": "Gale Carry",
       "pose": "crouch",
@@ -173,7 +198,7 @@
   ],
   "phases": [
     {
-      "name": "Only phase",
+      "name": "First phase",
       "startsAtHpFraction": 1,
       "attacks": [
         {
@@ -198,6 +223,50 @@
       "chainChance": 0.3,
       "walkSpeed": 420,
       "retreatSpeed": 380,
+      "combos": [
+        [
+          "wind-slash",
+          "gale-jab",
+          "gale-carry"
+        ],
+        [
+          "gale-jab",
+          "gale-jab",
+          "gale-cyclone"
+        ]
+      ]
+    },
+    {
+      "name": "Tempest Edge",
+      "startsAtHpFraction": 0.5,
+      "opening": "held-cyclone",
+      "attacks": [
+        {
+          "id": "wind-slash",
+          "weight": 3
+        },
+        {
+          "id": "gale-jab",
+          "weight": 3
+        },
+        {
+          "id": "tempest-rush",
+          "weight": 2
+        },
+        {
+          "id": "gale-cyclone",
+          "weight": 2
+        },
+        {
+          "id": "held-cyclone",
+          "weight": 4
+        }
+      ],
+      "gap": 24,
+      "maxChain": 3,
+      "chainChance": 0.35,
+      "walkSpeed": 504,
+      "retreatSpeed": 456,
       "combos": [
         [
           "wind-slash",

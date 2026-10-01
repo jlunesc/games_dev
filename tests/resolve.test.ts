@@ -35,8 +35,9 @@ describe('resolveBoss', () => {
     },
     // M6a: generated bosses can now draw an arena, and checkFairness's camp-safety simulation
     // over an arena is noticeably slower per candidate than the bare-boss case; a 100-seed sweep
-    // (up to 3 candidates each) no longer reliably finishes within the old 30s budget.
-    60000,
+    // (up to 3 candidates each) no longer reliably finishes within the old 30s budget. Second phases made the
+    // fights (and the skilled bot's cap) longer again, so the budget is 3 minutes.
+    180000,
   );
 
   it(

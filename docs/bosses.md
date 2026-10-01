@@ -242,7 +242,7 @@ The boss is always in one of five modes (`BossState.mode` in `src/game/state.ts`
 
 ## 3a. The Ashen Hound
 
-`src/bosses/ashen-hound.json`: a low, fast beast (90 wide, 90 tall, 24 health, one phase called Hunt) that keeps a shorter distance than the Duelist (`spacing` 110 to 260) and never has a counterable attack, so the counter does not apply to it. Its numbers are a **first guess**, to be tuned from the owner's play test (`docs/phone-testing.md`). The four attacks, all red (must dodge):
+`src/bosses/ashen-hound.json`: a low, fast beast (90 wide, 90 tall, 24 health, two phases called Hunt and Frenzy; the second phase is in section 3a-octies) that keeps a shorter distance than the Duelist (`spacing` 110 to 260) and never has a counterable attack, so the counter does not apply to it. Its numbers are a **first guess**, to be tuned from the owner's play test (`docs/phone-testing.md`). The four attacks, all red (must dodge):
 
 | Attack | Pose | What it does | What it trains |
 |---|---|---|---|
@@ -413,6 +413,46 @@ Not built: a Dancer fan of needles that spread out (the bolt format has no sprea
 - **Hold and blink** are the two mechanics that vary an attack's length or hide the boss. A hold's length is drawn from the fight's seed when the attack starts, and a blink's landing spot is worked out from the positions on the update the boss vanishes; neither changes afterwards, so a recorded fight replays exactly (`analyzeFight` adds the hold to `windupTicks` and `firstDangerTick`). Both are covered by the rule that every hit window lies in `[windup, windup + active]`.
 - **Embers and side bolts** are shots (section 2, "Shots"); they outlive their attack like any shot, and a phase change removes them.
 
+## 3a-octies. Second phases (game version 0.11.0)
+
+Every boss except the Trainee now has a second phase that begins at **half health**. Before this, six hand-built bosses (the Ashen Hound, Brass Sentinel, Cinder Golem, Gale Reaver, Quill Warden and Veil Dancer) and every generated boss had one phase; the Ember Duelist, Storm Kite, Tremor Brute and Vesper Sage already had two and are unchanged. Pairs inherit the second phases of their member bosses. Status: **LOCKED** (owner, 2026-10-01): every boss needs a second phase that is logical and coherent with the first. **DELEGATED**: the rule below and all its numbers, to be tuned from play.
+
+**The rule: the same attacks plus exactly one twist.** The second phase keeps every attack of the first phase (no new move the player has never seen) and adds one **twist**: a copy of a first-phase attack changed in one way. The player learns the boss in the first phase and is tested on a variation of what they learnt. There are four kinds of twist (owner's choice of all four):
+- **Snap**: the wind-up is shorter (the whole attack is shifted earlier).
+- **Reach**: the attack is wider, longer or bigger (range 20% more, hit boxes 30% more; a bolt, arc or eruption grows but stays inside the format's limits).
+- **Follow-up**: the same move is followed at once by a second strike, written as a combo (section 3a-septies). No new attack is added: the base attack's weight goes up and one combo is added.
+- **Delay**: the strike is held late (a `hold`, section 2), so a player who dashes on a count dashes too early.
+
+Everything else in the phase follows the same defaults:
+| Field | Second phase |
+|---|---|
+| `startsAtHpFraction` | 0.5 |
+| `attacks` | the first phase's list plus the twin, which has weight 3 or more (the follow-up kind raises the base attack's weight to 3 or more instead) |
+| `opening` | the twin (not for a follow-up, because a combo cannot start from the opening) |
+| `gap` | first phase's gap times 0.7, at least 20 |
+| `maxChain` / `chainChance` | at least 2 / at least 0.35 |
+| `walkSpeed`, `retreatSpeed` | first phase's times 1.2 |
+| the pause at the phase change | unchanged (`transitionTicks`) |
+
+A twin has the id and name of its own (for example `snap-rush`) and **looks like the original** (same pose and colour): the change is in the timing or size, so the player has to read it, not be told. Because of that the guard test `tests/boss-distinct.test.ts` and the figure test count only the attacks of the first phase. A counterable attack is never twisted, so the counter window stays what the player learnt.
+
+**The study shows only the first phase** (`state.ts` uses `boss.phases[0]`): the second phase is a surprise by design. The first phase of the Hound is still called Hunt; for the five other hand-built bosses and the generator it is now called "First phase" (the generator's was "Only phase").
+
+| Boss | Second phase | Twist | Notes |
+|---|---|---|---|
+| Ashen Hound | Frenzy | **Snap**: `snap-rush`, the rush with a 21-update wind-up (from 26; not lower because a fast move needs 21 to stay readable) | opens with it, weight 4, gap 31, walk 396 |
+| Brass Sentinel | Overbright | **Reach**: `long-sweep`, the counterable wide sweep reaching 270 (from 220) and a box to 310 (from 240) | it is still counterable and its counter window is the same |
+| Cinder Golem | Meltdown | **Follow-up**: `crag-slam` is followed at once by `fault-slam` | `crag-slam` weight 4, no opening |
+| Gale Reaver | Tempest Edge | **Delay**: `held-cyclone`, the cyclone with a hold of up to 14 updates | gap 24, chains of up to 3; walks and retreats 20% faster (504 / 456), which may be too much for a boss that already covers the most ground |
+| Quill Warden | Long Reach | **Reach**: `far-thrust`, the reaching poke reaching 480 (from 400) and a box to 520 (from 400) | opens with it |
+| Veil Dancer | Unveiled | **Follow-up**: `piercing-veil` is followed at once by `shadow-cut` | second combo next to `blink-away, shadow-cut` |
+
+**Generated bosses** (`generateSecondPhase` in `src/bosses/generate/phase2.ts`) draw three more random values after the arena (kind, base attack, hold length), so the same seed makes a different boss than before 0.11.0. The kind drawn is used when it has an attack it fits (snap needs a wind-up that can lose at least 4 updates and still stay above the readability floors of section 3b; delay needs a strike with no shots, hold or blink; follow-up needs two strikes); otherwise the next kind that fits is used, and reach always fits. All numbers are in `GEN` (`phase2Start`, `phase2GapFactor`, `twistWeight`, `snapFactor`, `reachFactor`, `holdMin`, `holdMax` and the rest).
+
+**Fairness.** The generator's checker (section 3b) runs on the whole boss, both phases. It does not check each twist alone: a twist stays readable by keeping the readability floors (a snap never goes under 18 updates, or 21 for a leap or a fast dash, and a hold only adds time). Pair fights were checked with both bosses in their second phase (`tests/pair-phase2.test.ts`): an idle player loses at every preset and a player who only chases ends the fight.
+
+**Tests**: `tests/boss-second-phase.test.ts` (the six bosses: half health, same attacks plus twin, shorter gap, opening, every difficulty extreme parses), `tests/generate-phase2.test.ts` (the generator, 300 seeds, every kind), `tests/pair-phase2.test.ts`.
+
 ## 3b. The boss generator
 
 `src/bosses/generate/` builds a boss at random instead of from a hand-written file. It is offered in the menu's Boss row as **Generated** (`src/bosses/index.ts`, `BOSS_CHOICES`; Generated is the last choice on the row). Picking Fight builds a fresh boss from that fight's own seed (`resolveBoss('generated', seed)` in `src/bosses/resolve.ts`), so it is different almost every attempt and replayable from the seed alone; there is no saved roster and no way to fight the "same" generated boss again except by keeping the exported seed.
@@ -421,7 +461,7 @@ Not built: a Dancer fan of needles that spread out (the bolt format has no sprea
 
 **The readability floor.** Every generated attack has a `windup` of at least 18 updates (300 ms), whatever its effect. A leap, or a dash at or above the "fast" speed threshold, gets a higher floor of 21 updates (350 ms), because its first dangerous update comes after `windup` rather than at it. These floors come from the M5a play-test review, which found a 233 ms warning unreactable and a 283 ms one fine; the generator stays above both. `GEN.windupMin` and `GEN.leapWindupMin` in the tuning file (below) are these two floors.
 
-**Shape of a generated boss** (`generateBoss` in `src/bosses/generate/boss.ts`): 3 to 5 attacks, with exactly **one** of them `counterable` (gold, like the Duelist's slam) and the rest `mustDodge`; **one phase only**. `id` is always `'generated'`, `name` always `'Generated Boss'`.
+**Shape of a generated boss** (`generateBoss` in `src/bosses/generate/boss.ts`): 3 to 5 attacks, with exactly **one** of them `counterable` (gold, like the Duelist's slam) and the rest `mustDodge`; **two phases**: a first phase ("First phase") and a second one ("Second phase", section 3a-octies). `id` is always `'generated'`, `name` always `'Generated Boss'`.
 
 **The arena (M6a)**: about 4 in 10 generated bosses stay bare, like the Ember Duelist; the rest get 1 to 3 pieces (`generateArena` in `src/bosses/generate/arena.ts`) at up to three fixed spots (x = 320, 640, 960 — the same spacing the Ashen Hound's own arena uses). The x = 320 spot is always a platform: cover can never sit over the player's start (see "Arena" above). Every piece in the same arena is spread at least `GEN.arenaMinHeightGap` apart in height from every other piece, so nothing clusters near one level — the concrete problem the Ashen Hound's own arena had (its platform and cover sit only 10 units apart). Generated cover is capped below the jumpable height, so it is never a true wall the boss's own attacks (which still ignore the arena, see "The boss ignores the arena" above) leave the player stuck behind.
 
@@ -436,9 +476,9 @@ Not built: a Dancer fan of needles that spread out (the bolt format has no sprea
 
 The skilled bot is **not** taught to dodge shots or eruptions (owner, 2026-09-29: a cheap check only). When a boss has shot attacks, the skilled bot fights the same boss with those attacks taken out (its strikes, dashes and leaps stay); a boss with nothing left after that skips the skilled check. The idle bot and the camp-safety check run on the real boss, so an idle player must still lose against the shots (a lone backward bolt, for example, would fail it). The first bolt, arc and eruption of a generated attack are built to reach a player standing still, so this holds by construction.
 
-Both checks run inside an update cap (`GEN.fairnessCapTicks`, `GEN.fairnessSkilledCapTicks`); a run that reaches the cap without the fight ending is itself a failure. A boss that fails either check is rejected (never offered to the player); the reasons are for logs only.
+Both checks run inside an update cap (`GEN.fairnessCapTicks` 3000 for the idle bot, `GEN.fairnessSkilledCapTicks` 6000 for the skilled bot, raised from 4000 when second phases made fights longer); a run that reaches the cap without the fight ending is itself a failure. The skilled bot waits out a `hold` (a held strike freezes on its last wind-up update) before pressing, and the boss it fights has its shot attacks removed from the attack lists, openings and combos alike. A boss that fails either check is rejected (never offered to the player); the reasons are for logs only.
 
-**Retry, then use the first candidate anyway, with a banner.** `resolveBoss('generated', seed)` tries up to three candidates — `generateBoss(seed)`, then `generateBoss` on the seed advanced once, then advanced twice — checking each with `checkFairness` and using the first that passes. If all three fail, it does **not** fall back to a different boss: it uses the **first** candidate anyway and returns `unfair: true` alongside it, and the UI (`src/ui/study-banner.ts`) shows the player a short banner, "This generated boss couldn't be checked as fair. Good luck!", for the first two seconds of the real fight. Measured over a natural sweep of 100 seeds, this unverified case is reached about **19% of the time** (19 of 100) now that arenas are part of generation — well up from the pre-arena baseline of 2%, and not chased down further: the owner's call after diagnosing several real causes (some fixed, some logged in `docs/backlog.md`) was that the banner exists precisely so this doesn't need to be rare to be acceptable.
+**Retry, then use the first candidate anyway, with a banner.** `resolveBoss('generated', seed)` tries up to three candidates — `generateBoss(seed)`, then `generateBoss` on the seed advanced once, then advanced twice — checking each with `checkFairness` and using the first that passes. If all three fail, it does **not** fall back to a different boss: it uses the **first** candidate anyway and returns `unfair: true` alongside it, and the UI (`src/ui/study-banner.ts`) shows the player a short banner, "This generated boss couldn't be checked as fair. Good luck!", for the first two seconds of the real fight. Measured over a natural sweep of 100 seeds, this unverified case was reached about **19% of the time** (19 of 100) once arenas were part of generation, and with second phases (game version 0.11.0) it is about **27%** (about 65 of 100 single candidates fail, against 56 before; three tries each). The banner exists so this does not need to be rare; the first measurement was — well up from the pre-arena baseline of 2%, and not chased down further: the owner's call after diagnosing several real causes (some fixed, some logged in `docs/backlog.md`) was that the banner exists precisely so this doesn't need to be rare to be acceptable.
 
 `TRAINEE` (`src/bosses/trainee.json`, id `'trainee'`) still exists in the codebase — two plain `mustDodge` attacks (a swipe and a forward charge), generous timings, no leap and no counterable attack, checked by `parseBoss` at load exactly like the Duelist and the Hound, and still covered by `tests/trainee.test.ts` — but `resolveBoss` no longer uses it as a fallback, and it was never offered in the menu's Boss row. It is a valid, tested, hand-built boss that is simply not currently reachable in play.
 

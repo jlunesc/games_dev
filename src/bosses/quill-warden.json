@@ -49,6 +49,29 @@
       ]
     },
     {
+      "id": "far-thrust",
+      "name": "Far Thrust",
+      "pose": "sideways",
+      "class": "mustDodge",
+      "windup": 28,
+      "active": 6,
+      "recovery": 26,
+      "range": {
+        "min": 280,
+        "max": 480
+      },
+      "hits": [
+        {
+          "from": 28,
+          "to": 34,
+          "x0": 0,
+          "x1": 520,
+          "bottom": 0,
+          "top": 170
+        }
+      ]
+    },
+    {
       "id": "low-piercer",
       "name": "Low Piercer",
       "pose": "down",
@@ -165,7 +188,7 @@
   ],
   "phases": [
     {
-      "name": "Only phase",
+      "name": "First phase",
       "startsAtHpFraction": 1,
       "attacks": [
         {
@@ -199,6 +222,53 @@
       "chainChance": 0,
       "walkSpeed": 260,
       "retreatSpeed": 320,
+      "combos": [
+        [
+          "snap-piercer",
+          "rising-swipe"
+        ]
+      ]
+    },
+    {
+      "name": "Long Reach",
+      "startsAtHpFraction": 0.5,
+      "opening": "far-thrust",
+      "attacks": [
+        {
+          "id": "reaching-poke",
+          "weight": 3
+        },
+        {
+          "id": "low-piercer",
+          "weight": 3
+        },
+        {
+          "id": "overextended-thrust",
+          "weight": 2
+        },
+        {
+          "id": "rising-swipe",
+          "weight": 2
+        },
+        {
+          "id": "backwards-vault",
+          "weight": 2
+        },
+        {
+          "id": "snap-piercer",
+          "weight": 1,
+          "heavy": true
+        },
+        {
+          "id": "far-thrust",
+          "weight": 4
+        }
+      ],
+      "gap": 38,
+      "maxChain": 2,
+      "chainChance": 0.35,
+      "walkSpeed": 312,
+      "retreatSpeed": 384,
       "combos": [
         [
           "snap-piercer",
