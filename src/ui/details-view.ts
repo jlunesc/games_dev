@@ -1,7 +1,9 @@
 import type { FightDetails } from '../stats/details';
 import { el } from './dom';
-import { columns, stackedRow, timelineMarks, type Rect } from './details-plots';
-import { dodgeBinLabels, numberBlocks, percent, recommendationText, replyBinLabels, seconds } from './details-text';
+import { attackBandRects, columns, marksAt, pathPoints, spanRects, stackedRow, timelineMarks, type Rect } from './details-plots';
+import { WORLD } from '../game/params';
+import { PATH_STEP } from '../stats/meter';
+import { dodgeBinLabels, percent, recommendationText, replyBinLabels, seconds } from './details-text';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 /** The plots are drawn in this many units wide and scaled to the panel. */
@@ -87,6 +89,74 @@ function timelineChart(details: FightDetails['timeline']): SVGSVGElement {
   return svg;
 }
 
+function positionChart(clock: { ticks: number; path: number[]; attackSpans: [number, number][] }): SVGSVGElement {
+  const height = 72;
+  const svg = chart(height + 14);
+  addRects(svg, spanRects(clock.attackSpans, clock.ticks, W, height, 'plot-attack'));
+  svg.append(svgNode('line', { x1: 0, x2: W, y1: 0, y2: 0 }, 'plot-axis'), svgNode('line', { x1: 0, x2: W, y1: height, y2: height }, 'plot-axis'));
+  const points = pathPoints(clock.path, clock.ticks, PATH_STEP, WORLD.width, W, height);
+  if (points.length > 1) svg.append(svgNode('polyline', { points: points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ') }, 'plot-path'));
+  addText(svg, 0, height + 11, '0:00', 'start');
+  const total = Math.round(clock.ticks / 60);
+  addText(svg, W, height + 11, `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`, 'end');
+  return svg;
+}
+
+type Clock = NonNullable<FightDetails['numbers']['clock']>;
+
+const OUTCOME_CLASS: Record<string, string> = {
+  hit: 'plot-taken',
+  dodged: 'plot-landed',
+  countered: 'plot-countered',
+  interrupted: 'plot-missed',
+};
+
+function addMarks(svg: SVGSVGElement, marks: ReturnType<typeof marksAt>, width: number, opacity = 1): void {
+  for (const m of marks) {
+    svg.append(svgNode('line', { x1: m.x, x2: m.x, y1: m.y1, y2: m.y2, 'stroke-width': width, 'stroke-opacity': opacity }, m.cls));
+  }
+}
+
+function addTimeLabels(svg: SVGSVGElement, ticks: number, y: number): void {
+  addText(svg, 0, y, '0:00', 'start');
+  const total = Math.round(ticks / 60);
+  addText(svg, W, y, `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`, 'end');
+}
+
+/** Three rows on the fight's own time axis: the boss's attacks (coloured by how each ended), the way you held, and your dashes and jumps. */
+function attacksAndMovesChart(details: FightDetails, clock: Clock): SVGSVGElement {
+  const length = details.timeline.length;
+  const svg = chart(112);
+  addText(svg, 0, 8, 'Boss attacks', 'start');
+  addRects(svg, attackBandRects(details.attackBands, length, W, 11, 18, (o) => OUTCOME_CLASS[o] ?? 'plot-missed'));
+  addText(svg, 0, 40, 'Holding left (above) or right (below)', 'start');
+  svg.append(svgNode('line', { x1: 0, x2: W, y1: 56, y2: 56 }, 'plot-axis'));
+  addRects(svg, spanRects(clock.leftRuns, length, W, 12, 'plot-left'), 0, 43);
+  addRects(svg, spanRects(clock.rightRuns, length, W, 12, 'plot-right'), 0, 57);
+  addText(svg, 0, 84, 'Dashes and jumps', 'start');
+  addMarks(svg, marksAt(details.moves.jumps, length, W, 87, 99, 'plot-jump'), 1.5);
+  addMarks(svg, marksAt(details.moves.dashes, length, W, 87, 99, 'plot-dash'), 2);
+  addTimeLabels(svg, length, 110);
+  return svg;
+}
+
+/** The gap to the nearest boss over the fight, with a mark for each hit you landed (green) and each hit you took (red). */
+function distanceChart(details: FightDetails, clock: Clock): SVGSVGElement {
+  const height = 72;
+  const length = details.timeline.length;
+  const svg = chart(height + 14);
+  addRects(svg, spanRects(clock.attackSpans, length, W, height, 'plot-attack'));
+  svg.append(svgNode('line', { x1: 0, x2: W, y1: height, y2: height }, 'plot-axis'));
+  const far = Math.max(300, ...clock.distance);
+  addMarks(svg, marksAt(details.timeline.landed, length, W, 0, height, 'plot-landed'), 1.5, 0.8);
+  addMarks(svg, marksAt(details.timeline.taken, length, W, 0, height, 'plot-taken'), 1.5, 0.8);
+  const points = pathPoints(clock.distance, length, PATH_STEP, far, W, height);
+  if (points.length > 1) svg.append(svgNode('polyline', { points: points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ') }, 'plot-path'));
+  addText(svg, W, 9, `${Math.round(far)} apart`, 'end');
+  addTimeLabels(svg, length, height + 11);
+  return svg;
+}
+
 function stackedBar(values: number[], classes: readonly string[]): SVGSVGElement {
   const svg = chart(20);
   addRects(svg, stackedRow(values, classes, W, 20));
@@ -122,19 +192,69 @@ export function renderDetails(
     tile(reply.medianTicks === null ? '–' : seconds(reply.medianTicks), 'Median reply time', 'after the attack ended'),
   );
 
-  const numbersBox = section(
-    'The numbers',
-    'Plain counts of the real fight. An arena width is the whole floor from wall to wall.',
-  );
-  for (const block of numberBlocks(details.numbers, nameOf)) {
-    const table = el('div', 'stat-table');
-    table.append(el('h3', 'stat-title', block.title));
-    for (const [label, value] of block.rows) {
-      const row = el('div', 'stat-row');
-      row.append(el('span', 'stat-label', label), el('span', 'stat-value', value));
-      table.append(row);
+  const attacksBox = section('Boss attacks', 'How many times each attack came, and how each one ended.');
+  const most = Math.max(1, ...details.numbers.boss.perAttack.map((a) => a.started));
+  for (const a of details.numbers.boss.perAttack) {
+    const stack = el('span', 'attack-stack');
+    stack.style.setProperty('--w', `${(a.started / most) * 100}%`);
+    for (const [count, cls] of [[a.hit, 'plot-taken'], [a.dodged, 'plot-landed'], [a.countered, 'plot-countered'], [a.interrupted, 'plot-missed']] as const) {
+      if (count === 0) continue;
+      const part = el('span', `attack-part ${cls}`);
+      part.style.setProperty('--n', String(count));
+      stack.append(part);
     }
-    numbersBox.append(table);
+    const bar = el('span', 'attack-bar');
+    bar.append(stack);
+    const row = el('div', 'attack-row');
+    row.append(el('span', 'attack-name', nameOf(a.attackId)), bar, el('span', 'attack-text', String(a.started)));
+    attacksBox.append(row);
+  }
+  if (details.numbers.boss.perAttack.length === 0) attacksBox.append(el('p', 'detail-note', 'The boss did not attack.'));
+  else {
+    attacksBox.append(
+      legend([
+        { cls: 'plot-taken', label: 'Hit you' },
+        { cls: 'plot-landed', label: 'Dodged' },
+        { cls: 'plot-countered', label: 'Countered' },
+        { cls: 'plot-missed', label: 'Cut short' },
+      ]),
+    );
+  }
+
+  const { movement, clock } = details.numbers;
+  const strips: HTMLElement[] = [];
+  if (movement !== null && clock !== null) {
+    const outcomes = legend([
+      { cls: 'plot-taken', label: 'Hit you' },
+      { cls: 'plot-landed', label: 'Dodged' },
+      { cls: 'plot-countered', label: 'Countered' },
+      { cls: 'plot-missed', label: 'Cut short' },
+    ]);
+    const movesBox = section('Boss attacks and your moves', 'Each attack from its warning (pale) to the end of its danger. A dash or jump just before a strike is a dodge.');
+    movesBox.append(attacksAndMovesChart(details, clock), outcomes);
+
+    const gapBox = section('Distance to the boss', 'The gap through the fight. Green lines: you hit the boss. Red lines: it hit you. Shaded: a boss was attacking.');
+    gapBox.append(distanceChart(details, clock));
+
+    const held = movement.leftTicks + movement.rightTicks + movement.stillTicks;
+    const arenaBox = section('Your place in the arena', 'The right wall at the top, the left wall at the bottom. Shaded: a boss was attacking.');
+    arenaBox.append(
+      positionChart(clock),
+      stackedBar([movement.leftTicks, movement.rightTicks, movement.stillTicks], ['plot-left', 'plot-right', 'plot-still']),
+      legend([
+        { cls: 'plot-left', label: `Holding left ${seconds(movement.leftTicks)}` },
+        { cls: 'plot-right', label: `Holding right ${seconds(movement.rightTicks)}` },
+        { cls: 'plot-still', label: `Holding neither ${seconds(movement.stillTicks)}` },
+      ]),
+      el(
+        'p',
+        'detail-note',
+        held === 0
+          ? 'No movement was measured.'
+          : `Changed direction ${movement.turns} times. Next to a wall ${seconds(movement.wallTicks)}. In the air ${seconds(movement.airTicks)}.`,
+      ),
+    );
+    strips.push(movesBox, gapBox, arenaBox);
   }
 
   const timelineBox = section('The fight', 'Hits you landed are above the line, hits you took below it, swings on it.');
@@ -215,8 +335,9 @@ export function renderDetails(
     el('h1', undefined, 'Fight details'),
     el('p', 'recommendation', recommendationText(details.recommendation, nameOf)),
     tiles,
-    numbersBox,
     timelineBox,
+    ...strips,
+    attacksBox,
     avoidBox,
     replyBox,
     perAttackBox,

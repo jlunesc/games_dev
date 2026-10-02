@@ -406,6 +406,11 @@ body {
 .plot-close { --c: #e5596b; }
 .plot-mid { --c: #ffd166; }
 .plot-far { --c: #4fc3f7; }
+.plot-left { --c: #4fc3f7; }
+.plot-right { --c: #ffd166; }
+.plot-still { --c: #6b6f86; }
+.plot-attack { --c: #e5596b; }
+.plot-path { --c: #8fa3ff; }
 
 .plot {
   display: block;
@@ -419,6 +424,21 @@ body {
 
 .plot line {
   stroke: var(--c);
+}
+
+.plot rect.plot-attack {
+  fill-opacity: 0.18;
+}
+
+.plot rect.plot-warn {
+  fill-opacity: 0.4;
+}
+
+.plot polyline {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
 }
 
 .plot .plot-axis {
@@ -536,32 +556,15 @@ body {
   white-space: nowrap;
 }
 
-/* Fight details: the table of plain counts. */
-.stat-table {
-  margin: 0.6rem 0;
-}
-
-.stat-title {
-  margin: 0 0 0.2rem;
-  color: var(--accent);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.stat-row {
+.attack-stack {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.15rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.85rem;
+  width: var(--w, 0%);
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0.3rem;
 }
 
-.stat-label {
-  color: #b4b4c8;
-}
-
-.stat-value {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.attack-part {
+  flex: var(--n, 1) 1 0;
+  background: var(--c);
 }

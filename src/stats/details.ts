@@ -31,10 +31,23 @@ export interface FightDetails {
   distance: { close: number; mid: number; far: number };
   /** Updates into the real fight: its length and when the player's swings, hits landed and hits taken happened. */
   timeline: { length: number; landed: number[]; taken: number[]; swings: number[] };
+  /** The player's dashes and jumps, in updates into the real fight. */
+  moves: { dashes: number[]; jumps: number[] };
+  /** Every real attack of the boss as a stretch of the same count: the warning from `start`, danger from `dangerStart`, over at `end`. */
+  attackBands: AttackBand[];
   /** How early dodges began, in bins (`T.dodgeBinEdges`; the first is a dodge that began after the danger did). */
   dodgeTiming: { dodged: number; hit: number }[];
   numbers: Numbers;
   recommendation: Recommendation;
+}
+
+export interface AttackBand {
+  attackId: string;
+  boss: number;
+  start: number;
+  dangerStart: number;
+  end: number;
+  outcome: Analysis['attacks'][number]['outcome'];
 }
 
 /** One attack of the boss, counted over the real fight by how it ended. */
@@ -48,11 +61,8 @@ export interface AttackCount {
   interrupted: number;
 }
 
-/** The plain counts shown as a table, for the real fight only. `movement` and `clock` need the replay's meter, so they are null without it. */
+/** The counts behind the attack bars and the movement plots, for the real fight only. `movement` and `clock` need the replay's meter, so they are null without it. */
 export interface Numbers {
-  /** Length of the real fight. */
-  seconds: number;
-  you: { swings: number; landed: number; taken: number; counters: number; dashes: number; jumps: number };
   boss: { started: number; perAttack: AttackCount[] };
   movement: ReplayMeasures['movement'] | null;
   clock: ReplayMeasures['clock'] | null;
@@ -189,17 +199,15 @@ export function fightDetails(analysis: Analysis, measures?: ReplayMeasures): Fig
       taken: realTicks(analysis.playerHitTicks),
       swings,
     },
+    moves: { dashes: realTicks(analysis.dashTicks), jumps: realTicks(analysis.jumpTicks) },
+    attackBands: realAttacks.map((a): AttackBand => {
+      const start = a.startTick - studyTicks;
+      const dangerStart = Math.max(start, a.firstDangerTick - studyTicks);
+      const found = measures?.clock.bands.find((x) => x.boss === a.boss && Math.abs(x.start - start) <= 1);
+      return { attackId: a.attackId, boss: a.boss, start, dangerStart, end: Math.max(dangerStart + 1, found?.end ?? dangerStart + 1), outcome: a.outcome };
+    }),
     dodgeTiming: dodgeBins,
     numbers: {
-      seconds: analysis.fightSeconds,
-      you: {
-        swings: swings.length,
-        landed: landed.length,
-        taken: realTicks(analysis.playerHitTicks).length,
-        counters: countered,
-        dashes: realTicks(analysis.dashTicks).length,
-        jumps: realTicks(analysis.jumpTicks).length,
-      },
       boss: { started: realAttacks.length, perAttack },
       movement: measures?.movement ?? null,
       clock: measures?.clock ?? null,

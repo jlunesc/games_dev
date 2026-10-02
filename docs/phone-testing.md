@@ -706,7 +706,7 @@ Every hand-built boss now has one question it asks you, and the game has new mec
 - [ ] The redone fights are saved, and the Stats show them as Custom.
 
 ## Fight details
-After a fight (win, loss or leaving with the hold), the after-fight menu gets a **Fight details** row a moment after the summary opens (the fight is analysed first). It opens a screen with one recommendation sentence on top, four key numbers (attacks avoided, swings that hit, attacks replied to, median reply time), a numbers table and plots. No row if you leave during the study.
+After a fight (win, loss or leaving with the hold), the after-fight menu gets a **Fight details** row a moment after the summary opens (the fight is analysed first). It opens a screen with one recommendation sentence on top, four key numbers (attacks avoided, swings that hit, attacks replied to, median reply time) and plots. No row if you leave during the study.
 - [ ] The Fight details row appears a moment after the summary opens, and the highlighted row does not jump to a different choice when it appears.
 - [ ] The screen fits the phone width in both orientations and scrolls with a finger. With the controller, up and down scroll and the confirm or back button returns to the summary.
 - [ ] The recommendation on top is one sentence naming the attack that hurt you most in this fight (or, if nothing hit you, the one whose openings you did not reply to). Does it point at what you felt went wrong? Does it change from fight to fight?
@@ -746,13 +746,13 @@ Bosses now use close-range attacks mainly when you are close (`docs/bosses.md` s
 - [ ] The Ember Duelist is unchanged.
 - [ ] If it feels too strict or too loose, `rangeBias` in each boss file is the number to change (0.25 now; 1 turns it off).
 
-## The numbers table in Fight details
-Added 2026-10-02 (`docs/stats.md` section 7.6). It sits under the four big numbers.
-- [ ] After a fight, open Fight details: there is a "The numbers" section with four blocks (What you did, What the boss did, How you moved, The clock).
-- [ ] The counts agree with what you remember: swings, dashes, jumps, hits you took; the boss's attacks by name add up to "Attacks started".
-- [ ] Walk only to the right for a few seconds in a fight: "Travelled right" is clearly bigger than "Travelled left", and "Holding right" shows most of the time. Stand against a wall for a while: "Next to a wall" grows.
-- [ ] The phases and the clock add up to the fight length (a pair fight has one row per boss).
-- [ ] Tell me which numbers you read and which you ignore, and what is missing.
+## Timeline strips in Fight details
+Added 2026-10-02 (`docs/stats.md` section 7.6). Under "The fight" timeline, which is unchanged, three strips use the same time axis.
+- [ ] After a fight, open Fight details: under "The fight" there are "Boss attacks and your moves", "Distance to the boss" and "Your place in the arena", all the same width, so a moment is straight above or below the same moment in the other strips.
+- [ ] In "Boss attacks and your moves", each attack is a band (pale warning, solid danger) coloured by how it ended. A dash or jump just before a solid band is a dodge; a red band with nothing before it is an attack you stood through. Does that read at a glance?
+- [ ] In "Distance to the boss", the green lines (you hit) and red lines (it hit you) match the marks in "The fight". The line shows whether you were far or close when attacks came.
+- [ ] Walk only to the right for a few seconds in a fight: the position line climbs to the top and "Holding right" is most of the bar. Stand against a wall for a while: "Next to a wall" grows.
+- [ ] Tell me what is missing or unclear on these strips, and whether they are easy to read on the phone.
 
 ## Things I would like to know
 After playing, answer these in plain words:

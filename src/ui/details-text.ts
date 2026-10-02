@@ -1,8 +1,7 @@
 import type { FightDef } from '../game/fight';
 import { TICK_RATE } from '../engine/time';
 import { DETAILS_TUNING as T } from '../stats/details-tuning';
-import type { Numbers, Recommendation } from '../stats/details';
-import { WORLD } from '../game/params';
+import type { Recommendation } from '../stats/details';
 
 /** Attack id to the name the player knows it by, over every boss of the fight; an unknown id stays as it is. */
 export function attackNamer(fight: FightDef): (attackId: string) => string {
@@ -52,93 +51,4 @@ export function recommendationText(rec: Recommendation, nameOf: (attackId: strin
     case 'few':
       return 'The boss did not attack in this fight, so there is nothing to work on.';
   }
-}
-
-/** Updates as minutes and seconds ("1:05"). */
-export const clockTime = (ticks: number): string => {
-  const total = Math.round(ticks / TICK_RATE);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-};
-
-export interface NumberBlock {
-  title: string;
-  /** Rows of a label and its value, all plain text. */
-  rows: [label: string, value: string][];
-}
-
-/** `n` over the fight's length as "n a minute" (nothing when the fight has no length). */
-const perMinute = (n: number, seconds: number): string => (seconds > 0 ? ` (${Math.round((n / seconds) * 60)} a minute)` : '');
-
-const timeAndShare = (ticks: number, whole: number): string =>
-  `${seconds(ticks)}${whole > 0 ? ` (${percent(ticks / whole)})` : ''}`;
-
-/** Distance as the number of arena widths ("2.4 arena widths"), a unit that means something on the screen. */
-const arenaWidths = (units: number): string => {
-  const widths = Math.round((units / WORLD.width) * 10) / 10;
-  return `${widths} arena ${widths === 1 ? 'width' : 'widths'}`;
-};
-
-/** The plain-count table of the fight details, in four blocks. The movement and clock blocks are left out when they were not measured. */
-export function numberBlocks(numbers: Numbers, nameOf: (attackId: string) => string): NumberBlock[] {
-  const { you, boss, movement, clock, seconds: length } = numbers;
-  const blocks: NumberBlock[] = [
-    {
-      title: 'What you did',
-      rows: [
-        ['Swings', `${you.swings}${perMinute(you.swings, length)}`],
-        ['Swings that hit the boss', String(you.landed)],
-        ['Hits you took', String(you.taken)],
-        ['Counters', String(you.counters)],
-        ['Dashes', `${you.dashes}${perMinute(you.dashes, length)}`],
-        ['Jumps', `${you.jumps}${perMinute(you.jumps, length)}`],
-      ],
-    },
-    {
-      title: 'What the boss did',
-      rows: [
-        ['Attacks started', `${boss.started}${perMinute(boss.started, length)}`],
-        ...boss.perAttack.map((a): [string, string] => {
-          const parts = [
-            a.hit > 0 ? `${a.hit} hit you` : null,
-            a.dodged > 0 ? `${a.dodged} dodged` : null,
-            a.countered > 0 ? `${a.countered} countered` : null,
-            a.interrupted > 0 ? `${a.interrupted} cut short` : null,
-          ].filter((x) => x !== null);
-          return [nameOf(a.attackId), `${a.started}${parts.length > 0 ? `: ${parts.join(', ')}` : ''}`];
-        }),
-      ],
-    },
-  ];
-  if (movement !== null) {
-    const held = movement.leftTicks + movement.rightTicks + movement.stillTicks;
-    blocks.push({
-      title: 'How you moved',
-      rows: [
-        ['Travelled left', arenaWidths(movement.left)],
-        ['Travelled right', arenaWidths(movement.right)],
-        ['Towards the boss', arenaWidths(movement.toward)],
-        ['Away from the boss', arenaWidths(movement.away)],
-        ['Holding left', timeAndShare(movement.leftTicks, held)],
-        ['Holding right', timeAndShare(movement.rightTicks, held)],
-        ['Holding neither', timeAndShare(movement.stillTicks, held)],
-        ['Changed direction', `${movement.turns} times`],
-        ['Next to a wall', timeAndShare(movement.wallTicks, held)],
-        ['In the air', timeAndShare(movement.airTicks, held)],
-      ],
-    });
-  }
-  if (clock !== null) {
-    const rows: [string, string][] = [['Fight length', clockTime(clock.ticks)]];
-    clock.phaseTicks.forEach((phases, boss) => {
-      const label = clock.phaseTicks.length > 1 ? `Boss ${boss + 1}, ` : '';
-      phases.forEach((ticks, phase) => rows.push([`${label}phase ${phase + 1}`, timeAndShare(ticks, clock.ticks)]));
-    });
-    rows.push(
-      ['A boss attacking', timeAndShare(clock.attackingTicks, clock.ticks)],
-      ['No boss attacking', timeAndShare(clock.ticks - clock.attackingTicks, clock.ticks)],
-      ['Longest stretch with no attack', seconds(clock.longestQuietTicks)],
-    );
-    blocks.push({ title: 'The clock', rows });
-  }
-  return blocks;
 }

@@ -268,14 +268,17 @@ Everything is for the real fight only (the study is excluded).
 | Per minute | Swings, dashes and jumps that began in the real fight, over the fight's minutes. |
 | Timeline | The updates (counted from the start of the real fight) of swings, hits landed (`bossHitTicks`) and hits taken (`playerHitTicks`). |
 
-**The numbers table (built 2026-10-02).** Under the four key numbers, "The numbers" lists plain counts in four blocks, real fight only. The first two come from the `analysis`; the last two need counts that the analysis does not store, so they are measured during the same replay by `createMeter` in `src/stats/meter.ts` (passed to `analyzeRecording` as an observer) and, like the rest of the details, are derived, never stored: the schema stays 8. They are therefore only available for the fight just played, not for a stored record unless it is replayed again.
+**The timeline strips (built 2026-10-02).** Under the existing timeline ("The fight", unchanged) three strips share the same width and the same time axis (updates of the real fight), so they read straight down. Real-fight data only.
 
-| Block | Numbers |
+| Strip | What it shows |
 |---|---|
-| What you did | Swings, swings that hit, hits you took, counters, dashes, jumps; swings, dashes and jumps also per minute. |
-| What the boss did | Attacks started (total and per minute) and, per attack name, how many started and how many hit you, were dodged, were countered or were cut short (`interrupted`). A pair fight adds both bosses' attacks by name. |
-| How you moved | Distance travelled left and right and towards and away from the nearest standing boss (in arena widths, 1280 world units, dashes included); updates holding left, holding right and holding neither (the three add up to the fight); times the held direction switched sides (a stop in between does not count as a break); updates within 100 world units of either wall (`wallMargin` in `details-tuning.ts`); updates off the ground. |
-| The clock | Fight length; updates in each phase of each boss (a pair fight has a row per boss); updates in which at least one boss was in an attack (warning through recovery) and those in which none was; the longest run of updates with no boss attacking. |
+| Boss attacks and your moves | Three rows. Boss attacks: each attack as a band from the start of its warning (pale) to the end of its danger (`AttackBand` in `details.ts`), coloured by how it ended (hit you red, dodged green, countered orange, cut short grey). Holding: the runs holding left (above the middle line) and right (below). Dashes and jumps: a mark at each. |
+| Distance to the boss | The gap to the nearest standing boss as a line (sampled every `PATH_STEP` = 6 updates; the top is the largest gap seen, at least 300), a green line through the strip at each hit you landed and a red line at each hit you took, and a shaded band for each run in which a boss was attacking. |
+| Your place in the arena | The player's x as a line (right wall at the top, left wall at the bottom) with the same shaded bands. Under it one bar of the updates holding left, holding right and holding neither (they add up to the fight), and a line with the times the held direction switched sides (a stop in between does not break it), the updates within 100 world units of either wall (`wallMargin` in `details-tuning.ts`) and the updates off the ground. |
+
+Below the strips, "Boss attacks" has one bar per attack name (a pair fight lists both bosses' attacks), as long as how many times it started, split by outcome, all on one scale.
+
+The boss-attack counts and the dashes and jumps come from the `analysis`. The positions, distances, holding runs and the end of each attack band need counts that the analysis does not store, so they are measured during the same replay by `createMeter` in `src/stats/meter.ts` (passed to `analyzeRecording` as an observer) and, like the rest of the details, are derived, never stored: the schema stays 8. They are therefore only available for the fight just played, not for a stored record unless it is replayed again; without them the three strips are left out and an attack band is only as long as its first dangerous update.
 
 **The recommendation** is one sentence with no target or cut-off: it ranks counts within this one fight (`recommend` in `src/stats/details.ts`). (1) If no boss attack started it says there was nothing to judge. (2) Otherwise the attack that hit you the most is named, with how many of its appearances hit you (a tie goes to the larger share of its appearances, then to the first). (3) If nothing hit you, the attack whose openings you left unanswered the most is named (openings shorter than `minReplyWindowTicks`, 12 updates, are not counted: that is what can be physically answered, not a skill bar). (4) If nothing hit you and every opening was answered it says nothing stands out. Only the real fight counts, never the study. The advice can therefore change from fight to fight with whichever attack was the weak spot.
 
@@ -284,7 +287,7 @@ Everything is for the real fight only (the study is excluded).
 **What this cannot tell you.**
 - One fight is a small sample. The recommendation is a hint to practise, not a verdict: one hit from an attack is enough to name it.
 - A travel dash and an early dodge dash are told apart only by whether an attack was live.
-- Movement direction is counted (the numbers table) but never graded.
+- Movement direction is plotted but never graded.
 - The distance plot is not part of the recommendation: standing far away is only a plot.
 
 ## 8. Replaying a fight
