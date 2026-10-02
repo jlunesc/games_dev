@@ -5,7 +5,17 @@ import { createInitialState, type GameState } from '../src/game/state';
 import { step } from '../src/game/step';
 import type { InputFrame } from '../src/engine/input-frame';
 import { analyzeFight } from '../src/stats/analyze';
-import { buildExport, EXPORT_FORMAT, loadLastExport, saveLastExport, shareOrDownload, type ExportDocument, type ExportFile } from '../src/stats/export';
+import { analyzeRecording, fightOf } from '../src/stats/analyze';
+import { fightDetails } from '../src/stats/details';
+import { rateDodges } from '../src/stats/dodges';
+import { createMeter } from '../src/stats/meter';
+import {
+  buildDetailsExport,
+  buildExport,
+  DETAILS_EXPORT_FORMAT,
+  DETAILS_EXPORT_VERSION,
+  type DetailsExportDocument,
+  EXPORT_FORMAT, loadLastExport, saveLastExport, shareOrDownload, type ExportDocument, type ExportFile } from '../src/stats/export';
 import {
   buildRecord,
   GAME_VERSION,
@@ -86,6 +96,39 @@ describe('buildExport', () => {
     const exported = parsed.fights[0]!;
     expect(replayFinalState(exported)).toEqual(state);
     expect(analyzeFight(exported)).toEqual(fight.analysis);
+  });
+});
+
+describe('buildDetailsExport', () => {
+  function details(updates: number) {
+    let state = createInitialState(fightOf(meta), meta.seed);
+    let rec = startRecording(meta);
+    for (let n = 1; n <= updates; n++) {
+      const frame = scripted(n);
+      state = step(state, frame, fightOf(meta));
+      rec = recordUpdate(rec, frame);
+      if (state.phase !== 'fight') break;
+    }
+    const meter = createMeter();
+    const analysis = analyzeRecording(rec, meter.observe);
+    const measures = meter.result();
+    return fightDetails(analysis, measures, rateDodges(fightOf(meta), analysis, measures));
+  }
+
+  it('holds the fight, the attack names and every number of the details screen, under a .stats.txt name', () => {
+    const shown = details(2000);
+    const file = buildDetailsExport(meta, 'defeat', shown, (id) => `Name of ${id}`, NOW);
+    expect(file.name).toBe('boss-trainer-details-2026-09-20-10-00-00.stats.txt');
+    const parsed = JSON.parse(file.json) as DetailsExportDocument;
+    expect(parsed.format).toBe(DETAILS_EXPORT_FORMAT);
+    expect(parsed.detailsVersion).toBe(DETAILS_EXPORT_VERSION);
+    expect(parsed.gameVersion).toBe(GAME_VERSION);
+    expect(parsed.exportedAt).toBe(NOW.toISOString());
+    expect(parsed.fight).toEqual({ ...meta, result: 'defeat' });
+    expect(parsed.details).toEqual(JSON.parse(JSON.stringify(shown)));
+    const ids = shown.attackBands.map((b) => b.attackId);
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) expect(parsed.attackNames[id]).toBe(`Name of ${id}`);
   });
 });
 

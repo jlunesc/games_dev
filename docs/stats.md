@@ -253,7 +253,7 @@ How to read a study fight:
 
 ### 7.6 Fight details (derived, not stored)
 
-After a fight (not one left during the study) the summary offers a **Fight details** screen: a recommendation sentence on top, four key numbers and several plots. Everything is computed on the spot from that one fight's `analysis` by `fightDetails` in `src/stats/details.ts` (the few fixed sizes in `src/stats/details-tuning.ts`, words in `src/ui/details-text.ts`, drawing in `src/ui/details-view.ts` and `src/ui/details-plots.ts`) and is **not** stored in the record or the export, so it can be reworded or re-tuned without a schema change. It replaces the text "Work on:" insights of schema version 7.
+After a fight (not one left during the study) the summary offers a **Fight details** screen: a recommendation sentence on top, four key numbers and several plots. Everything is computed on the spot from that one fight's `analysis` by `fightDetails` in `src/stats/details.ts` (the few fixed sizes in `src/stats/details-tuning.ts`, words in `src/ui/details-text.ts`, drawing in `src/ui/details-view.ts` and `src/ui/details-plots.ts`) and is **not** stored in the record or the stats export (it has its own file, section 7.7), so it can be reworded or re-tuned without a schema change. It replaces the text "Work on:" insights of schema version 7.
 
 Everything is for the real fight only (the study is excluded).
 
@@ -294,6 +294,22 @@ No distance or time threshold is involved. The meter records what the replay nee
 - A travel dash and an early dodge dash are told apart only by whether an attack was live.
 - Movement direction is plotted but never graded.
 - The distance plot is not part of the recommendation: standing far away is only a plot.
+
+### 7.7 The fight details file
+
+The Fight details screen has an **Export these details** button (on the pad: right) that saves the screen's numbers for that one fight as a file, with the phone's share sheet or a download, like the stats export. It is built by `buildDetailsExport` in `src/stats/export.ts` from the `FightDetails` shown (section 7.6), so it is the finished numbers, not the input log. For a replayable record, use the stats export (section 4).
+
+The file is one JSON document saved as plain text, named `boss-trainer-details-YYYY-MM-DD-HH-MM-SS.stats.txt` after when the fight was played (UTC, `playedAt`). The `.stats.txt` ending is git-ignored.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `format` | string | Always `"boss-trainer-fight-details"`. |
+| `detailsVersion` | number | Version of this file; raised whenever the shape of `details` changes. Currently 1. |
+| `exportedAt` | string | ISO 8601 date-time (UTC) when the file was built. |
+| `gameVersion` | string | `GAME_VERSION` of the game that built the file. |
+| `fight` | object | How the fight was set up: `bossId`, `presetId`, `dials`, `seed`, `study`, `playedAt` (as in a fight record, section 5), and `result` (`"victory"`, `"defeat"` or `"left"`). With `seed` and `dials` it can be found in the stats export. |
+| `attackNames` | object | The attack ids that appear in `details`, each with the name the game shows. |
+| `details` | object | The `FightDetails` of `src/stats/details.ts`: `avoided`, `hitRate`, `perMinute`, `reply`, `distance`, `timeline` (updates into the real fight), `moves`, `attackBands`, `dodges`, `numbers` (with the movement and the clock used by the plots) and `recommendation`. Times are in updates (1 update = 1/60 s), as in section 3. |
 
 ## 8. Replaying a fight
 

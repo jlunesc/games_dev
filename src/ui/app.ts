@@ -24,11 +24,11 @@ import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
 import type { FightResult, FightSummary } from '../game/summary';
 import { analyzeRecording, fightOf } from '../stats/analyze';
-import { buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
+import { buildDetailsExport, buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
 import { fightDetails, type FightDetails } from '../stats/details';
 import { rateDodges } from '../stats/dodges';
 import { createMeter } from '../stats/meter';
-import { buildRecord, type Recording } from '../stats/record';
+import { buildRecord, type FightMeta, type Recording } from '../stats/record';
 import { openIndexedDbStore, type FightStore } from '../stats/store';
 import { createSound } from './sound';
 import { attackNamer } from './details-text';
@@ -173,6 +173,11 @@ export function mountApp(root: HTMLElement): void {
   let shownDetails: FightDetails | null = null;
   // The attack names of that fight, for the details screen.
   let detailsNames: (attackId: string) => string = (id) => id;
+  // How that fight was set up and ended, for the details export.
+  let detailsInfo: { meta: FightMeta; result: FightResult } | null = null;
+  // Writes a line under the details screen's export button; null when that screen is not showing.
+  let sayDetails: ((message: string) => void) | null = null;
+  let detailsExporting = false;
   // Bumped when a new fight starts, so a save still running from an earlier fight does not write its line into the new one.
   let saveEpoch = 0;
   // What the summary screen currently shows, kept so the save line can be added when the save finishes.
@@ -547,17 +552,33 @@ export function mountApp(root: HTMLElement): void {
   function showDetails(): void {
     if (shownDetails === null) return;
     screen = 'details';
-    renderDetails(panel, shownDetails, detailsNames, backFromDetails);
+    sayDetails = renderDetails(panel, shownDetails, detailsNames, backFromDetails, exportDetails);
     window.scrollTo(0, 0);
   }
 
+  async function exportDetails(say: (message: string) => void): Promise<void> {
+    if (shownDetails === null || detailsInfo === null || detailsExporting) return;
+    detailsExporting = true;
+    try {
+      const file = buildDetailsExport(detailsInfo.meta, detailsInfo.result, shownDetails, detailsNames, new Date());
+      const result = await shareOrDownload(file);
+      say(result === 'shared' ? 'Sent.' : result === 'downloaded' ? 'File saved to your downloads.' : result === 'cancelled' ? 'Export cancelled.' : 'Export failed.');
+    } catch {
+      say('Export failed.');
+    } finally {
+      detailsExporting = false;
+    }
+  }
+
   function backFromDetails(): void {
+    sayDetails = null;
     screen = 'summary';
     renderSummaryScreen();
   }
 
   function handleDetails(action: MenuAction): void {
     if (action === 'confirm' || action === 'back') backFromDetails();
+    else if (action === 'right') void exportDetails(sayDetails ?? (() => {}));
     else if (action === 'up') window.scrollBy(0, -140);
     else if (action === 'down') window.scrollBy(0, 140);
   }
@@ -613,6 +634,7 @@ export function mountApp(root: HTMLElement): void {
     saveLine = line;
     shownDetails = details;
     detailsNames = nameOf;
+    detailsInfo = { meta: recording.meta, result };
     if (screen === 'summary') {
       // The menu gains its Fight details row now that the analysis is done.
       const focused = summaryMenu.items[summaryMenu.focus];

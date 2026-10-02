@@ -758,6 +758,11 @@ Bosses now use close-range attacks mainly when you are close (`docs/bosses.md` s
 - [ ] The Ember Duelist is unchanged.
 - [ ] If it feels too strict or too loose, `rangeBias` in each boss file is the number to change (0.25 now; 1 turns it off).
 
+## Exporting the fight details
+- [ ] On the Fight details screen, below the plots, the "Export these details" button opens the phone's share sheet (or saves a file to Downloads) and a line under it says "Sent." or "File saved to your downloads.".
+- [ ] The pad's right direction does the same. Does the hint under the button make that clear?
+- [ ] The file is named `boss-trainer-details-<date and time>.stats.txt` and opens in the Claude app as a text attachment.
+
 ## Timeline strips in Fight details
 Added 2026-10-02 (`docs/stats.md` section 7.6). Under "The fight" timeline, which is unchanged, two strips use the same time axis.
 - [ ] After a fight, open Fight details: under "The fight" there are "Boss attacks and your moves", and "Distance to the boss", the same width, so a moment is straight above or below the same moment in the other strips.

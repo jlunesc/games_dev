@@ -1,5 +1,7 @@
 import type { StorageLike } from '../ui/storage';
-import { GAME_VERSION, STATS_SCHEMA_VERSION } from './record';
+import type { FightResult } from '../game/summary';
+import type { FightDetails } from './details';
+import { GAME_VERSION, STATS_SCHEMA_VERSION, type FightMeta } from './record';
 import type { StoredFight } from './store';
 
 export const EXPORT_FORMAT = 'boss-trainer-stats';
@@ -31,6 +33,51 @@ export function buildExport(fights: readonly StoredFight[], now: Date): ExportFi
     name: `boss-trainer-${now.toISOString().slice(0, 10)}.stats.txt`,
     json: JSON.stringify(document),
     count: fights.length,
+  };
+}
+
+export const DETAILS_EXPORT_FORMAT = 'boss-trainer-fight-details';
+/** Version of the fight details file (`docs/stats.md` section 7.7); raise it whenever `FightDetails` changes shape. */
+export const DETAILS_EXPORT_VERSION = 1;
+
+export interface DetailsExportDocument {
+  format: string;
+  detailsVersion: number;
+  exportedAt: string;
+  gameVersion: string;
+  /** How the fight was set up and how it ended; with `seed` and `dials` it can be found again in the stats export. */
+  fight: FightMeta & { result: FightResult };
+  /** The boss's own names for the attacks that appear in `details`, by attack id. */
+  attackNames: Record<string, string>;
+  details: FightDetails;
+}
+
+/** The fight details screen's numbers as a file, named after when the fight was played. Same plain-text naming as the stats export. */
+export function buildDetailsExport(
+  meta: FightMeta,
+  result: FightResult,
+  details: FightDetails,
+  nameOf: (attackId: string) => string,
+  now: Date,
+): ExportFile {
+  const ids = new Set([
+    ...details.attackBands.map((b) => b.attackId),
+    ...details.numbers.boss.perAttack.map((a) => a.attackId),
+    ...details.reply.perAttack.map((a) => a.attackId),
+  ]);
+  const document: DetailsExportDocument = {
+    format: DETAILS_EXPORT_FORMAT,
+    detailsVersion: DETAILS_EXPORT_VERSION,
+    exportedAt: now.toISOString(),
+    gameVersion: GAME_VERSION,
+    fight: { ...meta, result },
+    attackNames: Object.fromEntries([...ids].map((id) => [id, nameOf(id)])),
+    details,
+  };
+  return {
+    name: `boss-trainer-details-${meta.playedAt.slice(0, 19).replace(/[:T]/g, '-')}.stats.txt`,
+    json: JSON.stringify(document),
+    count: 1,
   };
 }
 
