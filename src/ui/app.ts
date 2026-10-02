@@ -25,7 +25,7 @@ import { createInitialState, type GameState } from '../game/state';
 import type { FightResult, FightSummary } from '../game/summary';
 import { analyzeRecording, fightOf } from '../stats/analyze';
 import { buildDetailsExport, buildExport, downloadFile, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
-import { fightDetails, type FightDetails } from '../stats/details';
+import { fightDetails, harmlessAttacks, type FightDetails } from '../stats/details';
 import { rateDodges } from '../stats/dodges';
 import { createMeter } from '../stats/meter';
 import { buildRecord, type FightMeta, type Recording } from '../stats/record';
@@ -609,7 +609,8 @@ export function mountApp(root: HTMLElement): void {
       if (analysis.fightSeconds > 0) {
         try {
           const measures = meter.result();
-          details = fightDetails(analysis, measures, rateDodges(fightOf(recording.meta), analysis, measures));
+          const played = fightOf(recording.meta);
+          details = fightDetails(analysis, measures, rateDodges(played, analysis, measures), harmlessAttacks(played));
         } catch {
           details = null; // a fault in the details must never stop the fight being saved
         }

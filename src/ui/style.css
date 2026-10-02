@@ -399,12 +399,10 @@ body {
 .plot-missed { --c: #6b6f86; }
 .plot-dash { --c: #4fc3f7; }
 .plot-jump { --c: #ffd166; }
-.plot-platform { --c: #b388ff; }
-.plot-cover { --c: #f78fb3; }
 .plot-saved { --c: #5ec27a; }
-.plot-unneeded { --c: #9aa3c7; }
-.plot-never { --c: #4a4e63; }
+.plot-unneeded { --c: #ffd166; }
 .plot-unrated { --c: #6b6f86; }
+.plot-neutral { --c: #8a8fb0; }
 .plot-countered { --c: #ff9f5a; }
 .plot-close { --c: #e5596b; }
 .plot-mid { --c: #ffd166; }

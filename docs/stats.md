@@ -255,37 +255,39 @@ How to read a study fight:
 
 After a fight (not one left during the study) the summary offers a **Fight details** screen: a recommendation sentence on top, four key numbers and several plots. Everything is computed on the spot from that one fight's `analysis` by `fightDetails` in `src/stats/details.ts` (the few fixed sizes in `src/stats/details-tuning.ts`, words in `src/ui/details-text.ts`, drawing in `src/ui/details-view.ts` and `src/ui/details-plots.ts`) and is **not** stored in the record or the stats export (it has its own file, section 7.7), so it can be reworded or re-tuned without a schema change. It replaces the text "Work on:" insights of schema version 7.
 
-Everything is for the real fight only (the study is excluded).
+Everything is for the real fight only (the study is excluded), and only for the attacks that can hurt (reworked 2026-10-02). A boss move with no hit box and no shots (a slip, a blink, a feint, a recoil; `harmlessAttacks` in `details.ts`, read from the boss file) can never hurt, would always end as "dodged" and is left out of every number and plot on this screen. The after-fight summary and the stats export still count them; the schema stays 8.
 
 | Number | How it is counted |
 |---|---|
-| Attacks avoided | Attacks with outcome `"dodged"` or `"countered"`, over those plus the ones that hit (`"interrupted"` attacks are not counted). Split for the bar "How you avoided attacks": *Dodge saved you* and *Dodge not needed* (a dodged attack with a dash or jump during it, rated as in "Dodge ratings" below), *Used a platform* and *Used cover* (`evasion`, when no dash or jump was rated), *Countered*, *Dodged* (a dodge nobody rated, shown only when no ratings were given) and *Never threatened you* (`evasion` `"distance"`: no dash, jump, platform or cover, so the attack was out of reach by itself; not counted as a dodge and judged by no distance threshold). |
+| Attacks avoided | Attacks with outcome `"dodged"` or `"countered"`, over those plus the ones that hit (`"interrupted"` attacks are not counted). |
 | Swings that hit | `swingsThatHit` over `swings`, from the real fight. |
 | Attacks replied to | Of the *answerable* attacks (countered ones, plus punish windows of at least 12 updates, since a shorter opening cannot be answered), the countered ones and the windows with a swing (`replyTicks` not null). |
-| Reply time | The median `replyTicks` over the windows with a swing, shown in bins of 15, 30, 45, 60 and 90 updates, split into swings that hit the boss in the window and those that did not, and per attack. |
-| Dodges | See "Dodge ratings" below. |
-| Where you stood | Updates of the real fight in the close, middle and far distance bands. Shown as a plot only. |
+| Median reply time | The median `replyTicks` over the windows with a swing. |
+| Where you stood | Updates of the real fight in the close, middle and far distance bands. Shown as a bar under the distance plot. |
 | Per minute | Swings, dashes and jumps that began in the real fight, over the fight's minutes. |
 | Timeline | The updates (counted from the start of the real fight) of swings, hits landed (`bossHitTicks`) and hits taken (`playerHitTicks`). |
 
-**The timeline strips (built 2026-10-02).** Under the existing timeline ("Timeline: your hits and swings", unchanged) two strips share the same width and the same time axis (updates of the real fight), so they read straight down. Real-fight data only.
+**The timeline strips.** From the top, all on the same time axis (updates of the real fight), so they read straight down. Real-fight data only.
 
 | Strip | What it shows |
 |---|---|
-| Timeline: boss attacks and your direction of movement | Each attack as a tinted band the full height of the plot, from the start of its warning (pale) to the end of its danger (`AttackBand` in `details.ts`), coloured by how it ended (hit you red, dodged green, countered orange, cut short grey). In a lane under them, on one line because you cannot do both at once, the runs holding the direction towards the nearest standing boss (white) and away from it (purple), judged against where that boss was when the button was pressed; holding nothing shows nothing. Under the plot, the time spent each way. |
-| Timeline: your dashes (jumps), hits landed and hits taken | One plot each. Each dash (blue) or jump (yellow) as a line across the middle, the hits you landed (green) as lines above it and the hits you took (red) as lines below it. The note gives the dashes or jumps per minute. |
-| Timeline: boss attacks and your dashes (jumps) | One plot each. The same attack bands as above, with a line down through them for each dash or jump, so a line inside a band is a dodge made during that attack. |
-| Timeline: distance to the boss | The gap to the nearest standing boss as a line (sampled every `PATH_STEP` = 6 updates; the top is the largest gap seen, at least 300), a green line through the strip at each hit you landed and a red line at each hit you took, and a shaded band for each run in which a boss was attacking. Right under it, the bar of the updates close to, a middling way from and far from the boss (the former "Where you stood" plot). |
+| Timeline: your hits and swings | Unchanged: swings on the middle line, hits landed above it, hits taken below it. |
+| Timeline: boss attacks and you approaching the boss | Each attack that can hurt as a tinted band the full height of the plot, from the start of its warning (pale) to the end of its danger (`AttackBand` in `details.ts`), coloured by how it ended (hit you red, dodged green, countered orange, cut short grey). In a lane under them, the runs holding the direction towards the nearest standing boss, judged against where that boss was when the button was pressed. Under the plot, the time spent. |
+| Timeline: boss attacks and you moving away | The same bands and the runs holding the direction away from that boss. Approaching and moving away were one lane until 2026-10-02 and are now two plots so each is easy to read. |
+| Timeline: your dashes (jumps), hits landed and hits taken | One plot each, unchanged: each dash or jump as a line across the middle, the hits you landed above it and the hits you took below it. |
+| Timeline: did your dashes (jumps) get you out of attacks? | One plot each. The attacks that can hurt as grey bands, and each dash or jump as a line coloured by the verdict of the replay without it (see "Dodge ratings"): **saved you**, **not needed**, **hit anyway** or **other** (made when no attack that can hurt was live, or during one that was countered and so not rated). The legend counts each colour. |
+| Timeline: distance to the boss | Unchanged: the gap to the nearest standing boss as a line (sampled every `PATH_STEP` = 6 updates; the top is the largest gap seen, at least 300), a green line at each hit you landed, a red line at each hit you took, a shaded band for each run in which a boss was attacking, and under it the bar of the updates close, middling and far. |
 
-Below the strips, "Boss attacks" has one bar per attack name (a pair fight lists both bosses' attacks), as long as how many times it started, split by outcome, all on one scale.
+Below the strips, "Boss attacks by outcome" has one bar per attack name (a pair fight lists both bosses' attacks), as long as how many times it started, split by outcome, all on one scale.
 
-The boss-attack counts and the dashes and jumps come from the `analysis`. The distances, movement runs and the end of each attack band need counts that the analysis does not store, so they are measured during the same replay by `createMeter` in `src/stats/meter.ts` (passed to `analyzeRecording` as an observer) and, like the rest of the details, are derived, never stored: the schema stays 8. They are therefore only available for the fight just played, not for a stored record unless it is replayed again; without them the two strips are left out and an attack band is only as long as its first dangerous update.
+The boss-attack counts and the dashes and jumps come from the `analysis`. The distances, movement runs and the end of each attack band need counts that the analysis does not store, so they are measured during the same replay by `createMeter` in `src/stats/meter.ts` (passed to `analyzeRecording` as an observer) and, like the rest of the details, are derived, never stored: the schema stays 8. They are therefore only available for the fight just played, not for a stored record unless it is replayed again; without them the direction strips are left out and an attack band is only as long as its first dangerous update.
 
-**Dodge ratings (built 2026-10-02).** Every real attack that hit you or was dodged and during which you dashed or jumped (from the start of its warning until its danger or its last shot ended) is replayed from the update its warning began, with the dashes, jumps and held jump from your first dodge on removed (`rateDodges` in `src/stats/dodges.ts`, which runs the real `step`). Everything else you did stays as it was. A hit counts only when it comes from that attack, not from another boss or attack.
+**Dodge ratings.** Every attack that can hurt, that hit you or was dodged, and during which you dashed or jumped (from the start of its warning until its danger or its last shot ended) is replayed from the update its warning began, with the dashes, jumps and held jump from your first dodge on removed (`rateDodges` in `src/stats/dodges.ts`, which runs the real `step`). Everything else you did stays as it was. A hit counts only when it comes from that attack, not from another boss or attack.
 - The attack hit you anyway: **hit anyway**.
 - It was dodged and, replayed without the dodge, would not have hit you: **not needed**.
-- It was dodged and, replayed without the dodge, would have hit you: **saved you**. The *slack* is how many updates later the same dodge could have begun and still worked (found by halving, up to `maxSlackTicks`, 30 updates; the last bin means at least that much). Slack 0 means it only just worked. The slack is shown in the bins `slackBinEdges` (3, 6, 12, 24 updates).
-No distance or time threshold is involved. The meter records what the replay needs but does not store it (`trace`: every real input frame, the updates on which a dash or jump began, and a copy of the game at the start of each attack). The ratings are derived, so the schema stays 8. They are available only for the fight just played, like the other meter measures; without them `dodges` is null and the avoid bar falls back to the evasion split.
+- It was dodged and, replayed without the dodge, would have hit you: **saved you**. (The rating also holds the *slack*, how many updates later the same dodge could have begun and still worked, up to `maxSlackTicks`, 30 updates; it is computed but no longer shown.)
+
+Each rating carries the update its attack started (`start`) and ended (`until`), and every dash or jump inside that stretch takes the attack's verdict. The rating is per attack, so two dashes in one attack get the same colour. No distance or time threshold is involved. The meter records what the replay needs but does not store it (`trace`: every real input frame, the updates on which a dash or jump began, and a copy of the game at the start of each attack). The ratings are derived, so the schema stays 8. They are available only for the fight just played, like the other meter measures; without them every dash or jump during an attack shows as "other" ("unrated").
 
 **The recommendation** is one sentence with no target or cut-off: it ranks counts within this one fight (`recommend` in `src/stats/details.ts`). (1) If no boss attack started it says there was nothing to judge. (2) Otherwise the attack that hit you the most is named, with how many of its appearances hit you (a tie goes to the larger share of its appearances, then to the first). (3) If nothing hit you, the attack whose openings you left unanswered the most is named (openings shorter than `minReplyWindowTicks`, 12 updates, are not counted: that is what can be physically answered, not a skill bar). (4) If nothing hit you and every opening was answered it says nothing stands out. Only the real fight counts, never the study. The advice can therefore change from fight to fight with whichever attack was the weak spot.
 
@@ -296,6 +298,7 @@ No distance or time threshold is involved. The meter records what the replay nee
 - A travel dash and an early dodge dash are told apart only by whether an attack was live.
 - Movement direction is plotted but never graded.
 - The distance plot is not part of the recommendation: standing far away is only a plot.
+- A dodge verdict is per attack, not per dash: two dashes in one attack share a colour.
 
 ### 7.7 The fight details file
 
@@ -306,12 +309,12 @@ The file is one JSON document saved as plain text, named `boss-trainer-details-Y
 | Field | Type | Meaning |
 |---|---|---|
 | `format` | string | Always `"boss-trainer-fight-details"`. |
-| `detailsVersion` | number | Version of this file; raised whenever the shape of `details` changes. Currently 1. |
+| `detailsVersion` | number | Version of this file; raised whenever the shape of `details` changes. Currently 2 (2026-10-02: `dodges` removed, `reply` has no `bins`, `avoided` has no `methods`, `moves` entries carry a verdict, harmless attacks left out). |
 | `exportedAt` | string | ISO 8601 date-time (UTC) when the file was built. |
 | `gameVersion` | string | `GAME_VERSION` of the game that built the file. |
 | `fight` | object | How the fight was set up: `bossId`, `presetId`, `dials`, `seed`, `study`, `playedAt` (as in a fight record, section 5), and `result` (`"victory"`, `"defeat"` or `"left"`). With `seed` and `dials` it can be found in the stats export. |
 | `attackNames` | object | The attack ids that appear in `details`, each with the name the game shows. |
-| `details` | object | The `FightDetails` of `src/stats/details.ts`: `avoided`, `hitRate`, `perMinute`, `reply`, `distance`, `timeline` (updates into the real fight), `moves`, `attackBands`, `dodges`, `numbers` (with the movement and the clock used by the plots) and `recommendation`. Times are in updates (1 update = 1/60 s), as in section 3. |
+| `details` | object | The `FightDetails` of `src/stats/details.ts`: `avoided`, `hitRate`, `perMinute`, `reply`, `distance`, `timeline` (updates into the real fight), `moves` (`dashes` and `jumps`, each a list of `{tick, verdict}` with the verdict `saved`, `unneeded`, `hitAnyway`, `unrated` or `outside`), `attackBands`, `numbers` (with the movement and the clock used by the plots) and `recommendation`. Times are in updates (1 update = 1/60 s), as in section 3. |
 
 ## 8. Replaying a fight
 

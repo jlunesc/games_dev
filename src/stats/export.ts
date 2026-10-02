@@ -38,7 +38,7 @@ export function buildExport(fights: readonly StoredFight[], now: Date): ExportFi
 
 export const DETAILS_EXPORT_FORMAT = 'boss-trainer-fight-details';
 /** Version of the fight details file (`docs/stats.md` section 7.7); raise it whenever `FightDetails` changes shape. */
-export const DETAILS_EXPORT_VERSION = 1;
+export const DETAILS_EXPORT_VERSION = 2;
 
 export interface DetailsExportDocument {
   format: string;

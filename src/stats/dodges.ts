@@ -21,6 +21,8 @@ export interface DodgeRating {
   boss: number;
   /** The update the attack's warning began, into the real fight. */
   start: number;
+  /** The last update on which a dash or jump still counts as made during the attack (its danger, or its last shot, is over). */
+  until: number;
   verdict: DodgeVerdict;
   /** For `saved`: how many updates later the dodge could have begun and still saved you (0: it only just worked; `T.maxSlackTicks`: at least that many). Otherwise null. */
   slackTicks: number | null;
@@ -91,7 +93,7 @@ export function rateDodges(fight: FightDef, analysis: Analysis, measures: Replay
     const until = Math.max(attack.firstDangerTick - studyTicks - danger.from + danger.to + 1, start.lastShotTick);
     const dodge = dodgeTicks.find((t) => t > start.tick && t <= until);
     if (dodge === undefined) continue;
-    const rating = { attackId: attack.attackId, boss: attack.boss, start: start.tick };
+    const rating = { attackId: attack.attackId, boss: attack.boss, start: start.tick, until };
     if (attack.outcome === 'hit') {
       ratings.push({ ...rating, verdict: 'hitAnyway', slackTicks: null });
       continue;

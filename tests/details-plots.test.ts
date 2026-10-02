@@ -1,22 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attackBandRects, columns, marksAt, pathPoints, spanRects, stackedRow, timelineMarks } from '../src/ui/details-plots';
-
-describe('columns', () => {
-  it('scales every column to the tallest one and stacks the parts, the first at the bottom', () => {
-    const rects = columns([[1, 1], [0, 4], [0, 0]], ['a', 'b'], 100, 40, 10);
-    // Three columns of width 80/3, the second the tallest (4 = the full 40).
-    const w = 80 / 3;
-    expect(rects).toHaveLength(3);
-    expect(rects[0]).toEqual({ x: 0, y: 30, w, h: 10, cls: 'a' });
-    expect(rects[1]).toEqual({ x: 0, y: 20, w, h: 10, cls: 'b' });
-    expect(rects[2]).toEqual({ x: w + 10, y: 0, w, h: 40, cls: 'b' });
-  });
-
-  it('draws nothing when every bin is empty or there are no bins', () => {
-    expect(columns([[0, 0], [0, 0]], ['a', 'b'], 100, 40, 4)).toEqual([]);
-    expect(columns([], ['a'], 100, 40, 4)).toEqual([]);
-  });
-});
+import { attackBandRects, marksAt, pathPoints, spanRects, stackedRow, timelineMarks } from '../src/ui/details-plots';
 
 describe('stackedRow', () => {
   it('splits the width in proportion and skips zeros', () => {

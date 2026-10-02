@@ -7,30 +7,6 @@ export interface Rect {
   cls: string;
 }
 
-/**
- * Stacked columns, one per bin, `series[i]` holding the heights of the stacked parts of bin `i` (bottom part first)
- * and `classes` their colour classes. Every column is scaled to the tallest bin, so bins can be compared. A bin
- * of zero draws nothing. Columns fill `width` and the tallest fills `height`, with `gap` between columns.
- */
-export function columns(series: number[][], classes: readonly string[], width: number, height: number, gap: number): Rect[] {
-  const n = series.length;
-  if (n === 0) return [];
-  const top = Math.max(0, ...series.map((parts) => parts.reduce((a, b) => a + b, 0)));
-  if (top === 0) return [];
-  const colWidth = (width - gap * (n - 1)) / n;
-  const rects: Rect[] = [];
-  series.forEach((parts, i) => {
-    let base = height;
-    parts.forEach((value, j) => {
-      if (value <= 0) return;
-      const h = (value / top) * height;
-      base -= h;
-      rects.push({ x: i * (colWidth + gap), y: base, w: colWidth, h, cls: classes[j] ?? '' });
-    });
-  });
-  return rects;
-}
-
 /** One bar split in proportion to `values` (a zero draws nothing); empty when every value is zero. */
 export function stackedRow(values: number[], classes: readonly string[], width: number, height: number): Rect[] {
   const total = values.reduce((a, b) => a + b, 0);

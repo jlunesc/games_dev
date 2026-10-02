@@ -1,8 +1,8 @@
-import type { FightDetails } from '../stats/details';
+import type { FightDetails, MoveMark, MoveVerdict } from '../stats/details';
 import { el } from './dom';
-import { attackBandRects, columns, marksAt, pathPoints, spanRects, stackedRow, timelineMarks, type Rect } from './details-plots';
+import { attackBandRects, marksAt, pathPoints, spanRects, stackedRow, timelineMarks, type Rect } from './details-plots';
 import { PATH_STEP } from '../stats/meter';
-import { slackBinLabels, percent, recommendationText, replyBinLabels, seconds } from './details-text';
+import { percent, recommendationText, seconds } from './details-text';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 /** The plots are drawn in this many units wide and scaled to the panel. */
@@ -53,28 +53,6 @@ function tile(value: string, label: string, sub: string): HTMLElement {
   return box;
 }
 
-/** A column chart with a label under each column and its count above it; `series[i]` stacks the parts of column i. */
-function columnChart(series: number[][], classes: readonly string[], labels: readonly string[]): SVGSVGElement {
-  const height = 96;
-  const svg = chart(height);
-  const plotTop = 12;
-  const plotHeight = 64;
-  const gap = 4;
-  addRects(svg, columns(series, classes, W, plotHeight, gap), 0, plotTop);
-  const colWidth = (W - gap * (series.length - 1)) / series.length;
-  series.forEach((parts, i) => {
-    const x = i * (colWidth + gap) + colWidth / 2;
-    const total = parts.reduce((a, b) => a + b, 0);
-    if (total > 0) {
-      const top = Math.max(...series.map((p) => p.reduce((a, b) => a + b, 0)));
-      addText(svg, x, plotTop + plotHeight - (total / top) * plotHeight - 3, String(total));
-    }
-    addText(svg, x, height - 4, labels[i] ?? '');
-  });
-  svg.append(svgNode('line', { x1: 0, x2: W, y1: plotTop + plotHeight, y2: plotTop + plotHeight }, 'plot-axis'));
-  return svg;
-}
-
 function timelineChart(details: FightDetails['timeline']): SVGSVGElement {
   const height = 64;
   const svg = chart(height + 14);
@@ -112,24 +90,23 @@ function addTimeLabels(svg: SVGSVGElement, ticks: number, y: number): void {
 const bandClass = (outcome: string): string => `${OUTCOME_CLASS[outcome] ?? 'plot-missed'} plot-band`;
 
 /**
- * Which way you moved in each boss attack, on the fight's own time axis: every attack is a tinted band (pale warning, stronger
- * danger, coloured by how it ended) the full height, and under it one lane where the stretches you held towards the boss and
- * the stretches you held away from it sit at the same level, since you cannot do both at once.
+ * One way of moving against the boss attacks, on the fight's own time axis: every attack that can hurt is a tinted band the
+ * full height (pale warning, stronger danger, coloured by how it ended), and under it one lane with the stretches in which
+ * you held that direction.
  */
-function directionChart(details: FightDetails, clock: Clock): SVGSVGElement {
+function directionChart(details: FightDetails, runs: [number, number][], cls: string): SVGSVGElement {
   const length = details.timeline.length;
   const height = 56;
   const lane = 20;
   const svg = chart(height + 14);
   addRects(svg, attackBandRects(details.attackBands, length, W, 0, height, bandClass));
-  addRects(svg, spanRects(clock.towardRuns, length, W, lane, 'plot-toward'), 0, height - lane - 2);
-  addRects(svg, spanRects(clock.awayRuns, length, W, lane, 'plot-away'), 0, height - lane - 2);
+  addRects(svg, spanRects(runs, length, W, lane, cls), 0, height - lane - 2);
   addTimeLabels(svg, length, height + 11);
   return svg;
 }
 
 /** Your dashes (or jumps) as lines through the middle strip of the plot, with the hits you landed above it and the hits you took below it. */
-function movesAndHitsChart(details: FightDetails, moves: number[], cls: string): SVGSVGElement {
+function movesAndHitsChart(details: FightDetails, moves: MoveMark[], cls: string): SVGSVGElement {
   const length = details.timeline.length;
   const height = 64;
   const mid = height / 2;
@@ -137,18 +114,29 @@ function movesAndHitsChart(details: FightDetails, moves: number[], cls: string):
   svg.append(svgNode('line', { x1: 0, x2: W, y1: mid, y2: mid }, 'plot-axis'));
   addMarks(svg, marksAt(details.timeline.landed, length, W, 0, mid - 8, 'plot-landed'), 1.5, 0.85);
   addMarks(svg, marksAt(details.timeline.taken, length, W, mid + 8, height, 'plot-taken'), 1.5, 0.85);
-  addMarks(svg, marksAt(moves, length, W, mid - 6, mid + 6, cls), 2);
+  addMarks(svg, marksAt(moves.map((m) => m.tick), length, W, mid - 6, mid + 6, cls), 2);
   addTimeLabels(svg, length, height + 11);
   return svg;
 }
 
-/** The boss attacks as tinted bands the full height, with a line down through them for each of your dashes (or jumps). */
-function movesAndAttacksChart(details: FightDetails, moves: number[], cls: string): SVGSVGElement {
+const VERDICTS: readonly { verdict: MoveVerdict; cls: string; label: string }[] = [
+  { verdict: 'saved', cls: 'plot-saved', label: 'Saved you' },
+  { verdict: 'unneeded', cls: 'plot-unneeded', label: 'Not needed' },
+  { verdict: 'hitAnyway', cls: 'plot-taken', label: 'Hit anyway' },
+  { verdict: 'unrated', cls: 'plot-unrated', label: 'Not rated' },
+  { verdict: 'outside', cls: 'plot-missed', label: 'Other' },
+];
+
+/** The boss attacks that can hurt as grey bands the full height, with a line down through them for each dash (or jump), coloured by what the replay without it found. */
+function movesAndAttacksChart(details: FightDetails, moves: MoveMark[]): SVGSVGElement {
   const length = details.timeline.length;
   const height = 44;
   const svg = chart(height + 14);
-  addRects(svg, attackBandRects(details.attackBands, length, W, 0, height, bandClass));
-  addMarks(svg, marksAt(moves, length, W, 1, height - 1, cls), 1.5);
+  addRects(svg, attackBandRects(details.attackBands, length, W, 0, height, () => 'plot-neutral plot-band'));
+  for (const v of VERDICTS) {
+    const ticks = moves.filter((m) => m.verdict === v.verdict).map((m) => m.tick);
+    addMarks(svg, marksAt(ticks, length, W, 1, height - 1, v.cls), 2, v.verdict === 'outside' ? 0.6 : 1);
+  }
   addTimeLabels(svg, length, height + 11);
   return svg;
 }
@@ -176,16 +164,6 @@ function stackedBar(values: number[], classes: readonly string[]): SVGSVGElement
   return svg;
 }
 
-const METHODS = [
-  { key: 'saved', cls: 'plot-saved', label: 'Dodge saved you' },
-  { key: 'unneeded', cls: 'plot-unneeded', label: 'Dodge not needed' },
-  { key: 'platform', cls: 'plot-platform', label: 'Platform' },
-  { key: 'cover', cls: 'plot-cover', label: 'Cover' },
-  { key: 'countered', cls: 'plot-countered', label: 'Countered' },
-  { key: 'unrated', cls: 'plot-unrated', label: 'Dodged' },
-  { key: 'outOfReach', cls: 'plot-never', label: 'Never threatened you' },
-] as const;
-
 /**
  * Draws the fight details screen into `panel`: the recommendation, four key numbers and the plots. Text goes in
  * with `textContent` and the plots are SVG elements made one by one, so nothing is parsed as HTML. Tapping Back calls `onBack`.
@@ -196,7 +174,7 @@ export function renderDetails(
   nameOf: (attackId: string) => string,
   onBack: () => void,
 ): void {
-  const { avoided, hitRate, reply, perMinute, distance, timeline, dodges } = details;
+  const { avoided, hitRate, reply, perMinute, distance, timeline } = details;
 
   const tiles = el('div', 'tiles');
   tiles.append(
@@ -206,7 +184,15 @@ export function renderDetails(
     tile(reply.medianTicks === null ? '–' : seconds(reply.medianTicks), 'Median reply time', 'after the attack ended'),
   );
 
-  const attacksBox = section('Boss attacks by outcome', 'How many times each attack came, and how each one ended.');
+  const outcomes = (): HTMLElement =>
+    legend([
+      { cls: 'plot-taken', label: 'Hit you' },
+      { cls: 'plot-landed', label: 'Dodged' },
+      { cls: 'plot-countered', label: 'Countered' },
+      { cls: 'plot-missed', label: 'Cut short' },
+    ]);
+
+  const attacksBox = section('Boss attacks by outcome', 'How many times each attack that can hurt came, and how each one ended. Moves that cannot hurt you, such as teleports, are left out.');
   const most = Math.max(1, ...details.numbers.boss.perAttack.map((a) => a.started));
   for (const a of details.numbers.boss.perAttack) {
     const stack = el('span', 'attack-stack');
@@ -224,47 +210,29 @@ export function renderDetails(
     attacksBox.append(row);
   }
   if (details.numbers.boss.perAttack.length === 0) attacksBox.append(el('p', 'detail-note', 'The boss did not attack.'));
-  else {
-    attacksBox.append(
-      legend([
-        { cls: 'plot-taken', label: 'Hit you' },
-        { cls: 'plot-landed', label: 'Dodged' },
-        { cls: 'plot-countered', label: 'Countered' },
-        { cls: 'plot-missed', label: 'Cut short' },
-      ]),
-    );
-  }
+  else attacksBox.append(outcomes());
 
   const { movement, clock } = details.numbers;
   const strips: HTMLElement[] = [];
   if (movement !== null && clock !== null) {
-    const outcomes = (): HTMLElement =>
-      legend([
-        { cls: 'plot-taken', label: 'Hit you' },
-        { cls: 'plot-landed', label: 'Dodged' },
-        { cls: 'plot-countered', label: 'Countered' },
-        { cls: 'plot-missed', label: 'Cut short' },
-      ]);
-    const directionBox = section(
-      'Timeline: boss attacks and your direction of movement',
-      'Each boss attack is a tinted band, from its warning (pale) to the end of its danger, coloured by how it ended. Under it, the stretches you walked towards the boss and away from it, on the same line.',
-    );
-    directionBox.append(
-      directionChart(details, clock),
-      outcomes(),
-      legend([
-        { cls: 'plot-toward', label: `Towards the boss ${seconds(movement.towardTicks)}` },
-        { cls: 'plot-away', label: `Away from it ${seconds(movement.awayTicks)}` },
-      ]),
-    );
+    const directionBox = (title: string, runs: [number, number][], cls: string, label: string, ticks: number): HTMLElement => {
+      const box = section(
+        title,
+        'Each boss attack that can hurt is a tinted band, from its warning (pale) to the end of its danger, coloured by how it ended. Under it, the stretches you held that direction.',
+      );
+      box.append(directionChart(details, runs, cls), outcomes(), legend([{ cls, label: `${label} ${seconds(ticks)}` }]));
+      return box;
+    };
+    const approaching = directionBox('Timeline: boss attacks and you approaching the boss', clock.towardRuns, 'plot-toward', 'Towards the boss', movement.towardTicks);
+    const retreating = directionBox('Timeline: boss attacks and you moving away', clock.awayRuns, 'plot-away', 'Away from the boss', movement.awayTicks);
 
     const moveBoxes = ([
-      { moves: details.moves.dashes, cls: 'plot-dash', one: 'Dash', many: 'Dashes', lower: 'dashes', rate: perMinute.dashes },
-      { moves: details.moves.jumps, cls: 'plot-jump', one: 'Jump', many: 'Jumps', lower: 'jumps', rate: perMinute.jumps },
+      { moves: details.moves.dashes, cls: 'plot-dash', one: 'dash', many: 'Dashes', lower: 'dashes', rate: perMinute.dashes },
+      { moves: details.moves.jumps, cls: 'plot-jump', one: 'jump', many: 'Jumps', lower: 'jumps', rate: perMinute.jumps },
     ] as const).flatMap((m) => {
       const hitsBox = section(
         `Timeline: your ${m.lower}, hits landed and hits taken`,
-        `Each ${m.one.toLowerCase()} is a line across the middle. Hits you landed are above it, hits you took below it. About ${Math.round(m.rate)} ${m.lower} a minute.`,
+        `Each ${m.one} is a line across the middle. Hits you landed are above it, hits you took below it. About ${Math.round(m.rate)} ${m.lower} a minute.`,
       );
       hitsBox.append(
         movesAndHitsChart(details, m.moves, m.cls),
@@ -274,12 +242,19 @@ export function renderDetails(
           { cls: 'plot-taken', label: `Taken ${timeline.taken.length}` },
         ]),
       );
-      const attacksBox2 = section(
-        `Timeline: boss attacks and your ${m.lower}`,
-        `The boss attacks as bands, with a line for each ${m.one.toLowerCase()}. A line inside a band is a ${m.one.toLowerCase()} made during that attack.`,
+      const escapeBox = section(
+        `Timeline: did your ${m.lower} get you out of attacks?`,
+        `Each boss attack that can hurt is a grey band. Each ${m.one} is a line, coloured by what happened when the game replayed that attack without it: "saved you" (it would have hit), "not needed" (it would have missed anyway) or "hit anyway". "Other": made when no attack could hurt you, or during one you countered.`,
       );
-      attacksBox2.append(movesAndAttacksChart(details, m.moves, m.cls), outcomes(), legend([{ cls: m.cls, label: m.one }]));
-      return [hitsBox, attacksBox2];
+      escapeBox.append(
+        movesAndAttacksChart(details, m.moves),
+        legend(
+          VERDICTS.map((v) => ({ ...v, count: m.moves.filter((x) => x.verdict === v.verdict).length }))
+            .filter((v) => v.count > 0)
+            .map((v) => ({ cls: v.cls, label: `${v.label} ${v.count}` })),
+        ),
+      );
+      return [hitsBox, escapeBox];
     });
 
     const gapBox = section('Timeline: distance to the boss', 'The gap through the fight. Green lines: you hit the boss. Red lines: it hit you. Shaded: a boss was attacking. Under it, the share of the fight spent close to, a middling way from, and far from the boss.');
@@ -293,7 +268,7 @@ export function renderDetails(
       ]),
     );
 
-    strips.push(directionBox, ...moveBoxes, gapBox);
+    strips.push(approaching, retreating, ...moveBoxes, gapBox);
   }
 
   const timelineBox = section('Timeline: your hits and swings', 'Hits you landed are above the line, hits you took below it, swings on it.');
@@ -305,59 +280,6 @@ export function renderDetails(
       { cls: 'plot-swing', label: `Swings ${timeline.swings.length}` },
     ]),
   );
-
-  const avoidBox = section(
-    'How you avoided boss attacks',
-    'Attacks that did not hit you. A dash or jump during an attack is replayed without it: "saved you" if it would have hit, "not needed" if it would have missed anyway. "Never threatened you": it could not have reached you where you stood.',
-  );
-  avoidBox.append(
-    stackedBar(METHODS.map((m) => avoided.methods[m.key]), METHODS.map((m) => m.cls)),
-    legend(METHODS.filter((m) => avoided.methods[m.key] > 0).map((m) => ({ cls: m.cls, label: `${m.label} ${avoided.methods[m.key]}` }))),
-  );
-
-  const replyBox = section('Reply time after boss attacks', 'Time from a boss attack ending to you starting a swing, for attacks you replied to.');
-  replyBox.append(
-    columnChart(reply.bins.map((b) => [b.hit, b.missed]), ['plot-landed', 'plot-missed'], replyBinLabels()),
-    legend([
-      { cls: 'plot-landed', label: 'Swing hit' },
-      { cls: 'plot-missed', label: 'Swing missed' },
-    ]),
-  );
-
-  const perAttackBox = section('Reply rate by boss attack', 'How often you replied to each attack, and how fast.');
-  const slowest = Math.max(1, ...reply.perAttack.map((a) => a.medianTicks ?? 0));
-  for (const a of reply.perAttack) {
-    const row = el('div', 'attack-row');
-    const bar = el('span', 'attack-bar');
-    const fill = el('span', 'attack-fill');
-    fill.style.setProperty('--w', `${a.medianTicks === null ? 0 : Math.max(2, (a.medianTicks / slowest) * 100)}%`);
-    bar.append(fill);
-    row.append(
-      el('span', 'attack-name', nameOf(a.attackId)),
-      bar,
-      el('span', 'attack-text', `${a.replied} of ${a.answerable}${a.medianTicks === null ? '' : `, ${seconds(a.medianTicks)}`}`),
-    );
-    perAttackBox.append(row);
-  }
-  if (reply.perAttack.length === 0) perAttackBox.append(el('p', 'detail-note', 'No attack opened a long enough gap to reply in.'));
-
-  const dodgeBox = section(
-    'Dodge ratings',
-    'For each attack you dashed or jumped during, the game replays it without the dodge. How much later could the dodge you saved yourself with have been, and still worked?',
-  );
-  if (dodges === null || dodges.saved + dodges.unneeded + dodges.hitAnyway === 0) {
-    dodgeBox.append(el('p', 'detail-note', 'You did not dash or jump during any attack.'));
-  } else {
-    dodgeBox.append(
-      el('p', 'detail-note', `${dodges.saved + dodges.unneeded + dodges.hitAnyway} attacks with a dash or jump: ${dodges.saved} saved you, ${dodges.unneeded} were not needed, ${dodges.hitAnyway} hit you anyway.`),
-    );
-    if (dodges.saved > 0) {
-      dodgeBox.append(
-        columnChart(dodges.slackBins.map((n) => [n]), ['plot-saved'], slackBinLabels()),
-        el('p', 'detail-note', 'Left: it only just worked. Right: lots of room to spare.'),
-      );
-    }
-  }
 
   const back = el('button', 'row focused');
   back.type = 'button';
@@ -374,10 +296,6 @@ export function renderDetails(
     timelineBox,
     ...strips,
     attacksBox,
-    avoidBox,
-    replyBox,
-    perAttackBox,
-    dodgeBox,
     rows,
   );
   panel.scrollTop = 0;

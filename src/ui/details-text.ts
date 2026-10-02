@@ -1,6 +1,5 @@
 import type { FightDef } from '../game/fight';
 import { TICK_RATE } from '../engine/time';
-import { DETAILS_TUNING as T } from '../stats/details-tuning';
 import type { Recommendation } from '../stats/details';
 
 /** Attack id to the name the player knows it by, over every boss of the fight; an unknown id stays as it is. */
@@ -17,22 +16,6 @@ export const percent = (share: number | null): string => (share === null ? '–'
 
 /** Updates as seconds with at most two decimals ("0.5 s", "1.25 s"). */
 export const seconds = (ticks: number): string => `${Math.round((ticks / TICK_RATE) * 100) / 100} s`;
-
-/** Seconds without the unit, for a range label. */
-const sec = (ticks: number): string => `${Math.round((ticks / TICK_RATE) * 100) / 100}`;
-
-/** Labels for bins cut by `edges` (in updates): "under 0.25 s", "0.25 to 0.5 s", ..., "1.5 s or more". */
-export function binLabels(edges: readonly number[], first?: string): string[] {
-  const labels = edges.map((edge, i) => {
-    if (i === 0) return first ?? `under ${sec(edge)}`;
-    return `${sec(edges[i - 1]!)}–${sec(edge)}`;
-  });
-  return [...labels, `${sec(edges[edges.length - 1]!)}+`];
-}
-
-export const replyBinLabels = (): string[] => binLabels(T.replyBinEdges);
-/** How much later a dodge could have begun and still saved the player ("under 0.05 s", ..., "0.4+"). */
-export const slackBinLabels = (): string[] => binLabels(T.slackBinEdges);
 
 /** "once", "twice", "3 times". */
 const times = (n: number): string => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);

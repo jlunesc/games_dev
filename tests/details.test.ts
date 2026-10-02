@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeRun, type Analysis, type AttackOccurrence, type PunishWindow } from '../src/stats/analyze';
-import { fightDetails } from '../src/stats/details';
+import type { FightDef } from '../src/game/fight';
+import { fightDetails, harmlessAttacks } from '../src/stats/details';
 import type { DodgeRating } from '../src/stats/dodges';
+import { resolveFight } from '../src/bosses/resolve';
 import { standAt } from './boss-helpers';
 import { QUIET_BOSS, withInput } from './helpers';
 
@@ -86,37 +88,6 @@ describe('attacks avoided', () => {
   it('has no share when nothing was resolved', () => {
     expect(fightDetails(base()).avoided.share).toBeNull();
   });
-
-  it('splits how attacks were avoided, a dodge by what the replay without it said', () => {
-    const a = base({
-      attacks: [
-        attack({ startTick: 100, evasion: 'dash' }),
-        attack({ startTick: 200, evasion: 'dash' }),
-        attack({ startTick: 300, evasion: 'jump' }),
-        attack({ startTick: 400, evasion: 'platform' }),
-        attack({ startTick: 500, evasion: 'cover' }),
-        attack({ startTick: 600, evasion: 'distance' }),
-        attack({ startTick: 700, evasion: 'distance' }),
-        attack({ startTick: 800, outcome: 'countered', evasion: null }),
-      ],
-    });
-    const rating = (start: number, verdict: DodgeRating['verdict']): DodgeRating => ({ attackId: 'slam', boss: 0, start, verdict, slackTicks: null });
-    const ratings = [rating(100, 'saved'), rating(200, 'unneeded'), rating(300, 'saved'), rating(700, 'unneeded')];
-    expect(fightDetails(a, undefined, ratings).avoided.methods).toEqual({
-      saved: 2,
-      unneeded: 2,
-      platform: 1,
-      cover: 1,
-      outOfReach: 1,
-      countered: 1,
-      unrated: 0,
-    });
-  });
-
-  it('counts a dodge nobody replayed as unrated and never as out of reach', () => {
-    const a = base({ attacks: [attack({ evasion: 'dash' }), attack({ evasion: 'distance' })] });
-    expect(fightDetails(a).avoided.methods).toMatchObject({ unrated: 1, outOfReach: 1, saved: 0, unneeded: 0 });
-  });
 });
 
 describe('hit rate and actions per minute', () => {
@@ -162,7 +133,7 @@ describe('replying to attacks', () => {
     expect(r).toMatchObject({ answerable: 4, replied: 3, share: 0.75 });
   });
 
-  it('takes the median of the reply times and bins them with the hits told apart', () => {
+  it('takes the median of the reply times', () => {
     const a = withWindows([
       window({ swung: true, replyTicks: 10, hit: true, hitTicks: 14 }),
       window({ swung: true, replyTicks: 20 }),
@@ -170,10 +141,6 @@ describe('replying to attacks', () => {
     ]);
     const r = fightDetails(a).reply;
     expect(r.medianTicks).toBe(20);
-    expect(r.bins.reduce((n, b) => n + b.hit + b.missed, 0)).toBe(3);
-    expect(r.bins[0]).toMatchObject({ hit: 1, missed: 0 });
-    expect(r.bins[1]).toMatchObject({ hit: 0, missed: 1 });
-    expect(r.bins[3]).toMatchObject({ hit: 1, missed: 0 });
   });
 
   it('has no median when the player never replied', () => {
@@ -226,18 +193,70 @@ describe('timeline', () => {
   });
 });
 
-describe('dodges', () => {
-  const rating = (verdict: DodgeRating['verdict'], slackTicks: number | null): DodgeRating => ({ attackId: 'slam', boss: 0, start: 100, verdict, slackTicks });
+describe('dashes and jumps', () => {
+  const rating = (start: number, until: number, verdict: DodgeRating['verdict']): DodgeRating => ({ attackId: 'slam', boss: 0, start, until, verdict, slackTicks: null });
 
-  it('is null without ratings', () => {
-    expect(fightDetails(base()).dodges).toBeNull();
+  it('tells each dash and jump by the rating of the attack it was made in, and outside when none was live', () => {
+    const a = base({ dashTicks: [110, 160, 500], jumpTicks: [120, 305], attacks: [attack({ startTick: 100 }), attack({ startTick: 300, outcome: 'hit', evasion: null })] });
+    const ratings = [rating(100, 150, 'saved'), rating(300, 350, 'hitAnyway')];
+    const { moves } = fightDetails(a, undefined, ratings);
+    expect(moves.dashes).toEqual([
+      { tick: 110, verdict: 'saved' },
+      { tick: 160, verdict: 'outside' },
+      { tick: 500, verdict: 'outside' },
+    ]);
+    expect(moves.jumps).toEqual([
+      { tick: 120, verdict: 'saved' },
+      { tick: 305, verdict: 'hitAnyway' },
+    ]);
   });
 
-  it('counts each verdict and bins how much later the saving dodges could have been, only just first', () => {
-    const ratings = [rating('saved', 0), rating('saved', 2), rating('saved', 10), rating('saved', 30), rating('unneeded', null), rating('hitAnyway', null)];
-    const { dodges } = fightDetails(base(), undefined, ratings);
-    expect(dodges).toMatchObject({ saved: 4, unneeded: 1, hitAnyway: 1 });
-    expect(dodges!.slackBins).toEqual([2, 0, 1, 0, 1]);
+  it('does not count a dash on the update the warning began on, as in the dodge rating', () => {
+    const a = base({ dashTicks: [100], attacks: [attack({ startTick: 100 })] });
+    expect(fightDetails(a, undefined, [rating(100, 150, 'unneeded')]).moves.dashes[0]!.verdict).toBe('outside');
+  });
+
+  it('calls a move during an attack unrated when no ratings were given', () => {
+    const a = base({ dashTicks: [110, 400], attacks: [attack({ startTick: 100, firstDangerTick: 130 })] });
+    expect(fightDetails(a).moves.dashes.map((m) => m.verdict)).toEqual(['unrated', 'outside']);
+  });
+});
+
+describe('attacks that cannot hurt', () => {
+  const slip = (boss: number, id: string): boolean => boss === 0 && id === 'slip';
+
+  it('leaves them out of the counts, the bands and the movement marks', () => {
+    const a = base({
+      dashTicks: [110],
+      attacks: [attack({ attackId: 'slip', startTick: 100 }), attack({ attackId: 'slam', startTick: 300, outcome: 'hit', evasion: null })],
+    });
+    const ratings: DodgeRating[] = [{ attackId: 'slip', boss: 0, start: 100, until: 150, verdict: 'unneeded', slackTicks: null }];
+    const d = fightDetails(a, undefined, ratings, slip);
+    expect(d.avoided).toMatchObject({ avoided: 0, hit: 1, total: 1 });
+    expect(d.numbers.boss.perAttack.map((x) => x.attackId)).toEqual(['slam']);
+    expect(d.attackBands.map((b) => b.attackId)).toEqual(['slam']);
+    expect(d.moves.dashes).toEqual([{ tick: 110, verdict: 'outside' }]);
+  });
+
+  it('leaves their openings out of the reply numbers', () => {
+    const a = withWindows([window({ attackId: 'slip' }), window({ attackId: 'slam' })]);
+    expect(fightDetails(a, undefined, undefined, slip).reply.answerable).toBe(1);
+  });
+
+  it('names the attacks of a boss file with no hit box and no shots', () => {
+    const fight = {
+      bosses: [
+        {
+          attacks: [
+            { id: 'slip', hits: [] },
+            { id: 'blast', hits: [], shots: [{}] },
+            { id: 'slam', hits: [{}] },
+          ],
+        },
+      ],
+    } as unknown as FightDef;
+    const harmless = harmlessAttacks(fight);
+    expect([harmless(0, 'slip'), harmless(0, 'blast'), harmless(0, 'slam'), harmless(0, 'unknown'), harmless(1, 'slip')]).toEqual([true, false, false, false, false]);
   });
 });
 
@@ -292,5 +311,14 @@ describe('recommendation', () => {
 
   it('gives no block for a fight with no real time (left during the study)', () => {
     expect(fightDetails(base({ fightSeconds: 0, ticks: 300, study: { rounds: 1, ticks: 300, attacks: 1, hits: 0 } })).recommendation).toEqual({ kind: 'few' });
+  });
+});
+
+describe('harmlessAttacks on the real bosses', () => {
+  it('finds the slips and blinks and none of the attacks that hurt', () => {
+    const veil = harmlessAttacks(resolveFight('veil-dancer', 1).fight);
+    expect([veil(0, 'veil-slip'), veil(0, 'blink-away'), veil(0, 'needle-fan'), veil(0, 'shadow-cut'), veil(0, 'twin-cut')]).toEqual([true, true, false, false, false]);
+    const hound = harmlessAttacks(resolveFight('ashen-hound', 1).fight);
+    expect([hound(0, 'slip'), hound(0, 'feint'), hound(0, 'skitter')]).toEqual([true, true, true]);
   });
 });
