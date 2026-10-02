@@ -29,7 +29,7 @@ The owner and Claude build the specification together, one topic at a time. Clau
 
 - **LOCKED**: first language is **TypeScript (strict mode)**, chosen for fast iteration while tuning boss timings. Rust was considered (stronger compile-time safety) and is kept as a possible later move.
 - **LOCKED**: the game is a **web app**, first delivered as an **installable PWA** that runs offline on the phone after the first install. Controller input uses the browser Gamepad API.
-- **LOCKED**: the installed app is **landscape only** (the manifest asks for it), because the game is a fixed 16:9 side view and would be a tiny strip in portrait.
+- **LOCKED** (owner, 2026-10-02, reverses the earlier landscape-only decision): the installed app follows the phone's rotation (the manifest says `"orientation": "any"`), so menus and Fight details can be read upright. The fight is still a fixed 16:9 side view and is small in portrait, so hold the phone sideways to play.
 - **LOCKED** (owner, 2026-09-21): the installed web app (PWA) is the delivery for now and the **APK question is dropped**; it can be reopened if something feels missing. Earlier note: a real **APK is a possible later step**. Known routes that need no rewrite: Capacitor (bundles the built files inside an Android shell) or Bubblewrap / Trusted Web Activity (wraps the hosted PWA). Check the 8BitDo controller behaviour inside the wrapper when the time comes.
 - **LOCKED**: **public hosting is acceptable**, with strong emphasis on security (section 4).
 - **DEFAULT**: rendering with plain Canvas 2D, no heavy game engine.

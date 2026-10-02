@@ -51,7 +51,7 @@ The last row, **Reset to preset**, puts every value back to the preset (Easy, No
 **The summary.** After every fight (a win, a loss, or leaving with the top button) a summary appears instead of the next fight starting. It shows the result ("Victory!", "Defeated" or "You left the fight"), the time (the real fight only; if you played a study first, a "Study time" line shows how long it took), the phase reached, the hits you took, the boss's health left, and the attack that hurt you most (if nothing hit you, it says "You were never hit."). The bottom button (or tapping "Back to the menu") returns to the menu. For about half a second at the start the controller is ignored, so a button you were still pressing in the fight does not skip the summary by accident. Under the lines, a last line says whether the fight was saved on the phone (see "Stats and export" below).
 
 ### The fight
-The installed app opens sideways (landscape) by itself. If it does not after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site. In a normal Chrome tab, turn the phone sideways yourself.
+The installed app follows how you hold the phone (since 2026-10-02 it is no longer forced sideways): hold it upright to read the menus and Fight details, and sideways to play, because the fight is a 16:9 side view and is small in portrait. If it still opens forced sideways after an update (Android can take a while to notice a changed app setting), uninstall the app and install it again from the site.
 
 Controls: left stick or d-pad to move, bottom button to jump (hold it for a higher jump), left button to attack, right shoulder to dash.
 
