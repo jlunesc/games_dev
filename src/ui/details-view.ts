@@ -1,7 +1,7 @@
 import type { FightDetails } from '../stats/details';
 import { el } from './dom';
 import { columns, stackedRow, timelineMarks, type Rect } from './details-plots';
-import { dodgeBinLabels, percent, recommendationText, replyBinLabels, seconds } from './details-text';
+import { dodgeBinLabels, numberBlocks, percent, recommendationText, replyBinLabels, seconds } from './details-text';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 /** The plots are drawn in this many units wide and scaled to the panel. */
@@ -122,6 +122,21 @@ export function renderDetails(
     tile(reply.medianTicks === null ? '–' : seconds(reply.medianTicks), 'Median reply time', 'after the attack ended'),
   );
 
+  const numbersBox = section(
+    'The numbers',
+    'Plain counts of the real fight. An arena width is the whole floor from wall to wall.',
+  );
+  for (const block of numberBlocks(details.numbers, nameOf)) {
+    const table = el('div', 'stat-table');
+    table.append(el('h3', 'stat-title', block.title));
+    for (const [label, value] of block.rows) {
+      const row = el('div', 'stat-row');
+      row.append(el('span', 'stat-label', label), el('span', 'stat-value', value));
+      table.append(row);
+    }
+    numbersBox.append(table);
+  }
+
   const timelineBox = section('The fight', 'Hits you landed are above the line, hits you took below it, swings on it.');
   timelineBox.append(
     timelineChart(timeline),
@@ -198,8 +213,9 @@ export function renderDetails(
 
   panel.replaceChildren(
     el('h1', undefined, 'Fight details'),
-    el('p', 'recommendation', recommendationText(details.recommendation)),
+    el('p', 'recommendation', recommendationText(details.recommendation, nameOf)),
     tiles,
+    numbersBox,
     timelineBox,
     avoidBox,
     replyBox,

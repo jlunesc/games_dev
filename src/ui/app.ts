@@ -26,6 +26,7 @@ import type { FightResult, FightSummary } from '../game/summary';
 import { analyzeRecording } from '../stats/analyze';
 import { buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
 import { fightDetails, type FightDetails } from '../stats/details';
+import { createMeter } from '../stats/meter';
 import { buildRecord, type Recording } from '../stats/record';
 import { openIndexedDbStore, type FightStore } from '../stats/store';
 import { createSound } from './sound';
@@ -561,11 +562,12 @@ export function mountApp(root: HTMLElement): void {
       // Let the browser paint the summary or the end pause before the replay below runs (it can take a moment
       // on a long fight and would otherwise freeze the screen on the last fight frame).
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
-      const analysis = analyzeRecording(recording);
+      const meter = createMeter();
+      const analysis = analyzeRecording(recording, meter.observe);
       // A fight left during the study has no fight time: no details at all.
       if (analysis.fightSeconds > 0) {
         try {
-          details = fightDetails(analysis);
+          details = fightDetails(analysis, meter.result());
         } catch {
           details = null; // a fault in the details must never stop the fight being saved
         }

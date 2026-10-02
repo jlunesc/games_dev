@@ -706,15 +706,15 @@ Every hand-built boss now has one question it asks you, and the game has new mec
 - [ ] The redone fights are saved, and the Stats show them as Custom.
 
 ## Fight details
-After a fight (win, loss or leaving with the hold), the after-fight menu gets a **Fight details** row a moment after the summary opens (the fight is analysed first). It opens a screen with one recommendation sentence on top, four key numbers (attacks avoided, swings that hit, attacks replied to, median reply time) and plots. No row if you leave during the study.
+After a fight (win, loss or leaving with the hold), the after-fight menu gets a **Fight details** row a moment after the summary opens (the fight is analysed first). It opens a screen with one recommendation sentence on top, four key numbers (attacks avoided, swings that hit, attacks replied to, median reply time), a numbers table and plots. No row if you leave during the study.
 - [ ] The Fight details row appears a moment after the summary opens, and the highlighted row does not jump to a different choice when it appears.
 - [ ] The screen fits the phone width in both orientations and scrolls with a finger. With the controller, up and down scroll and the confirm or back button returns to the summary.
-- [ ] The recommendation on top is one sentence that quotes its numbers and the target. Does it point at what you felt went wrong? Is it understandable without knowing the game's numbers?
+- [ ] The recommendation on top is one sentence naming the attack that hurt you most in this fight (or, if nothing hit you, the one whose openings you did not reply to). Does it point at what you felt went wrong? Does it change from fight to fight?
 - [ ] The timeline shows your swings, hits landed (above the line) and hits taken (below it) where you remember them.
 - [ ] Reply time: do the bars and the "Reply by attack" rows make sense? A reply time is from the boss's attack ending to you starting a swing.
 - [ ] A short fight with little to say says there are too few attacks and not a wrong claim. A fight after another fight never shows the earlier fight's numbers.
 - [ ] Two-boss fights name the attacks of both bosses correctly.
-- [ ] The targets (70% avoided, 50% swings that hit, 60% replied to, 0.5 s reply) feel right? They are in `src/stats/details-tuning.ts`.
+- [ ] A flawless fight says nothing stands out; a fight with no boss attack says there was nothing to judge.
 
 ## Generated boss figures
 Every generated boss now has its own look: a body plan (two-legged, beast, floating wisp, stacked totem or wide crawler) with its own head, arm, back piece and trim. The look depends only on the fight's seed, so Redo gives a new boss and a new look. Hand-built bosses look exactly as before.
@@ -745,6 +745,14 @@ Bosses now use close-range attacks mainly when you are close (`docs/bosses.md` s
 - [ ] Standing still next to a boss, the fight feels the same as before.
 - [ ] The Ember Duelist is unchanged.
 - [ ] If it feels too strict or too loose, `rangeBias` in each boss file is the number to change (0.25 now; 1 turns it off).
+
+## The numbers table in Fight details
+Added 2026-10-02 (`docs/stats.md` section 7.6). It sits under the four big numbers.
+- [ ] After a fight, open Fight details: there is a "The numbers" section with four blocks (What you did, What the boss did, How you moved, The clock).
+- [ ] The counts agree with what you remember: swings, dashes, jumps, hits you took; the boss's attacks by name add up to "Attacks started".
+- [ ] Walk only to the right for a few seconds in a fight: "Travelled right" is clearly bigger than "Travelled left", and "Holding right" shows most of the time. Stand against a wall for a while: "Next to a wall" grows.
+- [ ] The phases and the clock add up to the fight length (a pair fight has one row per boss).
+- [ ] Tell me which numbers you read and which you ignore, and what is missing.
 
 ## Things I would like to know
 After playing, answer these in plain words:

@@ -10,6 +10,7 @@ import { step } from '../game/step';
 import { bossAt, bossCount, createInitialState, isDowned, type GameState, type PlayerState } from '../game/state';
 import { bossDefFor } from '../game/turns';
 import { decodeInputs } from './input-log';
+import type { UpdateObserver } from './meter';
 import type { FightRecord, Recording } from './record';
 
 /** Distance bands between player and boss, in world units. */
@@ -384,6 +385,8 @@ export function analyzeRun(
   frames: readonly InputFrame[],
   /** Only for the report's `study.rounds`; everything else is read from the states. */
   studyRounds = 0,
+  /** Sees every update of the replay as it goes (see `createMeter`); it cannot change the analysis. */
+  observer?: UpdateObserver,
 ): Analysis {
   const fight = asFight(source);
   let state = initial;
@@ -605,6 +608,7 @@ export function analyzeRun(
     if (before.phase !== 'fight') break;
     state = step(before, frame, fight);
     const after = state;
+    observer?.(before, after, frame);
     const { events, tick } = after;
 
     const dashStarted = events.includes('dash');
@@ -814,19 +818,23 @@ export function analyzeRun(
 export function analyzeFight(
   // `study` is missing in records of schema version 1: those analyse as a fight without a study.
   record: Pick<FightRecord, 'bossId' | 'dials' | 'seed' | 'input'> & { study?: FightRecord['study'] },
+  observer?: UpdateObserver,
 ): Analysis {
   const fight = applyDialsToFight(resolveFight(record.bossId, record.seed).fight, record.dials);
   const study = record.study ?? 0;
-  return analyzeRun(fight, createInitialState(fight, record.seed, study), decodeInputs(record.input), study);
+  return analyzeRun(fight, createInitialState(fight, record.seed, study), decodeInputs(record.input), study, observer);
 }
 
 /** Analyzes a fight just recorded, taking everything (boss, dials, seed, study) from its meta, so none can be forgotten. */
-export function analyzeRecording(recording: Recording): Analysis {
-  return analyzeFight({
-    bossId: recording.meta.bossId,
-    dials: recording.meta.dials,
-    seed: recording.meta.seed,
-    input: recording.runs,
-    study: recording.meta.study,
-  });
+export function analyzeRecording(recording: Recording, observer?: UpdateObserver): Analysis {
+  return analyzeFight(
+    {
+      bossId: recording.meta.bossId,
+      dials: recording.meta.dials,
+      seed: recording.meta.seed,
+      input: recording.runs,
+      study: recording.meta.study,
+    },
+    observer,
+  );
 }

@@ -229,63 +229,52 @@ describe('dodge timing', () => {
 });
 
 describe('recommendation', () => {
-  const good = (): Analysis =>
-    withWindows(
-      many(8, () => window({ swung: true, replyTicks: 10, hit: true, hitTicks: 14 })),
-      {
-        attacks: many(10, () => attack()),
-        swingTicks: many(10, (i) => 100 + i * 50),
-        bossHitTicks: many(8, (i) => 105 + i * 50),
-      },
-    );
+  const hit = (attackId: string) => attack({ attackId, outcome: 'hit', evasion: null, damageTaken: 1 });
+  const dodged = (attackId: string) => attack({ attackId, outcome: 'dodged' });
+  const answered = (attackId: string) => window({ attackId, swung: true, replyTicks: 10 });
+  const ignored = (attackId: string) => window({ attackId });
 
-  it('says nothing stands out when every number reaches its target', () => {
-    expect(fightDetails(good()).recommendation).toEqual({ kind: 'none' });
+  it('names the attack that hit the player most', () => {
+    const a = base({ attacks: [hit('slam'), hit('slam'), hit('sweep'), dodged('sweep'), dodged('sweep'), dodged('slam')] });
+    expect(fightDetails(a).recommendation).toEqual({ kind: 'hurt', attackId: 'slam', hits: 2, resolved: 3 });
   });
 
-  it('says there is too little to tell when the numbers rest on too few cases', () => {
+  it('breaks a tie in hits by the larger share of its appearances, then by the first one', () => {
+    const share = base({ attacks: [hit('slam'), hit('sweep'), dodged('slam'), dodged('slam')] });
+    expect(fightDetails(share).recommendation).toMatchObject({ attackId: 'sweep', hits: 1, resolved: 1 });
+    const first = base({ attacks: [hit('slam'), hit('sweep')] });
+    expect(fightDetails(first).recommendation).toMatchObject({ attackId: 'slam' });
+  });
+
+  it('names one hit as much as many: there is no number it has to reach', () => {
+    const a = base({ attacks: [hit('slam'), ...many(30, () => dodged('slam')), ...many(10, () => dodged('sweep'))] });
+    expect(fightDetails(a).recommendation).toEqual({ kind: 'hurt', attackId: 'slam', hits: 1, resolved: 31 });
+  });
+
+  it('counts only the real fight and leaves out interrupted attacks', () => {
+    const a = base({ attacks: [attack({ attackId: 'slam', outcome: 'hit', evasion: null, study: true }), attack({ attackId: 'slam', outcome: 'interrupted', evasion: null }), dodged('sweep')] });
+    expect(fightDetails(a).recommendation).toEqual({ kind: 'none' });
+  });
+
+  it('names the attack whose openings went unanswered most when nothing hit', () => {
+    const a = withWindows([answered('slam'), ignored('slam'), ignored('slam'), ignored('sweep'), answered('sweep')], {
+      attacks: [dodged('slam'), dodged('sweep')],
+    });
+    expect(fightDetails(a).recommendation).toEqual({ kind: 'unanswered', attackId: 'slam', missed: 2, answerable: 3 });
+  });
+
+  it('does not count an opening too short to answer', () => {
+    const a = withWindows([window({ ticks: 4 }), answered('slam')], { attacks: [dodged('slam')] });
+    expect(fightDetails(a).recommendation).toEqual({ kind: 'none' });
+  });
+
+  it('says nothing stands out when nothing hit and every opening was answered', () => {
+    const a = withWindows(many(6, () => answered('slam')), { attacks: many(6, () => dodged('slam')) });
+    expect(fightDetails(a).recommendation).toEqual({ kind: 'none' });
+  });
+
+  it('says there is nothing to judge when the boss never attacked', () => {
     expect(fightDetails(base()).recommendation).toEqual({ kind: 'few' });
-  });
-
-  it('names avoiding attacks when too many hit', () => {
-    const a = {
-      ...good(),
-      attacks: [...many(3, () => attack()), ...many(5, () => attack({ outcome: 'hit', evasion: null, damageTaken: 1 }))],
-    };
-    expect(fightDetails(a).recommendation).toEqual({ kind: 'avoid', avoided: 3, total: 8 });
-  });
-
-  it('names the aim when few swings hit', () => {
-    const a = { ...good(), bossHitTicks: [105] };
-    expect(fightDetails(a).recommendation).toEqual({ kind: 'aim', hits: 1, swings: 10 });
-  });
-
-  it('names replying when few attacks were answered', () => {
-    const a = withWindows(many(8, (i) => window(i < 2 ? { swung: true, replyTicks: 10 } : {})), {
-      attacks: many(10, () => attack()),
-      swingTicks: many(10, (i) => 100 + i * 50),
-      bossHitTicks: many(8, (i) => 105 + i * 50),
-    });
-    expect(fightDetails(a).recommendation).toEqual({ kind: 'reply', replied: 2, answerable: 8 });
-  });
-
-  it('names reply speed when replies are slow', () => {
-    const a = withWindows(many(8, () => window({ swung: true, replyTicks: 80 })), {
-      attacks: many(10, () => attack()),
-      swingTicks: many(10, (i) => 100 + i * 50),
-      bossHitTicks: many(8, (i) => 105 + i * 50),
-    });
-    expect(fightDetails(a).recommendation).toEqual({ kind: 'speed', medianTicks: 80 });
-  });
-
-  it('picks the biggest shortfall against its target', () => {
-    // Avoided 4 of 8 (50%, 29% short of 70%) and reply median 90 (200% over 30, capped at 100%): speed wins.
-    const a = withWindows(many(8, () => window({ swung: true, replyTicks: 90 })), {
-      attacks: [...many(4, () => attack()), ...many(4, () => attack({ outcome: 'hit', evasion: null, damageTaken: 1 }))],
-      swingTicks: many(10, (i) => 100 + i * 50),
-      bossHitTicks: many(8, (i) => 105 + i * 50),
-    });
-    expect(fightDetails(a).recommendation.kind).toBe('speed');
   });
 
   it('gives no block for a fight with no real time (left during the study)', () => {

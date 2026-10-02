@@ -535,3 +535,33 @@ body {
   color: #b4b4c8;
   white-space: nowrap;
 }
+
+/* Fight details: the table of plain counts. */
+.stat-table {
+  margin: 0.6rem 0;
+}
+
+.stat-title {
+  margin: 0 0 0.2rem;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.15rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+}
+
+.stat-label {
+  color: #b4b4c8;
+}
+
+.stat-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,5 +1,6 @@
 import type { Analysis } from './analyze';
 import { DETAILS_TUNING as T } from './details-tuning';
+import type { ReplayMeasures } from './meter';
 
 /** The numbers behind the plots of the fight details screen, for the real fight only (the study is left out). */
 export interface FightDetails {
@@ -32,17 +33,40 @@ export interface FightDetails {
   timeline: { length: number; landed: number[]; taken: number[]; swings: number[] };
   /** How early dodges began, in bins (`T.dodgeBinEdges`; the first is a dodge that began after the danger did). */
   dodgeTiming: { dodged: number; hit: number }[];
+  numbers: Numbers;
   recommendation: Recommendation;
 }
 
+/** One attack of the boss, counted over the real fight by how it ended. */
+export interface AttackCount {
+  attackId: string;
+  started: number;
+  hit: number;
+  dodged: number;
+  countered: number;
+  /** Cut short by the end of the fight or a phase change. */
+  interrupted: number;
+}
+
+/** The plain counts shown as a table, for the real fight only. `movement` and `clock` need the replay's meter, so they are null without it. */
+export interface Numbers {
+  /** Length of the real fight. */
+  seconds: number;
+  you: { swings: number; landed: number; taken: number; counters: number; dashes: number; jumps: number };
+  boss: { started: number; perAttack: AttackCount[] };
+  movement: ReplayMeasures['movement'] | null;
+  clock: ReplayMeasures['clock'] | null;
+}
+
+/** One sentence of advice, from ranking the attacks within the one fight: there is no target or cut-off to reach. */
 export type Recommendation =
-  | { kind: 'avoid'; avoided: number; total: number }
-  | { kind: 'aim'; hits: number; swings: number }
-  | { kind: 'reply'; replied: number; answerable: number }
-  | { kind: 'speed'; medianTicks: number }
-  /** Every number that could be judged reaches its target. */
+  /** The attack that hit the player most (`resolved` is how many times it came and was settled: hit, dodged or countered). */
+  | { kind: 'hurt'; attackId: string; hits: number; resolved: number }
+  /** Nothing hit the player; the attack whose openings were left unanswered most often. */
+  | { kind: 'unanswered'; attackId: string; missed: number; answerable: number }
+  /** No attack hit the player and every opening was answered. */
   | { kind: 'none' }
-  /** No number rests on enough cases to be judged. */
+  /** The boss never attacked in the real fight. */
   | { kind: 'few' };
 
 function median(values: number[]): number | null {
@@ -60,38 +84,28 @@ const binOf = (value: number, edges: readonly number[]): number => {
 
 const share = (part: number, whole: number): number | null => (whole === 0 ? null : part / whole);
 
+/** The first of equal candidates wins; `better(a, b)` is true when `a` should replace `b`. */
+function best<T>(items: T[], better: (a: T, b: T) => boolean): T | undefined {
+  return items.reduce<T | undefined>((top, item) => (top === undefined || better(item, top) ? item : top), undefined);
+}
+
+/**
+ * The attack that hit the player most, ties going to the one that hit the larger share of its appearances. When nothing
+ * hit, the attack with the most openings left unanswered, ties likewise. Counts only, so no number can be "good enough".
+ */
 function recommend(d: Omit<FightDetails, 'recommendation'>): Recommendation {
-  const options: { shortfall: number; pick: Recommendation }[] = [];
-  const { targets } = T;
-  if (d.avoided.total >= T.minAttacks && d.avoided.share !== null) {
-    options.push({
-      shortfall: (targets.avoided - d.avoided.share) / targets.avoided,
-      pick: { kind: 'avoid', avoided: d.avoided.avoided, total: d.avoided.total },
-    });
-  }
-  if (d.hitRate.swings >= T.minSwings && d.hitRate.share !== null) {
-    options.push({
-      shortfall: (targets.hitRate - d.hitRate.share) / targets.hitRate,
-      pick: { kind: 'aim', hits: d.hitRate.hits, swings: d.hitRate.swings },
-    });
-  }
-  if (d.reply.answerable >= T.minAnswerable && d.reply.share !== null) {
-    options.push({
-      shortfall: (targets.answered - d.reply.share) / targets.answered,
-      pick: { kind: 'reply', replied: d.reply.replied, answerable: d.reply.answerable },
-    });
-  }
-  const replyTimes = d.reply.bins.reduce((n, b) => n + b.hit + b.missed, 0);
-  if (replyTimes >= T.minReplies && d.reply.medianTicks !== null) {
-    options.push({
-      shortfall: Math.min(1, (d.reply.medianTicks - targets.replyTicks) / targets.replyTicks),
-      pick: { kind: 'speed', medianTicks: d.reply.medianTicks },
-    });
-  }
-  if (options.length === 0) return { kind: 'few' };
-  // The first of equal shortfalls wins: the options are in the order avoid, aim, reply, speed.
-  const worst = options.reduce((best, o) => (o.shortfall > best.shortfall ? o : best));
-  return worst.shortfall > 0 ? worst.pick : { kind: 'none' };
+  if (d.numbers.boss.started === 0) return { kind: 'few' };
+  const hurt = d.numbers.boss.perAttack
+    .filter((a) => a.hit > 0)
+    .map((a) => ({ attackId: a.attackId, hits: a.hit, resolved: a.hit + a.dodged + a.countered }));
+  const worst = best(hurt, (a, b) => a.hits > b.hits || (a.hits === b.hits && a.hits / a.resolved > b.hits / b.resolved));
+  if (worst !== undefined) return { kind: 'hurt', ...worst };
+  const open = d.reply.perAttack
+    .map((a) => ({ attackId: a.attackId, missed: a.answerable - a.replied, answerable: a.answerable }))
+    .filter((a) => a.missed > 0);
+  const neglected = best(open, (a, b) => a.missed > b.missed || (a.missed === b.missed && a.missed / a.answerable > b.missed / b.answerable));
+  if (neglected !== undefined) return { kind: 'unanswered', ...neglected };
+  return { kind: 'none' };
 }
 
 /**
@@ -99,7 +113,7 @@ function recommend(d: Omit<FightDetails, 'recommendation'>): Recommendation {
  * share of something the game measured; none says why. The recommendation is the one number furthest below its
  * target, given with the counts it comes from, or "none" / "few".
  */
-export function fightDetails(analysis: Analysis): FightDetails {
+export function fightDetails(analysis: Analysis, measures?: ReplayMeasures): FightDetails {
   const studyTicks = analysis.study.ticks;
   const realAttacks = analysis.attacks.filter((a) => !a.study);
   const hits = realAttacks.filter((a) => a.outcome === 'hit').length;
@@ -129,6 +143,17 @@ export function fightDetails(analysis: Analysis): FightDetails {
     if (a.marginTicks === null) continue;
     if (a.outcome === 'hit') dodgeBins[binOf(a.marginTicks, T.dodgeBinEdges)]!.hit += 1;
     else if (a.outcome === 'dodged') dodgeBins[binOf(a.marginTicks, T.dodgeBinEdges)]!.dodged += 1;
+  }
+
+  const perAttack: AttackCount[] = [];
+  for (const a of realAttacks) {
+    let entry = perAttack.find((x) => x.attackId === a.attackId);
+    if (entry === undefined) {
+      entry = { attackId: a.attackId, started: 0, hit: 0, dodged: 0, countered: 0, interrupted: 0 };
+      perAttack.push(entry);
+    }
+    entry.started += 1;
+    entry[a.outcome] += 1;
   }
 
   const b = analysis.behavior;
@@ -165,6 +190,20 @@ export function fightDetails(analysis: Analysis): FightDetails {
       swings,
     },
     dodgeTiming: dodgeBins,
+    numbers: {
+      seconds: analysis.fightSeconds,
+      you: {
+        swings: swings.length,
+        landed: landed.length,
+        taken: realTicks(analysis.playerHitTicks).length,
+        counters: countered,
+        dashes: realTicks(analysis.dashTicks).length,
+        jumps: realTicks(analysis.jumpTicks).length,
+      },
+      boss: { started: realAttacks.length, perAttack },
+      movement: measures?.movement ?? null,
+      clock: measures?.clock ?? null,
+    },
   };
   return { ...details, recommendation: analysis.fightSeconds > 0 ? recommend(details) : { kind: 'few' } };
 }
