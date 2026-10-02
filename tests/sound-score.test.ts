@@ -135,12 +135,12 @@ describe('the notes', () => {
     }
   });
 
-  it('repeat every four bars (every eight with a melody) and are the same every time', () => {
+  it('repeat every four bars and are the same every time', () => {
     const theme = THEMES['gale-reaver']!;
     expect(notesFor(theme, 0, { ...ALL, melody: false })).toEqual(notesFor(theme, 4, { ...ALL, melody: false }));
     const tuned = { ...theme, melody: 'gale-reaver' };
-    expect(notesFor(tuned, 0, ALL)).toEqual(notesFor(tuned, 8, ALL));
-    expect(notesFor(tuned, 0, ALL)).not.toEqual(notesFor(tuned, 4, ALL));
+    expect(notesFor(tuned, 0, ALL)).toEqual(notesFor(tuned, 4, ALL));
+    expect(notesFor(darkTheme(tuned), 1, ALL)).toEqual(notesFor(darkTheme(tuned), 5, ALL));
     expect(notesFor(theme, 1, ALL)).toEqual(notesFor(theme, 1, ALL));
     expect(notesFor(theme, 0, ALL)).not.toEqual(notesFor(theme, 1, ALL));
   });
@@ -160,56 +160,66 @@ describe('the notes', () => {
 describe('the melodies', () => {
   const SCALE_STEPS = { minor: [0, 2, 3, 5, 7, 8, 10], major: [0, 2, 4, 5, 7, 9, 11] } as const;
 
-  it('give every boss in the roster and the trainee two melodies of four bars of eight steps', () => {
+  it('give every boss in the roster and the trainee a melody and a second-phase melody of four bars of eight steps', () => {
     for (const boss of [...BOSSES, TRAINEE]) {
       const tunes = MELODIES[boss.id];
       expect(tunes, boss.id).toBeDefined();
-      expect(tunes).toHaveLength(2);
-      for (const tune of tunes!) {
+      for (const tune of [tunes!.normal, tunes!.phaseTwo]) {
         expect(tune).toHaveLength(4);
-        for (const bar of tune) expect(bar, boss.id).toMatch(/^[0-7.-]{8}$/);
+        for (const bar of tune) expect(bar, boss.id).toMatch(/^[0-9.-]{8}$/);
       }
     }
   });
 
-  it('have at least one note in every bar', () => {
+  it('have at least one note in every bar, and a second phase that differs from the first', () => {
     for (const [id, tunes] of Object.entries(MELODIES)) {
-      for (const tune of tunes) for (const bar of tune) expect(bar, id).toMatch(/[0-7]/);
+      for (const tune of [tunes.normal, tunes.phaseTwo]) for (const bar of tune) expect(bar, id).toMatch(/[0-9]/);
+      expect(tunes.phaseTwo, id).not.toEqual(tunes.normal);
     }
   });
 
-  it('hold only chord tones (root, third, fifth, octave) from the first or third beat', () => {
-    for (const [id, base] of Object.entries(THEMES)) {
-      for (const theme of [{ ...base, melody: id }, darkTheme({ ...base, melody: id })]) {
-        for (let bar = 0; bar < 8; bar++) {
-          const chord = bar % 4;
-          const tune = MELODIES[id]![Math.floor(bar / 4)]![chord]!;
-          for (const match of tune.matchAll(/([0-7])(-+)/g)) {
+  it('are all different from each other', () => {
+    const all = Object.values(MELODIES).map((t) => t.normal.join('|'));
+    expect(new Set(all).size).toBe(all.length);
+    const second = Object.values(MELODIES).map((t) => t.phaseTwo.join('|'));
+    expect(new Set(second).size).toBe(second.length);
+  });
+
+  it('hold only chord tones (root, third, fifth, octave, the octave third) from the first or third beat', () => {
+    for (const [id, tunes] of Object.entries(MELODIES)) {
+      for (const tune of [tunes.normal, tunes.phaseTwo]) {
+        tune.forEach((bar, chord) => {
+          for (const match of bar.matchAll(/([0-9])(-+)/g)) {
             const at = match.index!;
             if (at !== 0 && at !== 4) continue;
-            expect([0, 2, 4, 7], `${id} bar ${bar} ${tune}`).toContain(Number(match[1]));
+            expect([0, 2, 4, 7, 9], `${id} bar ${chord} ${bar}`).toContain(Number(match[1]));
           }
-          expect(theme.melody).toBe(id);
-        }
+        });
       }
     }
   });
 
-  it('play the first melody for four bars and then the second, in the notes of the chord scale', () => {
+  it('play the melody round and round, in the notes of the chord scale', () => {
     const theme = { ...THEMES['ember-duelist']!, melody: 'ember-duelist' };
     const first = notesFor(theme, 0, ALL).filter((n) => n.voice === 'melody');
-    // Bar 0 is the tonic chord: "0.24.42." is the root, the third, the fifth, the fifth and the third, with two rests.
+    // Bar 0 is the tonic chord: "4.4.7.4." is the fifth, the fifth, the octave and the fifth, with rests between.
     const scale = SCALE_STEPS.minor;
     const top = theme.root + 24;
     expect(first.map((n) => [n.step, n.midi])).toEqual([
-      [0, top + scale[0]!],
-      [2, top + scale[2]!],
-      [3, top + scale[4]!],
-      [5, top + scale[4]!],
-      [6, top + scale[2]!],
+      [0, top + scale[4]!],
+      [2, top + scale[4]!],
+      [4, top + 12],
+      [6, top + scale[4]!],
     ]);
-    const second = notesFor(theme, 4, ALL).filter((n) => n.voice === 'melody');
-    expect(second[0]).toMatchObject({ step: 0, steps: 2, midi: top + scale[4]! });
+    expect(notesFor(theme, 4, ALL).filter((n) => n.voice === 'melody')).toEqual(first);
+  });
+
+  it('play the second-phase melody in the dark theme', () => {
+    const theme = { ...THEMES['ember-duelist']!, melody: 'ember-duelist' };
+    const dark = darkTheme(theme);
+    // Bar 0 of the second phase is "44.47.97": six notes.
+    expect(notesFor(dark, 0, ALL).filter((n) => n.voice === 'melody').map((n) => n.step)).toEqual([0, 1, 3, 4, 6, 7]);
+    expect(notesFor(theme, 0, ALL).filter((n) => n.voice === 'melody')).toHaveLength(4);
   });
 
   it("count steps from the bar's own chord root", () => {
@@ -234,24 +244,6 @@ describe('the melodies', () => {
     expect(dark.bpm).toBeGreaterThan(theme.bpm);
     expect(dark.melody).toBe('brass-sentinel');
     expect(darkTheme(THEMES['gale-reaver']!).mode).toBe('minor');
-  });
-
-  it('strike a long held note again every two steps in the second phase', () => {
-    const base = { ...THEMES['cinder-golem']!, melody: 'cinder-golem' };
-    // Bar 4 is "0-----2-": a six-step note and a two-step note.
-    const plain = notesFor(base, 4, ALL).filter((n) => n.voice === 'melody');
-    expect(plain.map((n) => [n.step, n.steps])).toEqual([
-      [0, 6],
-      [6, 2],
-    ]);
-    const dark = notesFor(darkTheme(base), 4, ALL).filter((n) => n.voice === 'melody');
-    expect(dark.map((n) => [n.step, n.steps])).toEqual([
-      [0, 2],
-      [2, 2],
-      [4, 2],
-      [6, 2],
-    ]);
-    expect(new Set(dark.slice(0, 3).map((n) => n.midi)).size).toBe(1);
   });
 
   it('are given to the boss a fight starts with, including in a pair', () => {

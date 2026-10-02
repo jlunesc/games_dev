@@ -8,7 +8,7 @@ export interface Layers {
   bass: boolean;
   drums: boolean;
   lead: boolean;
-  /** The boss's own two melodies (`melodies.ts`); a boss without them is silent here. */
+  /** The boss's own melody (`melodies.ts`); a boss without them is silent here. */
   melody: boolean;
   /** The second phase's music: darker and faster (`darkTheme`). */
   phaseTwo: boolean;
@@ -97,12 +97,12 @@ export function layersFor(intensity: Intensity): Layers {
 
 const SCALE: Record<Mode, readonly number[]> = { minor: [0, 2, 3, 5, 7, 8, 10], major: [0, 2, 4, 5, 7, 9, 11] };
 
-/** The melody's notes for one bar: the boss's two melodies in turn, four bars each, from the first bar. */
+/** The melody's notes for one bar: the boss's melody, or its second-phase version in the dark theme, four bars round and round. */
 function melodyNotes(theme: Theme, bar: number): Note[] {
   const tune =
     theme.melody !== undefined && Object.prototype.hasOwnProperty.call(MELODIES, theme.melody) ? MELODIES[theme.melody] : undefined;
   if (tune === undefined) return [];
-  const text = tune[(((Math.floor(bar / 4) % 2) + 2) % 2) as 0 | 1][((bar % 4) + 4) % 4]!;
+  const text = (theme.dark === true ? tune.phaseTwo : tune.normal)[((bar % 4) + 4) % 4]!;
   const scale = SCALE[theme.mode];
   const chord = PROGRESSIONS[theme.mode][((bar % 4) + 4) % 4]!;
   const degree = scale.indexOf(chord.offset);
@@ -119,11 +119,7 @@ function melodyNotes(theme: Theme, bar: number): Note[] {
   for (const run of runs) {
     const index = degree + run.up;
     const midi = theme.root + 24 + scale[index % 7]! + 12 * Math.floor(index / 7);
-    const strikes = theme.dark === true && run.steps >= 4 ? Math.floor(run.steps / PHASE_TWO.strikeSteps) : 1;
-    for (let k = 0; k < strikes; k++) {
-      const length = strikes === 1 ? run.steps : k === strikes - 1 ? run.steps - k * PHASE_TWO.strikeSteps : PHASE_TWO.strikeSteps;
-      notes.push({ voice: 'melody', step: run.step + k * PHASE_TWO.strikeSteps, steps: length, midi });
-    }
+    notes.push({ voice: 'melody', step: run.step, steps: run.steps, midi });
   }
   return notes;
 }

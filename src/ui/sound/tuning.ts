@@ -235,7 +235,7 @@ export interface Theme {
   root: number;
   mode: Mode;
   bpm: number;
-  /** The boss whose two melodies (`melodies.ts`) play over the chords; none for a generated boss. */
+  /** The boss whose melody (`melodies.ts`) play over the chords; none for a generated boss. */
   melody?: string;
   /** The phase 2 version of a theme (`darkTheme`). */
   dark?: boolean;
@@ -258,10 +258,10 @@ export const THEMES: Record<string, Theme> = {
 
 /**
  * From the second phase the music turns darker and faster (the bar line after the phase changes): the key drops by
- * `rootShift` semitones, a major key turns minor, the tempo is multiplied by `tempoFactor`, and a note of the melody that is
- * held four steps or more is struck again every `strikeSteps` steps instead.
+ * `rootShift` semitones, a major key turns minor, the tempo is multiplied by `tempoFactor`, and the melody changes to the boss's
+ * second-phase version.
  */
-export const PHASE_TWO = { rootShift: -2, tempoFactor: 1.15, strikeSteps: 2 } as const;
+export const PHASE_TWO = { rootShift: -2, tempoFactor: 1.15 } as const;
 
 /** A generated boss: root `lowest` plus the seed modulo 12, tempo `bpmMin` plus the seed modulo `bpmSpan`. */
 export const SEEDED = { lowest: 36, bpmMin: 96, bpmSpan: 44 } as const;

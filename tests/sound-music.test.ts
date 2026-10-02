@@ -135,11 +135,11 @@ describe('the sequencer', () => {
     const on = setup();
     on.music.start(tuned, FIGHT);
     const heard = (ctx: FakeContext): number[] => ctx.ofKind('oscillator').map(firstFrequency);
-    // Bar 0 opens on the tonic, two octaves above the key's note.
-    expect(heard(on.ctx)).toContain(midiToHz(THEME.root + 24));
+    // Bar 0 opens on the fifth, two octaves above the key's note (the Duelist's "4.4.7.4.").
+    expect(heard(on.ctx)).toContain(midiToHz(THEME.root + 24 + 7));
     const off = setup();
     off.music.start(tuned, { ...FIGHT, melody: false });
-    expect(heard(off.ctx)).not.toContain(midiToHz(THEME.root + 24));
+    expect(heard(off.ctx)).not.toContain(midiToHz(THEME.root + 24 + 7));
   });
 
   it('turns darker and faster on the next bar line once the second phase is asked for, and keeps it', () => {

@@ -614,12 +614,13 @@ The ten placeholder beeps are gone. Every sound is made in code, so nothing extr
 - [ ] The fight stays smooth on the S21 with everything on: no stutter when many sounds overlap (two bolts, a counter and a warning at once), and the frame rate looks the same with Volume Off and High.
 - [ ] Leaving the fight, pausing when the controller drops out and turning the phone screen off do not leave a note hanging.
 
-### Boss melodies (added 2026-10-02)
-Each boss now has two melodies (A then B, four bars each) over the chord loop, from the start of the fight. In the second phase the music gets darker and faster (a lower key, minor, 15% quicker, long notes repeated) and the melody starts again.
-- [ ] Each boss's melody suits it (the Duelist's stabs, the Hound's growl, the Golem's slow climb, the Reaver's runs, the Kite's flitting). Which ones do not?
+### Boss melodies (added 2026-10-02, reworked the same day)
+Each boss has one melody (four bars) over the chord loop, from the start of the fight, and its own changed version for the second phase. In the second phase the music also gets darker and faster (a lower key, minor, 15% quicker) and the melody switches to the second-phase version.
+- [ ] The melodies sound clearly different from one boss to the next (the Duelist's stabs, the Hound's growl, the Quill Warden's falling notes, the Golem's long notes, the Dancer's off-beats, the Reaver's runs, the Sentinel's fanfare, the Sage's flicker, the Brute's thumps, the Kite's swoops). Which ones still sound alike?
+- [ ] Each boss's melody suits it. Which ones do not?
 - [ ] The melody is clear on the phone speaker but does not drown the warning sounds.
-- [ ] The second phase sounds darker and faster than the first, and the change comes on a bar line, not in the middle of a bar. Is it too much or too little?
-- [ ] Hear A and then B in the first minute: is it too repetitive, or is the loop too long?
+- [ ] The second phase sounds darker and faster than the first, with a different melody, and the change comes on a bar line, not in the middle of a bar. Is it too much or too little?
+- [ ] Is a four-bar melody too repetitive over a whole fight?
 - [ ] In a pair fight the first boss's melody plays. Does that feel wrong?
 - [ ] The fight stays smooth on the S21 with the melody on.
 
