@@ -109,20 +109,23 @@ function addTimeLabels(svg: SVGSVGElement, ticks: number, y: number): void {
   addText(svg, W, y, `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`, 'end');
 }
 
-/** Three rows on the fight's own time axis: the boss's attacks (coloured by how each ended), whether you held towards or away from the boss, and your dashes and jumps. */
+/**
+ * One plot on the fight's own time axis with everything on top of everything: each boss attack is a tinted band the full height
+ * (pale warning, stronger danger, coloured by how it ended), your holding towards (above the middle line) or away from the boss
+ * (below it) is drawn over the bands, each dash is a line in the top part and each jump one in the bottom part.
+ */
 function attacksAndMovesChart(details: FightDetails, clock: Clock): SVGSVGElement {
   const length = details.timeline.length;
-  const svg = chart(112);
-  addText(svg, 0, 8, 'Boss attacks', 'start');
-  addRects(svg, attackBandRects(details.attackBands, length, W, 11, 18, (o) => OUTCOME_CLASS[o] ?? 'plot-missed'));
-  addText(svg, 0, 40, 'Moving towards the boss (above) or away from it (below)', 'start');
-  svg.append(svgNode('line', { x1: 0, x2: W, y1: 56, y2: 56 }, 'plot-axis'));
-  addRects(svg, spanRects(clock.towardRuns, length, W, 12, 'plot-toward'), 0, 43);
-  addRects(svg, spanRects(clock.awayRuns, length, W, 12, 'plot-away'), 0, 57);
-  addText(svg, 0, 84, 'Dashes and jumps', 'start');
-  addMarks(svg, marksAt(details.moves.jumps, length, W, 87, 99, 'plot-jump'), 1.5);
-  addMarks(svg, marksAt(details.moves.dashes, length, W, 87, 99, 'plot-dash'), 2);
-  addTimeLabels(svg, length, 110);
+  const height = 92;
+  const mid = height / 2;
+  const svg = chart(height + 14);
+  addRects(svg, attackBandRects(details.attackBands, length, W, 0, height, (o) => `${OUTCOME_CLASS[o] ?? 'plot-missed'} plot-band`));
+  svg.append(svgNode('line', { x1: 0, x2: W, y1: mid, y2: mid }, 'plot-axis'));
+  addRects(svg, spanRects(clock.towardRuns, length, W, 14, 'plot-toward'), 0, mid - 14);
+  addRects(svg, spanRects(clock.awayRuns, length, W, 14, 'plot-away'), 0, mid);
+  addMarks(svg, marksAt(details.moves.jumps, length, W, mid + 18, height - 1, 'plot-jump'), 1.5);
+  addMarks(svg, marksAt(details.moves.dashes, length, W, 1, mid - 18, 'plot-dash'), 1.5);
+  addTimeLabels(svg, length, height + 11);
   return svg;
 }
 
@@ -217,13 +220,15 @@ export function renderDetails(
       { cls: 'plot-countered', label: 'Countered' },
       { cls: 'plot-missed', label: 'Cut short' },
     ]);
-    const movesBox = section('Boss attacks and your moves', 'Each attack from its warning (pale) to the end of its danger. A dash or jump just before a strike is a dodge.');
+    const movesBox = section('Boss attacks and your moves', 'Each attack is a tinted band, from its warning (pale) to the end of its danger. Over it: whether you walked towards the boss (above the middle line) or away from it (below), and a line at the top for each dash and one at the bottom for each jump. A dash or jump inside a band is a dodge.');
     movesBox.append(
       attacksAndMovesChart(details, clock),
       outcomes,
       legend([
         { cls: 'plot-toward', label: `Towards the boss ${seconds(movement.towardTicks)}` },
         { cls: 'plot-away', label: `Away from it ${seconds(movement.awayTicks)}` },
+        { cls: 'plot-dash', label: 'Dash' },
+        { cls: 'plot-jump', label: 'Jump' },
       ]),
       el('p', 'detail-note', `Per minute: ${Math.round(perMinute.swings)} swings, ${Math.round(perMinute.dashes)} dashes, ${Math.round(perMinute.jumps)} jumps.`),
     );

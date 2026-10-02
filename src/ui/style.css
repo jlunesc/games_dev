@@ -409,8 +409,8 @@ body {
 .plot-close { --c: #e5596b; }
 .plot-mid { --c: #ffd166; }
 .plot-far { --c: #4fc3f7; }
-.plot-toward { --c: #4fc3f7; }
-.plot-away { --c: #ffd166; }
+.plot-toward { --c: #f2f2fa; }
+.plot-away { --c: #b388ff; }
 .plot-attack { --c: #e5596b; }
 .plot-path { --c: #8fa3ff; }
 
@@ -434,6 +434,14 @@ body {
 
 .plot rect.plot-warn {
   fill-opacity: 0.4;
+}
+
+.plot rect.plot-band {
+  fill-opacity: 0.5;
+}
+
+.plot rect.plot-band.plot-warn {
+  fill-opacity: 0.22;
 }
 
 .plot polyline {
