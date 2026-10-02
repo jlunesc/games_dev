@@ -121,7 +121,26 @@ export function mountApp(root: HTMLElement): void {
   // The study note sits near the top, small and see-through, so it never covers the action or blocks a tap.
   const studyNote = el('p', 'note');
   studyNote.hidden = true;
-  root.replaceChildren(sceneCanvas, canvas, panel, banner, leaveHint, studyNote);
+  // The pause button (a tap alternative to the pad's pause button) and the pause screen.
+  const pauseButton = el('button', 'pause-button', 'II');
+  pauseButton.type = 'button';
+  pauseButton.setAttribute('aria-label', 'Pause');
+  pauseButton.hidden = true;
+  const resumeRow = el('button', 'row focused', 'Resume');
+  resumeRow.type = 'button';
+  const leaveRow = el('button', 'row', 'Leave the fight');
+  leaveRow.type = 'button';
+  const pauseBox = el('div', 'pause-box');
+  pauseBox.hidden = true;
+  const pauseCard = el('div', 'pause-card');
+  pauseCard.append(
+    el('h1', undefined, 'Paused'),
+    resumeRow,
+    leaveRow,
+    el('p', 'hint', "The jump button or the pad's pause button resumes. Hold the top button to leave."),
+  );
+  pauseBox.append(pauseCard);
+  root.replaceChildren(sceneCanvas, canvas, panel, banner, leaveHint, studyNote, pauseButton, pauseBox);
 
   // The fight store opens once, in the background. It resolves to null when the device cannot store stats (the
   // game plays on) and never rejects. Anything that needs the store awaits this.
@@ -201,6 +220,8 @@ export function mountApp(root: HTMLElement): void {
   let notice: string | null = null;
   let lastTime = performance.now();
   let paused = false;
+  // True while the player has paused the fight on purpose (the pause screen is up). Separate from `paused`, which is the missing-controller pause.
+  let manualPause = false;
   // How long the top button has been held during a fight (leaving needs GAME.exitHoldMs).
   let exitHoldMs = 0;
   let stopTest: (() => void) | null = null;
@@ -232,6 +253,9 @@ export function mountApp(root: HTMLElement): void {
     sound.endFight();
     exitHoldMs = 0;
     leaveHint.hidden = true;
+    manualPause = false;
+    pauseBox.hidden = true;
+    pauseButton.hidden = true;
     canvas.hidden = true;
     panel.hidden = false;
     sceneCanvas.hidden = false;
@@ -654,6 +678,9 @@ export function mountApp(root: HTMLElement): void {
     hitStopView = false;
     pending = NO_PRESSES;
     paused = false;
+    manualPause = false;
+    pauseBox.hidden = true;
+    pauseButton.hidden = false;
     lastTime = performance.now();
     panel.hidden = true;
     sceneCanvas.hidden = true;
@@ -666,6 +693,33 @@ export function mountApp(root: HTMLElement): void {
 
   banner.addEventListener('click', () => {
     if (screen === 'fight' && paused) endFight();
+  });
+
+  /** Stops the fight where it is: no updates run, so nothing is recorded and the clock does not move. */
+  function pauseFight(): void {
+    if (screen !== 'fight' || paused || manualPause) return;
+    manualPause = true;
+    exitHoldMs = 0;
+    leaveHint.hidden = true;
+    pauseBox.style.setProperty('--accent', scene.moodOf(prefs.bossId).accent);
+    pauseBox.hidden = false;
+    setStudyNote(null);
+    sound.suspend();
+  }
+
+  function resumeFight(): void {
+    if (!manualPause) return;
+    manualPause = false;
+    pauseBox.hidden = true;
+    // Presses made while paused do not carry into the fight.
+    pending = NO_PRESSES;
+    sound.unlock();
+  }
+
+  pauseButton.addEventListener('click', pauseFight);
+  resumeRow.addEventListener('click', resumeFight);
+  leaveRow.addEventListener('click', () => {
+    if (screen === 'fight' && manualPause) endFight();
   });
 
   function draw(alpha: number): void {
@@ -684,8 +738,11 @@ export function mountApp(root: HTMLElement): void {
     });
   }
 
-  function runFight(now: number, selection: ProfileSelection | null, input: InputFrame): void {
+  function runFight(now: number, selection: ProfileSelection | null, input: InputFrame, pausePressed: boolean): void {
     if (selection?.kind !== 'profile') {
+      // Losing the pad pauses the fight anyway, with its own message.
+      manualPause = false;
+      pauseBox.hidden = true;
       paused = true;
       exitHoldMs = 0;
       leaveHint.hidden = true;
@@ -700,6 +757,19 @@ export function mountApp(root: HTMLElement): void {
     leaveHint.hidden = exitHoldMs === 0;
     if (hold.done) {
       endFight();
+      return;
+    }
+    if (manualPause) {
+      if (input.confirm || pausePressed) resumeFight();
+      setStudyNote(null);
+      lastTime = now;
+      draw(0);
+      return;
+    }
+    if (pausePressed && !paused) {
+      pauseFight();
+      lastTime = now;
+      draw(0);
       return;
     }
     if (paused) {
@@ -788,11 +858,15 @@ export function mountApp(root: HTMLElement): void {
     hasProfile = selection?.kind === 'profile';
     if (hasProfile) notice = null;
     let input = NO_INPUT;
+    let pausePressed = false;
     if (pad !== null && selection?.kind === 'profile') {
       const sampled = sampleInput(pad, selection.profile, held, GAME.deadZone);
       held = sampled.held;
       // The first read after a pad (re)appears only seeds `held`: what is already down is not a new press.
-      if (padSeen) input = sampled.input;
+      if (padSeen) {
+        input = sampled.input;
+        pausePressed = sampled.pausePressed;
+      }
       padSeen = true;
     } else {
       held = NOTHING_HELD;
@@ -805,7 +879,7 @@ export function mountApp(root: HTMLElement): void {
     }
 
     if (screen === 'fight') {
-      runFight(now, selection, input);
+      runFight(now, selection, input, pausePressed);
       return;
     }
 

@@ -126,6 +126,19 @@ describe('the standard profile', () => {
   });
 });
 
+describe('the pause button', () => {
+  it('is the left shoulder on the SN30 Pro (button 8) and LB on the standard layout (button 4)', () => {
+    expect(sample(pad([8])).pausePressed).toBe(true);
+    expect(sampleInput(pad([4]), STANDARD_PROFILE, NOTHING_HELD, 0.25).pausePressed).toBe(true);
+  });
+
+  it('counts only the update where the button went down, and is not part of the fight input', () => {
+    const first = sample(pad([8]));
+    expect(sample(pad([8]), SN30_PRO_PROFILE, first.held).pausePressed).toBe(false);
+    expect(first.input).toEqual(sample(pad([])).input);
+  });
+});
+
 describe('selectProfile', () => {
   it('picks the SN30 Pro profile by its exact id', () => {
     expect(selectProfile(SN30_PRO_ID, 'standard')).toEqual({

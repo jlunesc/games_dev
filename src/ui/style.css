@@ -568,3 +568,67 @@ body {
   flex: var(--n, 1) 1 0;
   background: var(--c);
 }
+
+.pause-button {
+  position: fixed;
+  top: calc(0.6rem + env(safe-area-inset-top, 0px));
+  right: calc(0.6rem + env(safe-area-inset-right, 0px));
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 0.5rem;
+  background: rgba(10, 10, 18, 0.45);
+  color: var(--fg);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+}
+
+.pause-box {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.pause-box[hidden] {
+  display: none;
+}
+
+.pause-card {
+  width: min(22rem, 100%);
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 0.8rem;
+  background: rgba(10, 10, 18, 0.9);
+}
+
+.pause-card h1 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.5rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pause-card .row {
+  justify-content: center;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 32, 0.8);
+}
+
+.pause-card .row.focused {
+  border-color: var(--accent);
+}
+
+.pause-card .hint {
+  margin: 0.2rem 0 0;
+  color: #b4b4c8;
+  font-size: 0.9rem;
+}

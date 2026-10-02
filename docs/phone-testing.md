@@ -72,6 +72,8 @@ Try each of these and note anything that feels off:
 - [ ] Sounds play for hits, dashes and the Duelist's warnings. Sound needs one tap on the screen after the app starts. If you started the fight with the controller and there is no sound, tap the screen once (it should then work from the next hit).
 - [ ] Turn the controller off in the middle of a fight. The game pauses and says so. Turn it on and press the bottom, left or dash button to continue (holding the top button for about a second, or tapping the "No usable controller" message, leaves the fight and shows the summary).
 - [ ] Tapping the top button during a fight does nothing; holding it for about a second shows 'Keep holding to leave the fight…' and then leaves the fight and shows the summary ("You left the fight").
+- [ ] **Pause**: during a fight press the left shoulder button on the controller (or tap the small II button in the top right corner). The fight freezes, the music stops and a "Paused" card shows Resume and Leave the fight. The boss and you do not move, and the fight time does not run on.
+- [ ] On the pause card, the bottom (jump) button or the II button or a tap on Resume continues the fight where it was, and the music comes back. The left button (attack) and the dash button do nothing there. Tapping Leave the fight, or holding the top button for about a second, leaves the fight and shows the summary. A fight you paused for a minute shows its normal fight time in the summary.
 - [ ] Pressing several buttons at once (for example moving while jumping and attacking) works, and fast repeated taps are not lost.
 
 The menu and the summary (M3a):

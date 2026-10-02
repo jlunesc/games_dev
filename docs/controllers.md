@@ -23,7 +23,7 @@ Only X-input mode connects to the phone. Chrome reports `mapping: standard`, but
 | Right stick | nothing on axes 2 and 3; buttons 6 and 7 respond erratically and rest at about 0.50 |
 | Back, start, home, stick clicks | not measured |
 
-Button 2 is unused. Treat buttons 6 and 7 and the right stick as unusable in this mode.
+The left shoulder (8) pauses a fight (the standard layout uses LB, button 4). Button 2 is unused. Treat buttons 6 and 7 and the right stick as unusable in this mode.
 
 ## PC: generic X-Box pad, Firefox 145 on Linux
 

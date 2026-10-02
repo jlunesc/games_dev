@@ -15,6 +15,8 @@ export interface ControllerProfile {
   attack: number;
   dash: number;
   alt: number;
+  /** Pauses a fight. Not part of the recorded input: a paused fight records nothing. */
+  pause: number;
   dpadLeft: number;
   dpadRight: number;
   dpadUp: number;
@@ -34,6 +36,7 @@ export const SN30_PRO_PROFILE: ControllerProfile = {
   attack: 3,
   dash: 9,
   alt: 4,
+  pause: 8,
   dpadLeft: 14,
   dpadRight: 15,
   dpadUp: 12,
@@ -49,6 +52,7 @@ export const STANDARD_PROFILE: ControllerProfile = {
   attack: 2,
   dash: 5,
   alt: 3,
+  pause: 4,
   dpadLeft: 14,
   dpadRight: 15,
   dpadUp: 12,
@@ -78,9 +82,10 @@ export interface HeldButtons {
   attack: boolean;
   dash: boolean;
   alt: boolean;
+  pause: boolean;
 }
 
-export const NOTHING_HELD: HeldButtons = { jump: false, attack: false, dash: false, alt: false };
+export const NOTHING_HELD: HeldButtons = { jump: false, attack: false, dash: false, alt: false, pause: false };
 
 const isDown = (pad: PadLike, index: number): boolean => pad.buttons[index]?.pressed ?? false;
 
@@ -90,12 +95,13 @@ export function sampleInput(
   profile: ControllerProfile,
   previous: HeldButtons,
   deadZone: number,
-): { input: InputFrame; held: HeldButtons } {
+): { input: InputFrame; held: HeldButtons; pausePressed: boolean } {
   const held: HeldButtons = {
     jump: isDown(pad, profile.jump),
     attack: isDown(pad, profile.attack),
     dash: isDown(pad, profile.dash),
     alt: isDown(pad, profile.alt),
+    pause: isDown(pad, profile.pause),
   };
   const dpad = (isDown(pad, profile.dpadRight) ? 1 : 0) - (isDown(pad, profile.dpadLeft) ? 1 : 0);
   const stick = pad.axes[profile.stickX] ?? 0;
@@ -115,5 +121,5 @@ export function sampleInput(
     confirm: held.jump && !previous.jump,
     alt: held.alt && !previous.alt,
   };
-  return { input, held };
+  return { input, held, pausePressed: held.pause && !previous.pause };
 }
