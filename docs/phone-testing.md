@@ -759,8 +759,8 @@ Bosses now use close-range attacks mainly when you are close (`docs/bosses.md` s
 - [ ] If it feels too strict or too loose, `rangeBias` in each boss file is the number to change (0.25 now; 1 turns it off).
 
 ## Exporting the fight details
-- [ ] On the Fight details screen, below the plots, the "Export these details" button opens the phone's share sheet (or saves a file to Downloads) and a line under it says "Sent." or "File saved to your downloads.".
-- [ ] The pad's right direction does the same. Does the hint under the button make that clear?
+- [ ] After a fight, the menu has "Fight details" and, under it, "Download fight details". Choosing the download saves a file to the phone's Downloads folder (no share sheet), and a line on the same screen says it was saved, with the file name. You stay on the summary and can still open the details.
+- [ ] On the pad the download works with the confirm button, like the other rows. The Fight details screen itself no longer has an export button.
 - [ ] The file is named `boss-trainer-details-<date and time>.stats.txt` and opens in the Claude app as a text attachment.
 
 ## Timeline strips in Fight details

@@ -14,11 +14,12 @@ describe('the after-fight menu', () => {
     }
   });
 
-  it('puts Fight details after Redo when the fight has details, and offers it without a Redo', () => {
-    expect(createSummaryMenu('victory', harder, true).items).toEqual(['redo', 'details', 'again', 'menu']);
-    expect(createSummaryMenu('left', null, true).items).toEqual(['details', 'again', 'menu']);
+  it('puts Fight details and Download fight details after Redo when the fight has details, and offers them without a Redo', () => {
+    expect(createSummaryMenu('victory', harder, true).items).toEqual(['redo', 'details', 'download', 'again', 'menu']);
+    expect(createSummaryMenu('left', null, true).items).toEqual(['details', 'download', 'again', 'menu']);
     const rows = summaryRows(createSummaryMenu('left', null, true), null);
     expect(rows[0]?.label).toBe('Fight details');
+    expect(rows[1]?.label).toBe('Download fight details');
   });
 
   it('offers no Redo after leaving a fight, since there is no result to base it on', () => {

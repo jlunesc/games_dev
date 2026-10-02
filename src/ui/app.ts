@@ -24,7 +24,7 @@ import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
 import type { FightResult, FightSummary } from '../game/summary';
 import { analyzeRecording, fightOf } from '../stats/analyze';
-import { buildDetailsExport, buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
+import { buildDetailsExport, buildExport, downloadFile, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
 import { fightDetails, type FightDetails } from '../stats/details';
 import { rateDodges } from '../stats/dodges';
 import { createMeter } from '../stats/meter';
@@ -175,9 +175,8 @@ export function mountApp(root: HTMLElement): void {
   let detailsNames: (attackId: string) => string = (id) => id;
   // How that fight was set up and ended, for the details export.
   let detailsInfo: { meta: FightMeta; result: FightResult } | null = null;
-  // Writes a line under the details screen's export button; null when that screen is not showing.
-  let sayDetails: ((message: string) => void) | null = null;
-  let detailsExporting = false;
+  // The line on the summary saying whether the details file was saved; null until one is downloaded.
+  let downloadLine: string | null = null;
   // Bumped when a new fight starts, so a save still running from an earlier fight does not write its line into the new one.
   let saveEpoch = 0;
   // What the summary screen currently shows, kept so the save line can be added when the save finishes.
@@ -529,7 +528,7 @@ export function mountApp(root: HTMLElement): void {
     renderSummary(
       panel,
       text.title,
-      [...text.lines, ...(saveLine === null ? [] : [saveLine])],
+      [...text.lines, ...(saveLine === null ? [] : [saveLine]), ...(downloadLine === null ? [] : [downloadLine])],
       rows,
       summaryMenu.focus,
       (index) => {
@@ -543,6 +542,7 @@ export function mountApp(root: HTMLElement): void {
     const result = summaryStep(summaryMenu, action);
     summaryMenu = result.menu;
     if (result.pick === 'details') showDetails();
+    else if (result.pick === 'download') downloadDetails();
     else if (result.pick === 'redo') startFight(redoPlan.dials);
     else if (result.pick === 'again') startFight(fightDials);
     else if (result.pick === 'menu') showMenu();
@@ -552,33 +552,28 @@ export function mountApp(root: HTMLElement): void {
   function showDetails(): void {
     if (shownDetails === null) return;
     screen = 'details';
-    sayDetails = renderDetails(panel, shownDetails, detailsNames, backFromDetails, exportDetails);
+    renderDetails(panel, shownDetails, detailsNames, backFromDetails);
     window.scrollTo(0, 0);
   }
 
-  async function exportDetails(say: (message: string) => void): Promise<void> {
-    if (shownDetails === null || detailsInfo === null || detailsExporting) return;
-    detailsExporting = true;
+  function downloadDetails(): void {
+    if (shownDetails === null || detailsInfo === null) return;
     try {
       const file = buildDetailsExport(detailsInfo.meta, detailsInfo.result, shownDetails, detailsNames, new Date());
-      const result = await shareOrDownload(file);
-      say(result === 'shared' ? 'Sent.' : result === 'downloaded' ? 'File saved to your downloads.' : result === 'cancelled' ? 'Export cancelled.' : 'Export failed.');
+      downloadLine = downloadFile(file) === 'downloaded' ? `Fight details saved to your downloads (${file.name}).` : 'The fight details could not be saved.';
     } catch {
-      say('Export failed.');
-    } finally {
-      detailsExporting = false;
+      downloadLine = 'The fight details could not be saved.';
     }
+    renderSummaryScreen();
   }
 
   function backFromDetails(): void {
-    sayDetails = null;
     screen = 'summary';
     renderSummaryScreen();
   }
 
   function handleDetails(action: MenuAction): void {
     if (action === 'confirm' || action === 'back') backFromDetails();
-    else if (action === 'right') void exportDetails(sayDetails ?? (() => {}));
     else if (action === 'up') window.scrollBy(0, -140);
     else if (action === 'down') window.scrollBy(0, 140);
   }
@@ -655,6 +650,7 @@ export function mountApp(root: HTMLElement): void {
     const leaving = leaveRecording(flow);
     if (leaving !== null) {
       saveLine = null;
+      downloadLine = null;
       shownDetails = null;
       void saveFight(leaving.recording, 'left');
     }
@@ -666,6 +662,7 @@ export function mountApp(root: HTMLElement): void {
     fightDials = dials;
     saveEpoch += 1;
     saveLine = null;
+    downloadLine = null;
     shownDetails = null;
     shownSummary = null;
     const seed = newSeed();
@@ -831,6 +828,7 @@ export function mountApp(root: HTMLElement): void {
       flow = advanced.flow;
       if (advanced.finished !== null) {
         saveLine = null;
+        downloadLine = null;
         shownDetails = null;
         void saveFight(advanced.finished.recording, advanced.finished.result);
       }

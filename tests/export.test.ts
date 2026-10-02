@@ -15,7 +15,7 @@ import {
   DETAILS_EXPORT_FORMAT,
   DETAILS_EXPORT_VERSION,
   type DetailsExportDocument,
-  EXPORT_FORMAT, loadLastExport, saveLastExport, shareOrDownload, type ExportDocument, type ExportFile } from '../src/stats/export';
+  EXPORT_FORMAT, downloadFile, loadLastExport, saveLastExport, shareOrDownload, type ExportDocument, type ExportFile } from '../src/stats/export';
 import {
   buildRecord,
   GAME_VERSION,
@@ -210,6 +210,19 @@ describe('shareOrDownload', () => {
     expect(revoke).toHaveBeenCalledWith('blob:fake-url');
     create.mockRestore();
     revoke.mockRestore();
+  });
+
+  it('downloadFile saves the file without opening the share sheet, even where sharing works', () => {
+    vi.useFakeTimers();
+    const share = vi.fn();
+    vi.stubGlobal('navigator', { canShare: () => true, share });
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake-url');
+    const anchor = stubDocument();
+    expect(downloadFile(file)).toBe('downloaded');
+    expect(share).not.toHaveBeenCalled();
+    expect(anchor.download).toBe(file.name);
+    expect(anchor.click).toHaveBeenCalledTimes(1);
+    create.mockRestore();
   });
 
   it('falls back to a download when canShare itself throws', async () => {

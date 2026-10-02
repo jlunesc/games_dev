@@ -195,8 +195,7 @@ export function renderDetails(
   details: FightDetails,
   nameOf: (attackId: string) => string,
   onBack: () => void,
-  onExport: (say: (message: string) => void) => void,
-): (message: string) => void {
+): void {
   const { avoided, hitRate, reply, perMinute, distance, timeline, dodges } = details;
 
   const tiles = el('div', 'tiles');
@@ -365,17 +364,8 @@ export function renderDetails(
   back.append(el('span', 'row-label', 'Back to results'));
   back.addEventListener('click', onBack);
 
-  const note = el('p', 'hint');
-  const say = (message: string): void => {
-    note.textContent = message;
-  };
-  const save = el('button', 'row');
-  save.type = 'button';
-  save.append(el('span', 'row-label', 'Export these details'));
-  save.addEventListener('click', () => onExport(say));
-
   const rows = el('div', 'rows');
-  rows.append(save, back);
+  rows.append(back);
 
   panel.replaceChildren(
     el('h1', undefined, 'Fight details'),
@@ -389,9 +379,6 @@ export function renderDetails(
     perAttackBox,
     dodgeBox,
     rows,
-    note,
-    el('p', 'hint', "Export saves this fight's numbers as a file you can send. On the pad, right exports and either button goes back."),
   );
   panel.scrollTop = 0;
-  return say;
 }

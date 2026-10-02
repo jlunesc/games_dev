@@ -107,8 +107,8 @@ export async function shareOrDownload(file: ExportFile): Promise<ShareResult> {
   }
 }
 
-/** Saves the file to the device's downloads folder. */
-function downloadFile(file: ExportFile): 'downloaded' | 'failed' {
+/** Saves the file to the device's downloads folder; never opens the share sheet. */
+export function downloadFile(file: ExportFile): 'downloaded' | 'failed' {
   if (typeof document === 'undefined') return 'failed';
   try {
     const url = URL.createObjectURL(new Blob([file.json], { type: 'text/plain' }));

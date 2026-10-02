@@ -299,7 +299,7 @@ No distance or time threshold is involved. The meter records what the replay nee
 
 ### 7.7 The fight details file
 
-The Fight details screen has an **Export these details** button (on the pad: right) that saves the screen's numbers for that one fight as a file, with the phone's share sheet or a download, like the stats export. It is built by `buildDetailsExport` in `src/stats/export.ts` from the `FightDetails` shown (section 7.6), so it is the finished numbers, not the input log. For a replayable record, use the stats export (section 4).
+The after-fight menu has a **Download fight details** row (right under **Fight details**, so it also works with the pad's confirm button) that saves the numbers for that one fight as a file in the downloads folder. It always downloads; it never opens the share sheet (the stats export on the Stats screen still does). It is built by `buildDetailsExport` in `src/stats/export.ts` from the `FightDetails` shown (section 7.6), so it is the finished numbers, not the input log. For a replayable record, use the stats export (section 4).
 
 The file is one JSON document saved as plain text, named `boss-trainer-details-YYYY-MM-DD-HH-MM-SS.stats.txt` after when the fight was played (UTC, `playedAt`). The `.stats.txt` ending is git-ignored.
 
