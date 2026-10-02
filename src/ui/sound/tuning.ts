@@ -235,6 +235,10 @@ export interface Theme {
   root: number;
   mode: Mode;
   bpm: number;
+  /** The boss whose two melodies (`melodies.ts`) play over the chords; none for a generated boss. */
+  melody?: string;
+  /** The phase 2 version of a theme (`darkTheme`). */
+  dark?: boolean;
 }
 
 /** One theme per boss id. A boss that is not here (a generated one) gets a key from the fight's seed instead. */
@@ -251,6 +255,13 @@ export const THEMES: Record<string, Theme> = {
   'storm-kite': { root: 40, mode: 'major', bpm: 126 },
   trainee: { root: 36, mode: 'major', bpm: 100 },
 };
+
+/**
+ * From the second phase the music turns darker and faster (the bar line after the phase changes): the key drops by
+ * `rootShift` semitones, a major key turns minor, the tempo is multiplied by `tempoFactor`, and a note of the melody that is
+ * held four steps or more is struck again every `strikeSteps` steps instead.
+ */
+export const PHASE_TWO = { rootShift: -2, tempoFactor: 1.15, strikeSteps: 2 } as const;
 
 /** A generated boss: root `lowest` plus the seed modulo 12, tempo `bpmMin` plus the seed modulo `bpmSpan`. */
 export const SEEDED = { lowest: 36, bpmMin: 96, bpmSpan: 44 } as const;
@@ -293,7 +304,7 @@ export const MUSIC = {
   /** The whole music against the sound effects. */
   level: 0.5,
   /** How loud each layer plays when it is on. */
-  layerGain: { pad: 0.5, bass: 0.9, drums: 0.7, lead: 0.5 },
+  layerGain: { pad: 0.5, bass: 0.9, drums: 0.7, lead: 0.5, melody: 0.8 },
   /** The pad when it plays alone (the study): quieter, so watching is not drowned. */
   studyPadGain: 0.3,
   note: {
@@ -308,6 +319,15 @@ export const MUSIC = {
       ],
     },
     lead: { tone: 'square', seconds: 0.18, volume: 0.05 },
+    /** The boss's melody: a soft triangle with a thin square on top so it carries on a phone speaker. It rings for as long as the note is held, up to `maxSeconds`. */
+    melody: {
+      minSeconds: 0.2,
+      maxSeconds: 0.9,
+      parts: [
+        { tone: 'triangle', volume: 0.13 },
+        { tone: 'square', volume: 0.03 },
+      ],
+    },
     kick: { from: 120, to: 45, seconds: 0.16, volume: 0.5 },
     hat: { freq: 7000, seconds: 0.04, volume: 0.1 },
   },

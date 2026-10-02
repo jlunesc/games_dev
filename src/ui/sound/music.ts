@@ -1,10 +1,10 @@
 import type { Engine } from './engine';
-import { midiToHz, notesFor, type Layers, type Note } from './score';
+import { darkTheme, midiToHz, notesFor, type Layers, type Note } from './score';
 import { MUSIC, type Theme } from './tuning';
 import { noiseBurst, tone } from './voices';
 
-export type LayerName = 'pad' | 'bass' | 'drums' | 'lead';
-const LAYER_NAMES: readonly LayerName[] = ['pad', 'bass', 'drums', 'lead'];
+export type LayerName = 'pad' | 'bass' | 'drums' | 'lead' | 'melody';
+const LAYER_NAMES: readonly LayerName[] = ['pad', 'bass', 'drums', 'lead', 'melody'];
 
 /** setInterval and setTimeout behind a small door, so tests can drive the clock. */
 export interface Timer {
@@ -36,6 +36,7 @@ export function targetsFor(layers: Layers): Record<LayerName, number> {
     bass: layers.bass ? MUSIC.layerGain.bass : 0,
     drums: layers.drums ? MUSIC.layerGain.drums : 0,
     lead: layers.lead ? MUSIC.layerGain.lead : 0,
+    melody: layers.melody ? MUSIC.layerGain.melody : 0,
   };
 }
 
@@ -44,7 +45,12 @@ const stepSeconds = (theme: Theme): number => 30 / theme.bpm;
 const barSeconds = (theme: Theme): number => 240 / theme.bpm;
 
 interface Session {
+  /** The theme that is playing: `base`, or its darker phase 2 version. */
   theme: Theme;
+  base: Theme;
+  /** Whether `theme` is the phase 2 version, and whether it should be from the next bar line. */
+  dark: boolean;
+  wantDark: boolean;
   level: GainNode;
   gains: Record<LayerName, GainNode>;
   /** The gain each layer has been told to reach (at the last bar line). */
@@ -69,6 +75,11 @@ export function createMusic(engine: Engine, timer: Timer = browserTimer): Music 
 
   function beginBar(s: Session): void {
     const at = s.nextTime;
+    if (s.dark !== s.wantDark) {
+      s.dark = s.wantDark;
+      s.theme = s.dark ? darkTheme(s.base) : s.base;
+      s.bar = 0;
+    }
     const bar = barSeconds(s.theme);
     for (const name of LAYER_NAMES) {
       const want = s.desired[name];
@@ -86,6 +97,8 @@ export function createMusic(engine: Engine, timer: Timer = browserTimer): Music 
       bass: sounding('bass'),
       drums: sounding('drums'),
       lead: sounding('lead'),
+      melody: sounding('melody'),
+      phaseTwo: s.dark,
     });
   }
 
@@ -127,6 +140,17 @@ export function createMusic(engine: Engine, timer: Timer = browserTimer): Music 
           tone(ctx, s.gains.lead, at, { tone: n.lead.tone, from: midiToHz(note.midi), seconds: n.lead.seconds, volume: n.lead.volume });
         }
         break;
+      case 'melody':
+        if (note.midi === undefined) break;
+        for (const part of n.melody.parts) {
+          tone(ctx, s.gains.melody, at, {
+            tone: part.tone,
+            from: midiToHz(note.midi),
+            seconds: Math.min(n.melody.maxSeconds, Math.max(n.melody.minSeconds, note.steps * stepSeconds(s.theme))),
+            volume: part.volume,
+          });
+        }
+        break;
       case 'kick':
         tone(ctx, s.gains.drums, at, { tone: 'sine', from: n.kick.from, to: n.kick.to, seconds: n.kick.seconds, volume: n.kick.volume });
         break;
@@ -145,9 +169,9 @@ export function createMusic(engine: Engine, timer: Timer = browserTimer): Music 
     const s = session;
     if (s === null) return;
     const horizon = ctx.currentTime + MUSIC.lookaheadSeconds;
-    const length = stepSeconds(s.theme);
     while (s.nextTime < horizon) {
       if (s.step === 0) beginBar(s);
+      const length = stepSeconds(s.theme);
       if (s.nextTime >= ctx.currentTime - MUSIC.lateSeconds) {
         for (const note of s.barNotes) if (note.step === s.step) playNote(s, note, s.nextTime);
       }
@@ -191,12 +215,15 @@ export function createMusic(engine: Engine, timer: Timer = browserTimer): Music 
         return gain;
       };
       session = {
-        theme,
+        theme: layers.phaseTwo ? darkTheme(theme) : theme,
+        base: theme,
+        dark: layers.phaseTwo,
+        wantDark: layers.phaseTwo,
         level,
-        gains: { pad: make('pad'), bass: make('bass'), drums: make('drums'), lead: make('lead') },
+        gains: { pad: make('pad'), bass: make('bass'), drums: make('drums'), lead: make('lead'), melody: make('melody') },
         applied: { ...targets },
         desired: { ...targets },
-        fadeOutEnd: { pad: 0, bass: 0, drums: 0, lead: 0 },
+        fadeOutEnd: { pad: 0, bass: 0, drums: 0, lead: 0, melody: 0 },
         handle: null,
         nextTime: now + MUSIC.startDelaySeconds,
         step: 0,
@@ -207,7 +234,9 @@ export function createMusic(engine: Engine, timer: Timer = browserTimer): Music 
       pump();
     },
     setLayers(layers): void {
-      if (session !== null) session.desired = targetsFor(layers);
+      if (session === null) return;
+      session.desired = targetsFor(layers);
+      session.wantDark = layers.phaseTwo;
     },
     stop,
     sting(kind, theme): void {

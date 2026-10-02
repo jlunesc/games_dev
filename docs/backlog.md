@@ -197,7 +197,8 @@ Built: fight sounds, attack-specific sounds and layered music, all generated in 
 - **A separate Music switch**: music cannot be turned off alone (OPEN in the spec).
 - **Menu and UI sounds**: taps, moving through menus, the summary screen.
 - **Music on the summary screen**: today it stops with the win or loss sting.
-- **A hand-composed track per boss**: the score is a short chord loop per key, so bosses differ by key, mode and tempo, not by melody.
+- **A longer, hand-composed track per boss**: each boss now has two short melodies over the chord loop (built 2026-10-02, `docs/SPEC.md` section 11), but still no full composed track, and a generated boss has no melody.
+- **Pair fights play only the first boss's melodies**: the second boss's tune is not used.
 - **Sound files or samples**, and **reverb or spatial sound**: kept out for the phone's budget and because everything is generated in code.
 - **Distinct sounds per boss for the same event** (each boss having its own hit or death sound): sounds vary by attack shape and pair position, not by boss.
 - **Sound in the stats or the fairness checks**: sound reads the game only and is not recorded.

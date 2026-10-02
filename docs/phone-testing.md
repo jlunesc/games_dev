@@ -614,6 +614,15 @@ The ten placeholder beeps are gone. Every sound is made in code, so nothing extr
 - [ ] The fight stays smooth on the S21 with everything on: no stutter when many sounds overlap (two bolts, a counter and a warning at once), and the frame rate looks the same with Volume Off and High.
 - [ ] Leaving the fight, pausing when the controller drops out and turning the phone screen off do not leave a note hanging.
 
+### Boss melodies (added 2026-10-02)
+Each boss now has two melodies (A then B, four bars each) over the chord loop, from the start of the fight. In the second phase the music gets darker and faster (a lower key, minor, 15% quicker, long notes repeated) and the melody starts again.
+- [ ] Each boss's melody suits it (the Duelist's stabs, the Hound's growl, the Golem's slow climb, the Reaver's runs, the Kite's flitting). Which ones do not?
+- [ ] The melody is clear on the phone speaker but does not drown the warning sounds.
+- [ ] The second phase sounds darker and faster than the first, and the change comes on a bar line, not in the middle of a bar. Is it too much or too little?
+- [ ] Hear A and then B in the first minute: is it too repetitive, or is the loop too long?
+- [ ] In a pair fight the first boss's melody plays. Does that feel wrong?
+- [ ] The fight stays smooth on the S21 with the melody on.
+
 ### Questions
 - Is the music too loud or too busy next to the effects? Which layer is too much?
 - Which sounds get annoying when they repeat (the hit, the warning, the swell)?
@@ -751,7 +760,7 @@ Bosses now use close-range attacks mainly when you are close (`docs/bosses.md` s
 ## Timeline strips in Fight details
 Added 2026-10-02 (`docs/stats.md` section 7.6). Under "The fight" timeline, which is unchanged, two strips use the same time axis.
 - [ ] After a fight, open Fight details: under "The fight" there are "Boss attacks and your moves", and "Distance to the boss", the same width, so a moment is straight above or below the same moment in the other strips.
-- [ ] In "Boss attacks and your moves", each attack is a band (pale warning, solid danger) coloured by how it ended. A dash or jump just before a solid band is a dodge; a red band with nothing before it is an attack you stood through. Does that read at a glance?
+- [ ] In "Boss attacks and your moves", each attack is a tinted band (pale warning, stronger danger) coloured by how it ended, and over it are your towards (white, above the middle line) and away (purple, below) runs plus a blue line at the top for each dash and a yellow one at the bottom for each jump. A line level with a band is a dodge; a red band with no line beside it is an attack you stood through. Does that read at a glance, or is it too crowded?
 - [ ] In "Distance to the boss", the green lines (you hit) and red lines (it hit you) match the marks in "The fight". The line shows whether you were far or close when attacks came.
 - [ ] Walk only towards the boss for a few seconds: the "Moving towards the boss" row fills above the line. Walk away: the row below fills. Does it read well?
 - [ ] Under the distance line, the bar and legend show the share of the fight spent close, in the middle and far.

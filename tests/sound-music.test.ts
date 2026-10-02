@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createEngine } from '../src/ui/sound/engine';
 import { createMusic, targetsFor } from '../src/ui/sound/music';
-import { midiToHz, type Layers } from '../src/ui/sound/score';
+import { darkTheme, midiToHz, type Layers } from '../src/ui/sound/score';
 import { MUSIC, type Theme } from '../src/ui/sound/tuning';
 import { advance, asContext, FakeContext, FakeTimer, type FakeNode } from './fake-audio';
 
@@ -9,9 +9,9 @@ import { advance, asContext, FakeContext, FakeTimer, type FakeNode } from './fak
 const THEME: Theme = { root: 40, mode: 'minor', bpm: 120 };
 const BAR = 2;
 const FIRST = MUSIC.startDelaySeconds;
-const ALL: Layers = { pad: true, bass: true, drums: true, lead: true };
-const FIGHT: Layers = { pad: true, bass: true, drums: false, lead: false };
-const PAD_ONLY: Layers = { pad: true, bass: false, drums: false, lead: false };
+const ALL: Layers = { pad: true, bass: true, drums: true, lead: true, melody: true, phaseTwo: false };
+const FIGHT: Layers = { pad: true, bass: true, drums: false, lead: false, melody: true, phaseTwo: false };
+const PAD_ONLY: Layers = { pad: true, bass: false, drums: false, lead: false, melody: false, phaseTwo: false };
 
 function setup(volume: 'off' | 'medium' = 'medium') {
   const ctx = new FakeContext();
@@ -20,8 +20,8 @@ function setup(volume: 'off' | 'medium' = 'medium') {
   const music = createMusic(engine, timer);
   // The engine makes three gains (master, effects, music bus); the music's own come next: level, pad, bass, drums, lead.
   const base = ctx.ofKind('gain').length;
-  const gain = (name: 'level' | 'pad' | 'bass' | 'drums' | 'lead'): FakeNode =>
-    ctx.ofKind('gain')[base + ['level', 'pad', 'bass', 'drums', 'lead'].indexOf(name)]!;
+  const gain = (name: 'level' | 'pad' | 'bass' | 'drums' | 'lead' | 'melody'): FakeNode =>
+    ctx.ofKind('gain')[base + ['level', 'pad', 'bass', 'drums', 'lead', 'melody'].indexOf(name)]!;
   return { ctx, timer, music, gain };
 }
 
@@ -37,8 +37,15 @@ describe('the music targets', () => {
       bass: MUSIC.layerGain.bass,
       drums: MUSIC.layerGain.drums,
       lead: MUSIC.layerGain.lead,
+      melody: MUSIC.layerGain.melody,
     });
-    expect(targetsFor({ pad: false, bass: false, drums: false, lead: false })).toEqual({ pad: 0, bass: 0, drums: 0, lead: 0 });
+    expect(targetsFor({ pad: false, bass: false, drums: false, lead: false, melody: false, phaseTwo: false })).toEqual({
+      pad: 0,
+      bass: 0,
+      drums: 0,
+      lead: 0,
+      melody: 0,
+    });
   });
 });
 
@@ -123,6 +130,41 @@ describe('the sequencer', () => {
     expect(ctx.ofKind('filter')).toHaveLength(8);
   });
 
+  it("plays the boss's melody over the bass, and nothing of it without the layer", () => {
+    const tuned: Theme = { ...THEME, melody: 'ember-duelist' };
+    const on = setup();
+    on.music.start(tuned, FIGHT);
+    const heard = (ctx: FakeContext): number[] => ctx.ofKind('oscillator').map(firstFrequency);
+    // Bar 0 opens on the tonic, two octaves above the key's note.
+    expect(heard(on.ctx)).toContain(midiToHz(THEME.root + 24));
+    const off = setup();
+    off.music.start(tuned, { ...FIGHT, melody: false });
+    expect(heard(off.ctx)).not.toContain(midiToHz(THEME.root + 24));
+  });
+
+  it('turns darker and faster on the next bar line once the second phase is asked for, and keeps it', () => {
+    const { ctx, timer, music } = setup();
+    music.start({ ...THEME, melody: 'ember-duelist' }, FIGHT);
+    advance(ctx, timer, 1);
+    music.setLayers({ ...FIGHT, phaseTwo: true });
+    advance(ctx, timer, 6);
+    const dark = darkTheme(THEME);
+    const bass = ctx
+      .ofKind('oscillator')
+      .filter((o) => o.type === 'triangle' && firstFrequency(o) === midiToHz(dark.root))
+      .map((o) => o.startedAt!);
+    expect(bass.length).toBeGreaterThanOrEqual(4);
+    expect(bass[0]!).toBeCloseTo(FIRST + BAR, 6);
+    expect(bass[1]! - bass[0]!).toBeCloseTo(60 / dark.bpm, 6);
+    expect(dark.bpm).toBeGreaterThan(THEME.bpm);
+  });
+
+  it("starts in the second phase's music when it is already asked for, as after a pause", () => {
+    const { ctx, music } = setup();
+    music.start(THEME, { ...FIGHT, phaseTwo: true });
+    expect(ctx.ofKind('oscillator').map(firstFrequency)).toContain(midiToHz(darkTheme(THEME).root));
+  });
+
   it('skips steps it missed instead of playing them late', () => {
     const { ctx, timer, music } = setup();
     music.start(THEME, ALL);
@@ -140,7 +182,9 @@ describe('the sequencer', () => {
     music.stop();
     expect(music.running).toBe(false);
     expect(timer.active).toBe(0);
-    const ramp = gain('level').gain.calls.filter((call) => call.op === 'linear').at(-1);
+    const ramp = gain('level')
+      .gain.calls.filter((call) => call.op === 'linear')
+      .at(-1);
     expect(ramp).toMatchObject({ value: 0 });
     expect(ramp!.time).toBeCloseTo(MUSIC.stopFadeSeconds, 6);
     const count = ctx.ofKind('oscillator').length;
