@@ -723,7 +723,7 @@ After a fight (win, loss or leaving with the hold), the after-fight menu gets a 
 - [ ] The screen fits the phone width in both orientations and scrolls with a finger. With the controller, up and down scroll and the confirm or back button returns to the summary.
 - [ ] The recommendation on top is one sentence naming the attack that hurt you most in this fight (or, if nothing hit you, the one whose openings you did not reply to). Does it point at what you felt went wrong? Does it change from fight to fight?
 - [ ] The timeline shows your swings, hits landed (above the line) and hits taken (below it) where you remember them.
-- [ ] Reply time: do the bars and the "Reply by attack" rows make sense? A reply time is from the boss's attack ending to you starting a swing.
+- [ ] Reply time: do the bars and the "Reply rate by boss attack" rows make sense? A reply time is from the boss's attack ending to you starting a swing.
 - [ ] A short fight with little to say says there are too few attacks and not a wrong claim. A fight after another fight never shows the earlier fight's numbers.
 - [ ] Two-boss fights name the attacks of both bosses correctly.
 - [ ] A flawless fight says nothing stands out; a fight with no boss attack says there was nothing to judge.
@@ -764,19 +764,21 @@ Bosses now use close-range attacks mainly when you are close (`docs/bosses.md` s
 - [ ] The file is named `boss-trainer-details-<date and time>.stats.txt` and opens in the Claude app as a text attachment.
 
 ## Timeline strips in Fight details
-Added 2026-10-02 (`docs/stats.md` section 7.6). Under "The fight" timeline, which is unchanged, two strips use the same time axis.
-- [ ] After a fight, open Fight details: under "The fight" there are "Boss attacks and your moves", and "Distance to the boss", the same width, so a moment is straight above or below the same moment in the other strips.
-- [ ] In "Boss attacks and your moves", each attack is a tinted band (pale warning, stronger danger) coloured by how it ended, and over it are your towards (white, above the middle line) and away (purple, below) runs plus a blue line at the top for each dash and a yellow one at the bottom for each jump. A line level with a band is a dodge; a red band with no line beside it is an attack you stood through. Does that read at a glance, or is it too crowded?
-- [ ] In "Distance to the boss", the green lines (you hit) and red lines (it hit you) match the marks in "The fight". The line shows whether you were far or close when attacks came.
-- [ ] Walk only towards the boss for a few seconds: the "Moving towards the boss" row fills above the line. Walk away: the row below fills. Does it read well?
+Added 2026-10-02 (`docs/stats.md` section 7.6). Under the "Timeline: your hits and swings" strip (formerly "The fight"), the strips use the same time axis (split into separate timelines on 2026-10-02).
+- [ ] After a fight, open Fight details: there are six timelines: "Timeline: your hits and swings", "Timeline: boss attacks and your direction of movement", "Timeline: your dashes, hits landed and hits taken", "Timeline: boss attacks and your dashes", the same two for jumps, and "Timeline: distance to the boss", the same width, so a moment is straight above or below the same moment in the other strips.
+- [ ] In "Timeline: boss attacks and your direction of movement", each attack is a tinted band (pale warning, stronger danger) coloured by how it ended, and under it your towards (white) and away (purple) runs sit on the same line, never overlapping. Can you tell which way you went in each attack, and which attacks hit you?
+- [ ] In "Timeline: your dashes, hits landed and hits taken" (and the one for jumps), each dash (blue) or jump (yellow) is a line across the middle, the hits you landed (green) above it and the hits you took (red) below it. Do you see dashes shortly before the red lines, or not?
+- [ ] In "Timeline: boss attacks and your dashes" (and the one for jumps), a line inside a band is a dodge made during that attack; a red band with no line in it is an attack you stood through. Does that read at a glance?
+- [ ] In "Timeline: distance to the boss", the green lines (you hit) and red lines (it hit you) match the marks in "Timeline: your hits and swings". The line shows whether you were far or close when attacks came.
+- [ ] Walk only towards the boss for a few seconds: a white run appears in the lane under the attack bands. Walk away: a purple run appears on the same line. Does it read well?
 - [ ] Under the distance line, the bar and legend show the share of the fight spent close, in the middle and far.
 - [ ] Tell me what is missing or unclear on these strips, and whether they are easy to read on the phone.
 
-## How you avoided attacks and how well your dodges worked
+## How you avoided boss attacks and the dodge ratings
 Added 2026-10-02 (`docs/stats.md` 7.6).
-- [ ] In "How you avoided attacks" the bar is split into "Dodge saved you", "Dodge not needed", platform, cover, countered and "Never threatened you". Are the labels clear? "Never threatened you" should be the attacks that were out of reach without you doing anything.
+- [ ] In "How you avoided boss attacks" the bar is split into "Dodge saved you", "Dodge not needed", platform, cover, countered and "Never threatened you". Are the labels clear? "Never threatened you" should be the attacks that were out of reach without you doing anything.
 - [ ] Dash through an attack just before it lands: it should count as "Dodge saved you". Dash while standing far from the boss: "Dodge not needed".
-- [ ] In "How well your dodges worked", a line says how many attacks had a dash or jump and how many saved you, were not needed or hit you anyway. The columns show how much later the dodge could have begun: left means it only just worked, right means lots of room.
+- [ ] In "Dodge ratings", a line says how many attacks had a dash or jump and how many saved you, were not needed or hit you anyway. The columns show how much later the dodge could have begun: left means it only just worked, right means lots of room.
 - [ ] A fight with no dash or jump during an attack shows "You did not dash or jump during any attack."
 - [ ] Does saving the fight at the end feel slower than before (the dodges are replayed then)?
 
