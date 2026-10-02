@@ -401,14 +401,16 @@ body {
 .plot-jump { --c: #ffd166; }
 .plot-platform { --c: #b388ff; }
 .plot-cover { --c: #f78fb3; }
-.plot-distance { --c: #7ee0c3; }
+.plot-saved { --c: #5ec27a; }
+.plot-unneeded { --c: #9aa3c7; }
+.plot-never { --c: #4a4e63; }
+.plot-unrated { --c: #6b6f86; }
 .plot-countered { --c: #ff9f5a; }
 .plot-close { --c: #e5596b; }
 .plot-mid { --c: #ffd166; }
 .plot-far { --c: #4fc3f7; }
-.plot-left { --c: #4fc3f7; }
-.plot-right { --c: #ffd166; }
-.plot-still { --c: #6b6f86; }
+.plot-toward { --c: #4fc3f7; }
+.plot-away { --c: #ffd166; }
 .plot-attack { --c: #e5596b; }
 .plot-path { --c: #8fa3ff; }
 

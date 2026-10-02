@@ -20,32 +20,21 @@ function measure(frames: InputFrame[], distance = 500) {
 }
 
 describe('movement', () => {
-  it('counts the distance and the updates holding each direction', () => {
+  it('counts the updates moving towards the boss, away from it, and neither (the boss starts on the right)', () => {
     const { measures } = measure([...repeat(right, 30), ...repeat(left, 20), ...repeat(NO_INPUT, 10)]);
     const m = measures.movement;
-    expect(m.rightTicks).toBe(30);
-    expect(m.leftTicks).toBe(20);
+    expect(m.towardTicks).toBe(30);
+    expect(m.awayTicks).toBe(20);
     expect(m.stillTicks).toBe(10);
   });
 
-  it('counts a change of direction, also with a stop in between, but not a stop and a restart the same way', () => {
-    expect(measure([...repeat(right, 10), ...repeat(left, 10)]).measures.movement.turns).toBe(1);
-    expect(measure([...repeat(right, 10), ...repeat(NO_INPUT, 10), ...repeat(left, 10)]).measures.movement.turns).toBe(1);
-    expect(measure([...repeat(right, 10), ...repeat(NO_INPUT, 10), ...repeat(right, 10)]).measures.movement.turns).toBe(0);
-    expect(measure([...repeat(right, 5), ...repeat(left, 5), ...repeat(right, 5)]).measures.movement.turns).toBe(2);
-  });
-
-  it('counts the updates next to a wall and in the air', () => {
-    const wall = createInitialState(QUIET_BOSS, 1);
-    wall.player.x = 30;
-    wall.player.prevX = 30;
+  it('judges towards and away against the side the boss is on, whichever it is', () => {
+    const behind = standAt(QUIET_BOSS, 500);
+    behind.player.x = behind.boss.x + 500;
+    behind.player.prevX = behind.player.x;
     const meter = createMeter();
-    analyzeRun(QUIET_BOSS, wall, repeat(NO_INPUT, 20), 0, meter.observe);
-    expect(meter.result().movement.wallTicks).toBe(20);
-
-    const jump = measure([withInput({ jumpPressed: true, jumpHeld: true }), ...repeat(withInput({ jumpHeld: true }), 20)]);
-    expect(jump.measures.movement.airTicks).toBeGreaterThan(10);
-    expect(measure(repeat(NO_INPUT, 20)).measures.movement.airTicks).toBe(0);
+    analyzeRun(QUIET_BOSS, behind, [...repeat(left, 30), ...repeat(right, 10)], 0, meter.observe);
+    expect(meter.result().movement).toEqual({ towardTicks: 30, awayTicks: 10, stillTicks: 0 });
   });
 });
 
@@ -58,11 +47,11 @@ describe('clock', () => {
     expect(meter.result().clock.ticks).toBe(analysis.ticks - analysis.study.ticks);
   });
 
-  it('samples the position of the player every few updates', () => {
+  it('samples the distance to the boss every few updates', () => {
     const { measures } = measure(repeat(right, 61));
-    const { path, ticks } = measures.clock;
-    expect(path).toHaveLength(Math.ceil(ticks / PATH_STEP));
-    expect(path[path.length - 1]!).toBeGreaterThan(path[0]!);
+    const { distance, ticks } = measures.clock;
+    expect(distance).toHaveLength(Math.ceil(ticks / PATH_STEP));
+    expect(distance[distance.length - 1]!).toBeLessThan(distance[0]!);
   });
 
   it('lists the runs in which a boss was attacking, inside the fight and in order', () => {
@@ -95,16 +84,32 @@ describe('clock', () => {
     }
   });
 
-  it('lists the runs holding each direction and samples the distance to the boss', () => {
+  it('lists the runs moving towards and away from the boss and samples the distance to it', () => {
     const { measures } = measure([...repeat(right, 20), ...repeat(NO_INPUT, 10), ...repeat(left, 30)]);
-    expect(measures.clock.rightRuns).toEqual([[0, 20]]);
-    expect(measures.clock.leftRuns).toEqual([[30, 60]]);
-    expect(measures.clock.distance).toHaveLength(measures.clock.path.length);
+    expect(measures.clock.towardRuns).toEqual([[0, 20]]);
+    expect(measures.clock.awayRuns).toEqual([[30, 60]]);
     expect(Math.abs(measures.clock.distance[0]! - 500)).toBeLessThan(20);
   });
 
   it('has no attack runs against a boss that never attacks', () => {
     expect(measure(repeat(NO_INPUT, 100)).measures.clock.attackSpans).toEqual([]);
+  });
+});
+
+describe('trace', () => {
+  it('keeps every real update\'s input, the updates a dash or jump began on, and the state at each attack\'s warning', () => {
+    const meter = createMeter();
+    const frames = repeat(NO_INPUT, 600).map((f, i) => (i === 100 ? withInput({ dashPressed: true }) : f));
+    const analysis = analyzeRun(EMBER_DUELIST, createInitialState(EMBER_DUELIST, 1), frames, 0, meter.observe);
+    const { trace, clock } = meter.result();
+    expect(trace.frames).toHaveLength(clock.ticks);
+    expect(trace.dodgeTicks).toEqual([101]);
+    expect(trace.starts).toHaveLength(clock.bands.length);
+    for (const start of trace.starts) {
+      expect(start.state.tick).toBe(start.tick);
+      expect(start.lastShotTick).toBeGreaterThanOrEqual(start.tick);
+    }
+    expect(trace.starts.length).toBeGreaterThanOrEqual(analysis.attacks.length);
   });
 });
 
@@ -123,6 +128,6 @@ describe('the numbers of the details', () => {
     const meter = createMeter();
     const analysis = analyzeRun(QUIET_BOSS, standAt(QUIET_BOSS, 300), repeat(right, 30), 0, meter.observe);
     expect(fightDetails(analysis).numbers.movement).toBeNull();
-    expect(fightDetails(analysis, meter.result()).numbers.movement?.rightTicks).toBe(30);
+    expect(fightDetails(analysis, meter.result()).numbers.movement?.towardTicks).toBe(30);
   });
 });

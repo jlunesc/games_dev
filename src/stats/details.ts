@@ -1,5 +1,6 @@
 import type { Analysis } from './analyze';
 import { DETAILS_TUNING as T } from './details-tuning';
+import type { DodgeRating } from './dodges';
 import type { ReplayMeasures } from './meter';
 
 /** The numbers behind the plots of the fight details screen, for the real fight only (the study is left out). */
@@ -10,8 +11,12 @@ export interface FightDetails {
     hit: number;
     total: number;
     share: number | null;
-    /** How the attacks that were avoided were avoided. */
-    methods: { dash: number; jump: number; platform: number; cover: number; distance: number; countered: number };
+    /**
+     * How the attacks that were avoided were avoided. `saved` and `unneeded` are the dodges (a dash or jump during the attack)
+     * that, replayed without the dodge, would have hit or would not have; `outOfReach` never threatened the player; `unrated` is
+     * a dodge nobody replayed (no ratings were given).
+     */
+    methods: { saved: number; unneeded: number; platform: number; cover: number; outOfReach: number; countered: number; unrated: number };
   };
   hitRate: { swings: number; hits: number; share: number | null };
   perMinute: { swings: number; dashes: number; jumps: number };
@@ -35,8 +40,8 @@ export interface FightDetails {
   moves: { dashes: number[]; jumps: number[] };
   /** Every real attack of the boss as a stretch of the same count: the warning from `start`, danger from `dangerStart`, over at `end`. */
   attackBands: AttackBand[];
-  /** How early dodges began, in bins (`T.dodgeBinEdges`; the first is a dodge that began after the danger did). */
-  dodgeTiming: { dodged: number; hit: number }[];
+  /** The dashes and jumps made during attacks, replayed without them (see `rateDodges`); null when no ratings were given. `slackBins`: of the saved ones, how much later they could have begun (`T.slackBinEdges`). */
+  dodges: { saved: number; unneeded: number; hitAnyway: number; slackBins: number[] } | null;
   numbers: Numbers;
   recommendation: Recommendation;
 }
@@ -123,15 +128,23 @@ function recommend(d: Omit<FightDetails, 'recommendation'>): Recommendation {
  * share of something the game measured; none says why. The recommendation is the one number furthest below its
  * target, given with the counts it comes from, or "none" / "few".
  */
-export function fightDetails(analysis: Analysis, measures?: ReplayMeasures): FightDetails {
+export function fightDetails(analysis: Analysis, measures?: ReplayMeasures, ratings?: DodgeRating[]): FightDetails {
   const studyTicks = analysis.study.ticks;
   const realAttacks = analysis.attacks.filter((a) => !a.study);
   const hits = realAttacks.filter((a) => a.outcome === 'hit').length;
   const countered = realAttacks.filter((a) => a.outcome === 'countered').length;
   const dodged = realAttacks.filter((a) => a.outcome === 'dodged');
   const avoidedCount = dodged.length + countered;
-  const methods = { dash: 0, jump: 0, platform: 0, cover: 0, distance: 0, countered };
-  for (const a of dodged) if (a.evasion !== null) methods[a.evasion] += 1;
+  const ratingOf = (a: Analysis['attacks'][number]): DodgeRating | undefined =>
+    ratings?.find((r) => r.boss === a.boss && r.attackId === a.attackId && Math.abs(r.start - (a.startTick - studyTicks)) <= 1);
+  const methods = { saved: 0, unneeded: 0, platform: 0, cover: 0, outOfReach: 0, countered, unrated: 0 };
+  for (const a of dodged) {
+    const verdict = ratingOf(a)?.verdict;
+    if (verdict === 'saved' || verdict === 'unneeded') methods[verdict] += 1;
+    else if (a.evasion === 'platform' || a.evasion === 'cover') methods[a.evasion] += 1;
+    else if (a.evasion === 'distance') methods.outOfReach += 1;
+    else methods.unrated += 1;
+  }
 
   const realTicks = (ticks: number[]): number[] => ticks.filter((t) => t > studyTicks).map((t) => t - studyTicks);
   const swings = realTicks(analysis.swingTicks);
@@ -148,12 +161,21 @@ export function fightDetails(analysis: Analysis, measures?: ReplayMeasures): Fig
   for (const w of replies) replyBins[binOf(w.replyTicks!, T.replyBinEdges)]![w.hit ? 'hit' : 'missed'] += 1;
   const ids = [...new Set([...windows.map((w) => w.attackId), ...realAttacks.filter((a) => a.outcome === 'countered').map((a) => a.attackId)])];
 
-  const dodgeBins = Array.from({ length: T.dodgeBinEdges.length + 1 }, () => ({ dodged: 0, hit: 0 }));
-  for (const a of realAttacks) {
-    if (a.marginTicks === null) continue;
-    if (a.outcome === 'hit') dodgeBins[binOf(a.marginTicks, T.dodgeBinEdges)]!.hit += 1;
-    else if (a.outcome === 'dodged') dodgeBins[binOf(a.marginTicks, T.dodgeBinEdges)]!.dodged += 1;
-  }
+  const dodges =
+    ratings === undefined
+      ? null
+      : {
+          saved: ratings.filter((r) => r.verdict === 'saved').length,
+          unneeded: ratings.filter((r) => r.verdict === 'unneeded').length,
+          hitAnyway: ratings.filter((r) => r.verdict === 'hitAnyway').length,
+          slackBins: ratings.reduce(
+            (bins, r) => {
+              if (r.slackTicks !== null) bins[binOf(r.slackTicks, T.slackBinEdges)]! += 1;
+              return bins;
+            },
+            Array.from({ length: T.slackBinEdges.length + 1 }, () => 0),
+          ),
+        };
 
   const perAttack: AttackCount[] = [];
   for (const a of realAttacks) {
@@ -206,7 +228,7 @@ export function fightDetails(analysis: Analysis, measures?: ReplayMeasures): Fig
       const found = measures?.clock.bands.find((x) => x.boss === a.boss && Math.abs(x.start - start) <= 1);
       return { attackId: a.attackId, boss: a.boss, start, dangerStart, end: Math.max(dangerStart + 1, found?.end ?? dangerStart + 1), outcome: a.outcome };
     }),
-    dodgeTiming: dodgeBins,
+    dodges,
     numbers: {
       boss: { started: realAttacks.length, perAttack },
       movement: measures?.movement ?? null,

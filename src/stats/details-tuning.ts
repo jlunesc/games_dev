@@ -4,8 +4,8 @@ export const DETAILS_TUNING = {
   minReplyWindowTicks: 12,
   /** Bin edges in updates. A value goes in the first bin whose upper edge is above it. */
   replyBinEdges: [15, 30, 45, 60, 90],
-  /** The dodge timing: updates between the dodge beginning and the danger beginning (negative: it began after). */
-  dodgeBinEdges: [0, 6, 12, 24, 48],
-  /** The player counts as next to a wall within this many world units of either end of the arena (the arena is 1280 wide). */
-  wallMargin: 100,
+  /** How much later a dodge that saved the player could have begun, in bins of updates (see `rateDodges`). */
+  slackBinEdges: [3, 6, 12, 24],
+  /** The longest delay tried when finding how much later a dodge could have begun (half a second). */
+  maxSlackTicks: 30,
 } as const;

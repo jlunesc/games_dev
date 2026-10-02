@@ -749,12 +749,21 @@ Bosses now use close-range attacks mainly when you are close (`docs/bosses.md` s
 - [ ] If it feels too strict or too loose, `rangeBias` in each boss file is the number to change (0.25 now; 1 turns it off).
 
 ## Timeline strips in Fight details
-Added 2026-10-02 (`docs/stats.md` section 7.6). Under "The fight" timeline, which is unchanged, three strips use the same time axis.
-- [ ] After a fight, open Fight details: under "The fight" there are "Boss attacks and your moves", "Distance to the boss" and "Your place in the arena", all the same width, so a moment is straight above or below the same moment in the other strips.
+Added 2026-10-02 (`docs/stats.md` section 7.6). Under "The fight" timeline, which is unchanged, two strips use the same time axis.
+- [ ] After a fight, open Fight details: under "The fight" there are "Boss attacks and your moves", and "Distance to the boss", the same width, so a moment is straight above or below the same moment in the other strips.
 - [ ] In "Boss attacks and your moves", each attack is a band (pale warning, solid danger) coloured by how it ended. A dash or jump just before a solid band is a dodge; a red band with nothing before it is an attack you stood through. Does that read at a glance?
 - [ ] In "Distance to the boss", the green lines (you hit) and red lines (it hit you) match the marks in "The fight". The line shows whether you were far or close when attacks came.
-- [ ] Walk only to the right for a few seconds in a fight: the position line climbs to the top and "Holding right" is most of the bar. Stand against a wall for a while: "Next to a wall" grows.
+- [ ] Walk only towards the boss for a few seconds: the "Moving towards the boss" row fills above the line. Walk away: the row below fills. Does it read well?
+- [ ] Under the distance line, the bar and legend show the share of the fight spent close, in the middle and far.
 - [ ] Tell me what is missing or unclear on these strips, and whether they are easy to read on the phone.
+
+## How you avoided attacks and how well your dodges worked
+Added 2026-10-02 (`docs/stats.md` 7.6).
+- [ ] In "How you avoided attacks" the bar is split into "Dodge saved you", "Dodge not needed", platform, cover, countered and "Never threatened you". Are the labels clear? "Never threatened you" should be the attacks that were out of reach without you doing anything.
+- [ ] Dash through an attack just before it lands: it should count as "Dodge saved you". Dash while standing far from the boss: "Dodge not needed".
+- [ ] In "How well your dodges worked", a line says how many attacks had a dash or jump and how many saved you, were not needed or hit you anyway. The columns show how much later the dodge could have begun: left means it only just worked, right means lots of room.
+- [ ] A fight with no dash or jump during an attack shows "You did not dash or jump during any attack."
+- [ ] Does saving the fight at the end feel slower than before (the dodges are replayed then)?
 
 ## Things I would like to know
 After playing, answer these in plain words:

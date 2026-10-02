@@ -31,8 +31,8 @@ export function binLabels(edges: readonly number[], first?: string): string[] {
 }
 
 export const replyBinLabels = (): string[] => binLabels(T.replyBinEdges);
-/** The first dodge bin is a dodge that began after the danger did. */
-export const dodgeBinLabels = (): string[] => binLabels(T.dodgeBinEdges, 'too late');
+/** How much later a dodge could have begun and still saved the player ("under 0.05 s", ..., "0.4+"). */
+export const slackBinLabels = (): string[] => binLabels(T.slackBinEdges);
 
 /** "once", "twice", "3 times". */
 const times = (n: number): string => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);

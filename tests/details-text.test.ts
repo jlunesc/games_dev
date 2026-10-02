@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { binLabels, dodgeBinLabels, percent, recommendationText, replyBinLabels, seconds } from '../src/ui/details-text';
+import { binLabels, percent, recommendationText, replyBinLabels, seconds, slackBinLabels } from '../src/ui/details-text';
 
 describe('details text', () => {
   it('writes shares as whole percents and no share as a dash', () => {
@@ -17,8 +17,8 @@ describe('details text', () => {
   it('labels bins from their edges, one more label than edges', () => {
     expect(binLabels([15, 30, 60])).toEqual(['under 0.25', '0.25–0.5', '0.5–1', '1+']);
     expect(replyBinLabels()).toHaveLength(6);
-    expect(dodgeBinLabels()[0]).toBe('too late');
-    expect(dodgeBinLabels()).toHaveLength(6);
+    expect(slackBinLabels()).toHaveLength(5);
+    expect(slackBinLabels()[4]).toBe('0.4+');
   });
 
   it('gives each recommendation with the counts it rests on', () => {

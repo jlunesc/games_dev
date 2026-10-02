@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeRun, type Analysis, type AttackOccurrence, type PunishWindow } from '../src/stats/analyze';
 import { fightDetails } from '../src/stats/details';
+import type { DodgeRating } from '../src/stats/dodges';
 import { standAt } from './boss-helpers';
 import { QUIET_BOSS, withInput } from './helpers';
 
@@ -86,19 +87,35 @@ describe('attacks avoided', () => {
     expect(fightDetails(base()).avoided.share).toBeNull();
   });
 
-  it('splits how attacks were avoided', () => {
+  it('splits how attacks were avoided, a dodge by what the replay without it said', () => {
     const a = base({
       attacks: [
-        attack({ evasion: 'dash' }),
-        attack({ evasion: 'dash' }),
-        attack({ evasion: 'jump' }),
-        attack({ evasion: 'platform' }),
-        attack({ evasion: 'cover' }),
-        attack({ evasion: 'distance' }),
-        attack({ outcome: 'countered', evasion: null }),
+        attack({ startTick: 100, evasion: 'dash' }),
+        attack({ startTick: 200, evasion: 'dash' }),
+        attack({ startTick: 300, evasion: 'jump' }),
+        attack({ startTick: 400, evasion: 'platform' }),
+        attack({ startTick: 500, evasion: 'cover' }),
+        attack({ startTick: 600, evasion: 'distance' }),
+        attack({ startTick: 700, evasion: 'distance' }),
+        attack({ startTick: 800, outcome: 'countered', evasion: null }),
       ],
     });
-    expect(fightDetails(a).avoided.methods).toEqual({ dash: 2, jump: 1, platform: 1, cover: 1, distance: 1, countered: 1 });
+    const rating = (start: number, verdict: DodgeRating['verdict']): DodgeRating => ({ attackId: 'slam', boss: 0, start, verdict, slackTicks: null });
+    const ratings = [rating(100, 'saved'), rating(200, 'unneeded'), rating(300, 'saved'), rating(700, 'unneeded')];
+    expect(fightDetails(a, undefined, ratings).avoided.methods).toEqual({
+      saved: 2,
+      unneeded: 2,
+      platform: 1,
+      cover: 1,
+      outOfReach: 1,
+      countered: 1,
+      unrated: 0,
+    });
+  });
+
+  it('counts a dodge nobody replayed as unrated and never as out of reach', () => {
+    const a = base({ attacks: [attack({ evasion: 'dash' }), attack({ evasion: 'distance' })] });
+    expect(fightDetails(a).avoided.methods).toMatchObject({ unrated: 1, outOfReach: 1, saved: 0, unneeded: 0 });
   });
 });
 
@@ -209,22 +226,18 @@ describe('timeline', () => {
   });
 });
 
-describe('dodge timing', () => {
-  it('bins how early dodges began, hits and dodges apart, late ones first', () => {
-    const a = base({
-      attacks: [
-        attack({ outcome: 'hit', damageTaken: 1, evasion: null, marginTicks: -3 }),
-        attack({ outcome: 'dodged', evasion: 'dash', marginTicks: 4 }),
-        attack({ outcome: 'dodged', evasion: 'jump', marginTicks: 20 }),
-        attack({ outcome: 'hit', damageTaken: 1, evasion: null, marginTicks: 20 }),
-        attack({ outcome: 'dodged', evasion: 'distance', marginTicks: null }),
-      ],
-    });
-    const bins = fightDetails(a).dodgeTiming;
-    expect(bins.reduce((n, b) => n + b.dodged + b.hit, 0)).toBe(4);
-    expect(bins[0]).toMatchObject({ hit: 1, dodged: 0 });
-    expect(bins[1]).toMatchObject({ hit: 0, dodged: 1 });
-    expect(bins[3]).toMatchObject({ hit: 1, dodged: 1 });
+describe('dodges', () => {
+  const rating = (verdict: DodgeRating['verdict'], slackTicks: number | null): DodgeRating => ({ attackId: 'slam', boss: 0, start: 100, verdict, slackTicks });
+
+  it('is null without ratings', () => {
+    expect(fightDetails(base()).dodges).toBeNull();
+  });
+
+  it('counts each verdict and bins how much later the saving dodges could have been, only just first', () => {
+    const ratings = [rating('saved', 0), rating('saved', 2), rating('saved', 10), rating('saved', 30), rating('unneeded', null), rating('hitAnyway', null)];
+    const { dodges } = fightDetails(base(), undefined, ratings);
+    expect(dodges).toMatchObject({ saved: 4, unneeded: 1, hitAnyway: 1 });
+    expect(dodges!.slackBins).toEqual([2, 0, 1, 0, 1]);
   });
 });
 

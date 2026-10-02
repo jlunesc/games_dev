@@ -1,9 +1,8 @@
 import type { FightDetails } from '../stats/details';
 import { el } from './dom';
 import { attackBandRects, columns, marksAt, pathPoints, spanRects, stackedRow, timelineMarks, type Rect } from './details-plots';
-import { WORLD } from '../game/params';
 import { PATH_STEP } from '../stats/meter';
-import { dodgeBinLabels, percent, recommendationText, replyBinLabels, seconds } from './details-text';
+import { slackBinLabels, percent, recommendationText, replyBinLabels, seconds } from './details-text';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 /** The plots are drawn in this many units wide and scaled to the panel. */
@@ -89,19 +88,6 @@ function timelineChart(details: FightDetails['timeline']): SVGSVGElement {
   return svg;
 }
 
-function positionChart(clock: { ticks: number; path: number[]; attackSpans: [number, number][] }): SVGSVGElement {
-  const height = 72;
-  const svg = chart(height + 14);
-  addRects(svg, spanRects(clock.attackSpans, clock.ticks, W, height, 'plot-attack'));
-  svg.append(svgNode('line', { x1: 0, x2: W, y1: 0, y2: 0 }, 'plot-axis'), svgNode('line', { x1: 0, x2: W, y1: height, y2: height }, 'plot-axis'));
-  const points = pathPoints(clock.path, clock.ticks, PATH_STEP, WORLD.width, W, height);
-  if (points.length > 1) svg.append(svgNode('polyline', { points: points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ') }, 'plot-path'));
-  addText(svg, 0, height + 11, '0:00', 'start');
-  const total = Math.round(clock.ticks / 60);
-  addText(svg, W, height + 11, `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`, 'end');
-  return svg;
-}
-
 type Clock = NonNullable<FightDetails['numbers']['clock']>;
 
 const OUTCOME_CLASS: Record<string, string> = {
@@ -123,16 +109,16 @@ function addTimeLabels(svg: SVGSVGElement, ticks: number, y: number): void {
   addText(svg, W, y, `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`, 'end');
 }
 
-/** Three rows on the fight's own time axis: the boss's attacks (coloured by how each ended), the way you held, and your dashes and jumps. */
+/** Three rows on the fight's own time axis: the boss's attacks (coloured by how each ended), whether you held towards or away from the boss, and your dashes and jumps. */
 function attacksAndMovesChart(details: FightDetails, clock: Clock): SVGSVGElement {
   const length = details.timeline.length;
   const svg = chart(112);
   addText(svg, 0, 8, 'Boss attacks', 'start');
   addRects(svg, attackBandRects(details.attackBands, length, W, 11, 18, (o) => OUTCOME_CLASS[o] ?? 'plot-missed'));
-  addText(svg, 0, 40, 'Holding left (above) or right (below)', 'start');
+  addText(svg, 0, 40, 'Moving towards the boss (above) or away from it (below)', 'start');
   svg.append(svgNode('line', { x1: 0, x2: W, y1: 56, y2: 56 }, 'plot-axis'));
-  addRects(svg, spanRects(clock.leftRuns, length, W, 12, 'plot-left'), 0, 43);
-  addRects(svg, spanRects(clock.rightRuns, length, W, 12, 'plot-right'), 0, 57);
+  addRects(svg, spanRects(clock.towardRuns, length, W, 12, 'plot-toward'), 0, 43);
+  addRects(svg, spanRects(clock.awayRuns, length, W, 12, 'plot-away'), 0, 57);
   addText(svg, 0, 84, 'Dashes and jumps', 'start');
   addMarks(svg, marksAt(details.moves.jumps, length, W, 87, 99, 'plot-jump'), 1.5);
   addMarks(svg, marksAt(details.moves.dashes, length, W, 87, 99, 'plot-dash'), 2);
@@ -164,12 +150,13 @@ function stackedBar(values: number[], classes: readonly string[]): SVGSVGElement
 }
 
 const METHODS = [
-  { key: 'dash', cls: 'plot-dash', label: 'Dash' },
-  { key: 'jump', cls: 'plot-jump', label: 'Jump' },
+  { key: 'saved', cls: 'plot-saved', label: 'Dodge saved you' },
+  { key: 'unneeded', cls: 'plot-unneeded', label: 'Dodge not needed' },
   { key: 'platform', cls: 'plot-platform', label: 'Platform' },
   { key: 'cover', cls: 'plot-cover', label: 'Cover' },
-  { key: 'distance', cls: 'plot-distance', label: 'Out of reach' },
   { key: 'countered', cls: 'plot-countered', label: 'Countered' },
+  { key: 'unrated', cls: 'plot-unrated', label: 'Dodged' },
+  { key: 'outOfReach', cls: 'plot-never', label: 'Never threatened you' },
 ] as const;
 
 /**
@@ -182,7 +169,7 @@ export function renderDetails(
   nameOf: (attackId: string) => string,
   onBack: () => void,
 ): void {
-  const { avoided, hitRate, reply, perMinute, distance, timeline, dodgeTiming } = details;
+  const { avoided, hitRate, reply, perMinute, distance, timeline, dodges } = details;
 
   const tiles = el('div', 'tiles');
   tiles.append(
@@ -231,30 +218,28 @@ export function renderDetails(
       { cls: 'plot-missed', label: 'Cut short' },
     ]);
     const movesBox = section('Boss attacks and your moves', 'Each attack from its warning (pale) to the end of its danger. A dash or jump just before a strike is a dodge.');
-    movesBox.append(attacksAndMovesChart(details, clock), outcomes);
-
-    const gapBox = section('Distance to the boss', 'The gap through the fight. Green lines: you hit the boss. Red lines: it hit you. Shaded: a boss was attacking.');
-    gapBox.append(distanceChart(details, clock));
-
-    const held = movement.leftTicks + movement.rightTicks + movement.stillTicks;
-    const arenaBox = section('Your place in the arena', 'The right wall at the top, the left wall at the bottom. Shaded: a boss was attacking.');
-    arenaBox.append(
-      positionChart(clock),
-      stackedBar([movement.leftTicks, movement.rightTicks, movement.stillTicks], ['plot-left', 'plot-right', 'plot-still']),
+    movesBox.append(
+      attacksAndMovesChart(details, clock),
+      outcomes,
       legend([
-        { cls: 'plot-left', label: `Holding left ${seconds(movement.leftTicks)}` },
-        { cls: 'plot-right', label: `Holding right ${seconds(movement.rightTicks)}` },
-        { cls: 'plot-still', label: `Holding neither ${seconds(movement.stillTicks)}` },
+        { cls: 'plot-toward', label: `Towards the boss ${seconds(movement.towardTicks)}` },
+        { cls: 'plot-away', label: `Away from it ${seconds(movement.awayTicks)}` },
       ]),
-      el(
-        'p',
-        'detail-note',
-        held === 0
-          ? 'No movement was measured.'
-          : `Changed direction ${movement.turns} times. Next to a wall ${seconds(movement.wallTicks)}. In the air ${seconds(movement.airTicks)}.`,
-      ),
+      el('p', 'detail-note', `Per minute: ${Math.round(perMinute.swings)} swings, ${Math.round(perMinute.dashes)} dashes, ${Math.round(perMinute.jumps)} jumps.`),
     );
-    strips.push(movesBox, gapBox, arenaBox);
+
+    const gapBox = section('Distance to the boss', 'The gap through the fight. Green lines: you hit the boss. Red lines: it hit you. Shaded: a boss was attacking. Under it, the share of the fight spent close to, a middling way from, and far from the boss.');
+    gapBox.append(
+      distanceChart(details, clock),
+      stackedBar([distance.close, distance.mid, distance.far], ['plot-close', 'plot-mid', 'plot-far']),
+      legend([
+        { cls: 'plot-close', label: 'Close' },
+        { cls: 'plot-mid', label: 'Middle' },
+        { cls: 'plot-far', label: 'Far' },
+      ]),
+    );
+
+    strips.push(movesBox, gapBox);
   }
 
   const timelineBox = section('The fight', 'Hits you landed are above the line, hits you took below it, swings on it.');
@@ -267,7 +252,10 @@ export function renderDetails(
     ]),
   );
 
-  const avoidBox = section('How you avoided attacks', 'Attacks you did not take a hit from, by what saved you.');
+  const avoidBox = section(
+    'How you avoided attacks',
+    'Attacks that did not hit you. A dash or jump during an attack is replayed without it: "saved you" if it would have hit, "not needed" if it would have missed anyway. "Never threatened you": it could not have reached you where you stood.',
+  );
   avoidBox.append(
     stackedBar(METHODS.map((m) => avoided.methods[m.key]), METHODS.map((m) => m.cls)),
     legend(METHODS.filter((m) => avoided.methods[m.key] > 0).map((m) => ({ cls: m.cls, label: `${m.label} ${avoided.methods[m.key]}` }))),
@@ -299,29 +287,23 @@ export function renderDetails(
   }
   if (reply.perAttack.length === 0) perAttackBox.append(el('p', 'detail-note', 'No attack opened a long enough gap to reply in.'));
 
-  const dodgeBox = section('Dodge timing', 'How long before the attack could hurt you a dash or jump began, when you dodged.');
-  dodgeBox.append(
-    columnChart(dodgeTiming.map((b) => [b.dodged, b.hit]), ['plot-landed', 'plot-taken'], dodgeBinLabels()),
-    legend([
-      { cls: 'plot-landed', label: 'Avoided' },
-      { cls: 'plot-taken', label: 'Still hit' },
-    ]),
+  const dodgeBox = section(
+    'How well your dodges worked',
+    'For each attack you dashed or jumped during, the game replays it without the dodge. How much later could the dodge you saved yourself with have been, and still worked?',
   );
-
-  const standBox = section('Where you stood and what you did', 'Share of the fight close to, a middling way from, and far from the boss.');
-  standBox.append(
-    stackedBar([distance.close, distance.mid, distance.far], ['plot-close', 'plot-mid', 'plot-far']),
-    legend([
-      { cls: 'plot-close', label: 'Close' },
-      { cls: 'plot-mid', label: 'Middle' },
-      { cls: 'plot-far', label: 'Far' },
-    ]),
-    el(
-      'p',
-      'detail-note',
-      `Per minute: ${Math.round(perMinute.swings)} swings, ${Math.round(perMinute.dashes)} dashes, ${Math.round(perMinute.jumps)} jumps.`,
-    ),
-  );
+  if (dodges === null || dodges.saved + dodges.unneeded + dodges.hitAnyway === 0) {
+    dodgeBox.append(el('p', 'detail-note', 'You did not dash or jump during any attack.'));
+  } else {
+    dodgeBox.append(
+      el('p', 'detail-note', `${dodges.saved + dodges.unneeded + dodges.hitAnyway} attacks with a dash or jump: ${dodges.saved} saved you, ${dodges.unneeded} were not needed, ${dodges.hitAnyway} hit you anyway.`),
+    );
+    if (dodges.saved > 0) {
+      dodgeBox.append(
+        columnChart(dodges.slackBins.map((n) => [n]), ['plot-saved'], slackBinLabels()),
+        el('p', 'detail-note', 'Left: it only just worked. Right: lots of room to spare.'),
+      );
+    }
+  }
 
   const back = el('button', 'row focused');
   back.type = 'button';
@@ -342,7 +324,6 @@ export function renderDetails(
     replyBox,
     perAttackBox,
     dodgeBox,
-    standBox,
     rows,
   );
   panel.scrollTop = 0;

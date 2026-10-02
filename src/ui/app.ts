@@ -23,9 +23,10 @@ import { GAME } from '../game/params';
 import { step } from '../game/step';
 import { createInitialState, type GameState } from '../game/state';
 import type { FightResult, FightSummary } from '../game/summary';
-import { analyzeRecording } from '../stats/analyze';
+import { analyzeRecording, fightOf } from '../stats/analyze';
 import { buildExport, loadLastExport, saveLastExport, shareOrDownload } from '../stats/export';
 import { fightDetails, type FightDetails } from '../stats/details';
+import { rateDodges } from '../stats/dodges';
 import { createMeter } from '../stats/meter';
 import { buildRecord, type Recording } from '../stats/record';
 import { openIndexedDbStore, type FightStore } from '../stats/store';
@@ -591,7 +592,8 @@ export function mountApp(root: HTMLElement): void {
       // A fight left during the study has no fight time: no details at all.
       if (analysis.fightSeconds > 0) {
         try {
-          details = fightDetails(analysis, meter.result());
+          const measures = meter.result();
+          details = fightDetails(analysis, measures, rateDodges(fightOf(recording.meta), analysis, measures));
         } catch {
           details = null; // a fault in the details must never stop the fight being saved
         }

@@ -1,5 +1,5 @@
 import { resolveFight } from '../bosses/resolve';
-import type { BossDef, ShotDef } from '../bosses/schema';
+import type { AttackDef, BossDef, ShotDef } from '../bosses/schema';
 import type { InputFrame } from '../engine/input-frame';
 import { TICK_RATE } from '../engine/time';
 import { applyDialsToFight } from '../game/difficulty';
@@ -281,6 +281,21 @@ interface OpenAttack {
   swingAtDanger: boolean;
   /** Dashes of the real fight begun while this attack was the live one. */
   dashes: number;
+}
+
+/**
+ * The attack times (updates since its warning began, a hold excluded) from which an attack can hurt and until which (exclusive).
+ * A bolt is dangerous from the update it fires; an arc from the update it lands until its burst ends; an eruption from the update
+ * its blast goes off until the blast ends.
+ */
+export function dangerSpan(def: AttackDef): { from: number; to: number } {
+  const shots = def.shots ?? [];
+  const dangerStart = (x: ShotDef): number => (x.kind === 'arc' ? x.at + x.flight : x.kind === 'eruption' ? x.at + x.delay : x.at);
+  const dangerEnd = (x: ShotDef): number =>
+    x.kind === 'arc' ? x.at + x.flight + x.burst : x.kind === 'eruption' ? x.at + x.delay + x.burst + (x.linger ?? 0) : x.at + 1;
+  const froms = [...def.hits.map((h) => h.from), ...shots.map(dangerStart)];
+  const tos = [...def.hits.map((h) => h.to), ...shots.map(dangerEnd)];
+  return { from: froms.length > 0 ? Math.min(...froms) : def.windup, to: tos.length > 0 ? Math.max(...tos) : def.windup + def.active };
 }
 
 function occurrence(open: OpenAttack): AttackOccurrence {
@@ -689,23 +704,16 @@ export function analyzeRun(
     const id = bossAt(after, index).attackId ?? bossAt(before, index).pendingAttackId;
     const def = started ? bossDefFor(after, fight, index).attacks.find((a) => a.id === id) : undefined;
     if (def !== undefined) {
-      // A bolt is dangerous from the update it fires; an arc from the update it lands until its burst ends;
-      // an eruption from the update its blast goes off until the blast ends.
       const shots = def.shots ?? [];
-      const dangerStart = (x: ShotDef): number =>
-        x.kind === 'arc' ? x.at + x.flight : x.kind === 'eruption' ? x.at + x.delay : x.at;
-      const dangerEnd = (x: ShotDef): number =>
-        x.kind === 'arc' ? x.at + x.flight + x.burst : x.kind === 'eruption' ? x.at + x.delay + x.burst + (x.linger ?? 0) : x.at + 1;
-      const froms = [...def.hits.map((h) => h.from), ...shots.map(dangerStart)];
-      const tos = [...def.hits.map((h) => h.to), ...shots.map(dangerEnd)];
+      const danger = dangerSpan(def);
       open = {
         attackId: def.id,
         boss: index,
         phase: bossAt(after, index).phase + 1,
         startTick: tick,
         windup: def.windup,
-        dangerFrom: froms.length > 0 ? Math.min(...froms) : def.windup,
-        dangerTo: tos.length > 0 ? Math.max(...tos) : def.windup + def.active,
+        dangerFrom: danger.from,
+        dangerTo: danger.to,
         recoveryFrom: def.windup + def.active,
         distance: Math.abs(after.player.x - bossAt(after, index).x),
         actionAtStart: actionOf(after.player, frame),
@@ -820,9 +828,14 @@ export function analyzeFight(
   record: Pick<FightRecord, 'bossId' | 'dials' | 'seed' | 'input'> & { study?: FightRecord['study'] },
   observer?: UpdateObserver,
 ): Analysis {
-  const fight = applyDialsToFight(resolveFight(record.bossId, record.seed).fight, record.dials);
+  const fight = fightOf(record);
   const study = record.study ?? 0;
   return analyzeRun(fight, createInitialState(fight, record.seed, study), decodeInputs(record.input), study, observer);
+}
+
+/** The fight as it was played: the boss (or pair) of the record with its dials applied. */
+export function fightOf(record: Pick<FightRecord, 'bossId' | 'dials' | 'seed'>): FightDef {
+  return applyDialsToFight(resolveFight(record.bossId, record.seed).fight, record.dials);
 }
 
 /** Analyzes a fight just recorded, taking everything (boss, dials, seed, study) from its meta, so none can be forgotten. */
